@@ -14,185 +14,319 @@
 
 </script>
 
-<!-- Main Container with dark background and gradient -->
-<div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-green-400 font-mono p-4 md:p-8">
-	<div class="max-w-7xl mx-auto space-y-6">
-		
-		<!-- Terminal Header -->
-		<div class="bg-slate-950/50 border-2 border-green-500/30 rounded-lg p-4 backdrop-blur-sm shadow-lg shadow-green-500/10">
-			<div class="flex items-center gap-2 mb-2">
-				<div class="flex gap-1.5">
-					<div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-					<div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse delay-75"></div>
-					<div class="w-3 h-3 rounded-full bg-green-500 animate-pulse delay-150"></div>
-				</div>
-				<span class="text-xs text-slate-500 ml-2">TimViZ Terminal v2.0</span>
-			</div>
-			<div class="text-sm md:text-base">
-				<span class="text-green-400 font-bold">analyst@timviz:~$</span>
-				<span class="text-cyan-400 ml-2">init --user=</span>
-				<span class="text-yellow-300 animate-pulse">{$currentSelectedAnalyst?.full_name}</span>
-			</div>
+<div class="dashboard">
+	<!-- Header -->
+	<div class="header">
+		<div class="header-info">
+			<span class="header-label">Analyst:</span>
+			<span class="header-value">{$currentSelectedAnalyst?.full_name || 'Not Selected'}</span>
 		</div>
+	</div>
 
-		<!-- Statistics Dashboard -->
-		<div class="grid md:grid-cols-2 gap-4">
-			<!-- Priority Alerts Card -->
-			<div class="bg-slate-950/40 border-2 border-red-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-red-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 group">
-				<div class="flex items-center gap-2 mb-4">
-					<span class="text-red-500 text-xl">⚠</span>
-					<h3 class="text-sm font-bold text-red-400 uppercase tracking-wider">
-						[ Priority Alerts ]
-					</h3>
-				</div>
-				<div class="space-y-3 pl-4 border-l-2 border-red-500/30 group-hover:border-red-500/60 transition-colors">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-red-500 font-bold">●</span>
-							<span class="text-red-300 text-sm">Critical</span>
-						</div>
-						<span class="text-red-400 font-bold bg-red-500/10 px-3 py-1 rounded">{$incidentStats.critical || "—"}</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-yellow-500 font-bold">●</span>
-							<span class="text-yellow-300 text-sm">High</span>
-						</div>
-						<span class="text-yellow-400 font-bold bg-yellow-500/10 px-3 py-1 rounded">{$incidentStats.high || "—"}</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Incident Metrics Card -->
-			<div class="bg-slate-950/40 border-2 border-cyan-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-cyan-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20 group">
-				<div class="flex items-center gap-2 mb-4">
-					<span class="text-cyan-500 text-xl">📊</span>
-					<h3 class="text-sm font-bold text-cyan-400 uppercase tracking-wider">
-						[ Incident Metrics ]
-					</h3>
-				</div>
-				<div class="space-y-3 pl-4 border-l-2 border-cyan-500/30 group-hover:border-cyan-500/60 transition-colors">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-cyan-500">▸</span>
-							<span class="text-cyan-300 text-sm">Total Incidents</span>
-						</div>
-						<span class="text-cyan-400 font-bold bg-cyan-500/10 px-3 py-1 rounded">{$incidentStats.total || "—"}</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-cyan-500">▸</span>
-							<span class="text-cyan-300 text-sm">In Progress</span>
-						</div>
-						<span class="text-cyan-400 font-bold bg-cyan-500/10 px-3 py-1 rounded">{$incidentStats.inProgress || "—"}</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-cyan-500">▸</span>
-							<span class="text-cyan-300 text-sm">Closed Cases</span>
-						</div>
-						<span class="text-cyan-400 font-bold bg-cyan-500/10 px-3 py-1 rounded">{$incidentStats.closed || "—"}</span>
-					</div>
-				</div>
-			</div>
+	<!-- Statistics -->
+	<div class="stats-grid">
+		<div class="stat-card critical">
+			<div class="stat-label">Critical</div>
+			<div class="stat-value">{$incidentStats.critical || 0}</div>
 		</div>
+		<div class="stat-card warning">
+			<div class="stat-label">High Priority</div>
+			<div class="stat-value">{$incidentStats.high || 0}</div>
+		</div>
+		<div class="stat-card info">
+			<div class="stat-label">Total</div>
+			<div class="stat-value">{$incidentStats.total || 0}</div>
+		</div>
+		<div class="stat-card info">
+			<div class="stat-label">In Progress</div>
+			<div class="stat-value">{$incidentStats.inProgress || 0}</div>
+		</div>
+		<div class="stat-card success">
+			<div class="stat-label">Closed</div>
+			<div class="stat-value">{$incidentStats.closed || 0}</div>
+		</div>
+	</div>
 
-		<!-- Recent Incidents -->
-		<div class="bg-slate-950/40 border-2 border-green-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-green-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-			<div class="flex items-center gap-2 mb-4">
-				<span class="text-green-500 text-xl font-bold">{'>'}</span>
-				<h2 class="text-base font-bold text-green-400 uppercase tracking-widest">
-					Recent.Incidents
-				</h2>
-			</div>
-			<div class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-green-500/50 scrollbar-track-slate-900">
+	<!-- Recent Incidents -->
+	<div class="section">
+		<div class="section-header">Recent Incidents</div>
+		<div class="section-content">
+			<div class="incident-list">
 				{#each $currentCachedIncidents as incident, i}
-					<div class="flex items-start gap-3 p-3 bg-slate-900/50 border border-green-500/20 rounded hover:border-green-500/50 hover:bg-slate-900/70 transition-all duration-200 group">
-						<span class="text-green-500 mt-1 group-hover:animate-pulse">{String(i + 1).padStart(2, '0')}</span>
-						<div class="flex-1 min-w-0" onclick={()=>userSelectedIncident(incident)}>
-							<p class="text-white font-semibold text-sm truncate group-hover:text-green-300 transition-colors">
-								{incident.title}
-							</p>
-							<div class="flex flex-wrap items-center gap-2 mt-1 text-xs">
-								<span class="px-2 py-0.5 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded">
-									{incident.status}
-								</span>
-								<span class="text-slate-400">•</span>
-								<span class="text-slate-400">{incident.created_at}</span>
+					<button 
+						class="incident-item" 
+						onclick={() => userSelectedIncident(incident)}
+						type="button"
+					>
+						<span class="incident-number">{String(i + 1).padStart(2, '0')}</span>
+						<div class="incident-content">
+							<div class="incident-title">{incident.title}</div>
+							<div class="incident-meta">
+								<span class="status-badge">{incident.status}</span>
+								<span>•</span>
+								<span>{incident.created_at}</span>
 							</div>
 						</div>
-					</div>
+					</button>
 				{/each}
 			</div>
 		</div>
+	</div>
 
-		<!-- Bottom Grid: Health Status & Action Types -->
-		<div class="grid lg:grid-cols-2 gap-4">
-			<!-- System Health -->
-			<div class="bg-slate-950/40 border-2 border-emerald-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-emerald-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
-				<div class="flex items-center gap-2 mb-4">
-					<span class="text-emerald-500 text-xl font-bold">{'>'}</span>
-					<h2 class="text-base font-bold text-emerald-400 uppercase tracking-widest">
-						System.Health
-					</h2>
+	<!-- Bottom Grid -->
+	<div class="two-column-grid">
+		<!-- System Health -->
+		<div class="section">
+			<div class="section-header">System Health</div>
+			<div class="section-content">
+				<div class="info-row">
+					<span class="info-label">Database</span>
+					<span class="info-value">{data.health.database}</span>
 				</div>
-				<div class="space-y-3 bg-slate-900/50 border border-emerald-500/20 rounded p-4">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-emerald-500">▸</span>
-							<span class="text-emerald-300 text-sm">Database</span>
-						</div>
-						<span class="text-emerald-400 font-bold text-sm bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/30">
-							{data.health.database}
-						</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<span class="text-emerald-500">▸</span>
-							<span class="text-emerald-300 text-sm">Status</span>
-						</div>
-						<span class="text-emerald-400 font-bold text-sm bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/30 flex items-center gap-2">
-							<span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-							{data.health.status}
-						</span>
-					</div>
-					{#if data.health.error}
-						<div class="flex items-start gap-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded">
-							<span class="text-red-500">⚠</span>
-							<div class="flex-1">
-								<span class="text-red-300 text-sm font-semibold">Error:</span>
-								<p class="text-red-400 text-xs mt-1">{data.health.error}</p>
-							</div>
-						</div>
-					{/if}
+				<div class="info-row">
+					<span class="info-label">Status</span>
+					<span class="info-value success">{data.health.status}</span>
 				</div>
+				{#if data.health.error}
+					<div class="info-row">
+						<span class="info-label">Error</span>
+						<span class="info-value" style="color: var(--color-accent-error)">{data.health.error}</span>
+					</div>
+				{/if}
 			</div>
+		</div>
 
-			<!-- Action Types -->
-			<div class="bg-slate-950/40 border-2 border-purple-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-purple-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-				<div class="flex items-center gap-2 mb-4">
-					<span class="text-purple-500 text-xl font-bold">{'>'}</span>
-					<h2 class="text-base font-bold text-purple-400 uppercase tracking-widest">
-						Action.Types
-					</h2>
-				</div>
-				<div class="space-y-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/50 scrollbar-track-slate-900">
+		<!-- Action Types -->
+		<div class="section">
+			<div class="section-header">Action Types</div>
+			<div class="section-content">
+				<div class="action-list">
 					{#each $actionTypes as action_type}
-						<div class="flex items-start gap-2 p-2 bg-slate-900/50 border border-purple-500/20 rounded hover:border-purple-500/50 hover:bg-slate-900/70 transition-all duration-200 group">
-							<span class="text-purple-500 mt-0.5 group-hover:animate-pulse">▸</span>
-							<div class="flex-1 min-w-0">
-								<p class="text-white font-semibold text-sm group-hover:text-purple-300 transition-colors">
-									{action_type.name}
-								</p>
-								<p class="text-slate-400 text-xs mt-0.5 line-clamp-2">
-									{action_type.description}
-								</p>
-							</div>
+						<div class="action-item">
+							<div class="action-name">{action_type.name}</div>
+							<div class="action-description">{action_type.description}</div>
 						</div>
 					{/each}
 				</div>
 			</div>
 		</div>
-
 	</div>
 </div>
+
+<style>
+	.dashboard {
+		min-height: 100vh;
+		padding: var(--spacing-lg);
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	.header {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding: var(--spacing-md) var(--spacing-lg);
+		margin-bottom: var(--spacing-lg);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.header-info {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		font-size: var(--font-size-sm);
+	}
+
+	.header-label {
+		color: var(--color-text-tertiary);
+	}
+
+	.header-value {
+		color: var(--color-accent-primary);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: var(--spacing-md);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.stat-card {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding: var(--spacing-md) var(--spacing-lg);
+	}
+
+	.stat-label {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.stat-value {
+		font-size: var(--font-size-lg);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-primary);
+	}
+
+	.stat-card.critical .stat-value { color: var(--color-accent-error); }
+	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
+	.stat-card.success .stat-value { color: var(--color-accent-success); }
+	.stat-card.info .stat-value { color: var(--color-accent-primary); }
+
+	.section {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.section-header {
+		padding: var(--spacing-md) var(--spacing-lg);
+		border-bottom: 1px solid var(--color-border-subtle);
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.section-content {
+		padding: var(--spacing-md);
+	}
+
+	.incident-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.incident-item {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		padding: var(--spacing-sm) var(--spacing-md);
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-subtle);
+		border-radius: var(--border-radius-sm);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.incident-item:hover {
+		background: var(--color-bg-hover);
+		border-color: var(--color-border-medium);
+	}
+
+	.incident-number {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-dim);
+		font-variant-numeric: tabular-nums;
+		min-width: 1.5rem;
+	}
+
+	.incident-content {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.incident-title {
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-medium);
+		color: var(--color-text-primary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.incident-meta {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+	}
+
+	.status-badge {
+		padding: 2px var(--spacing-sm);
+		border-radius: var(--border-radius-sm);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+		background: var(--color-bg-primary);
+		border: 1px solid var(--color-border-medium);
+	}
+
+	.two-column-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: var(--spacing-md);
+	}
+
+	.info-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: var(--spacing-sm) 0;
+		font-size: var(--font-size-sm);
+	}
+
+	.info-row:not(:last-child) {
+		border-bottom: 1px solid var(--color-border-subtle);
+	}
+
+	.info-label {
+		color: var(--color-text-tertiary);
+	}
+
+	.info-value {
+		color: var(--color-text-primary);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.info-value.success {
+		color: var(--color-accent-success);
+	}
+
+	.action-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		max-height: 300px;
+		overflow-y: auto;
+	}
+
+	.action-item {
+		padding: var(--spacing-sm) var(--spacing-md);
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-subtle);
+		border-radius: var(--border-radius-sm);
+		transition: border-color var(--transition-fast);
+	}
+
+	.action-item:hover {
+		border-color: var(--color-border-medium);
+	}
+
+	.action-name {
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-medium);
+		color: var(--color-text-primary);
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.action-description {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+		line-height: 1.4;
+	}
+</style>

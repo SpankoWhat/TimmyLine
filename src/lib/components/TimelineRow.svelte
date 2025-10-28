@@ -124,93 +124,83 @@
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        border-left: 3px solid;
-        background: rgba(15, 23, 42, 0.5);
-        border-radius: 0.25rem;
-        margin-bottom: 0.5rem;
-        font-family: 'Courier New', monospace;
-        transition: all 0.2s ease;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-left: 2px solid var(--color-border-strong);
+        background: var(--color-bg-secondary);
+        border-radius: var(--border-radius-sm);
+        margin-bottom: var(--spacing-xs);
+        transition: all var(--transition-fast);
     }
 
     .timeline-item.event {
-        border-left-color: #3b82f6;
-        background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0.5) 10%);
+        border-left-color: var(--color-accent-primary);
     }
 
     .timeline-item.action {
-        border-left-color: #10b981;
-        background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.5) 10%);
+        border-left-color: var(--color-accent-success);
     }
 
     .timeline-item:hover {
-        background: rgba(30, 41, 59, 0.7);
-        border-left-width: 4px;
-        box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
-    }
-
-    .timeline-item.event:hover {
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        background: var(--color-bg-hover);
+        border-left-width: 3px;
     }
 
     /* Type Indicator */
     .type-indicator {
         display: flex;
         align-items: center;
-        gap: 0.35rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: 600;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--border-radius-sm);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        min-width: 90px;
-        border: 1px solid;
+        min-width: 80px;
+        border: 1px solid var(--color-border-medium);
+        background: var(--color-bg-tertiary);
     }
 
     .type-indicator.event {
-        background: rgba(59, 130, 246, 0.15);
-        color: #60a5fa;
-        border-color: rgba(59, 130, 246, 0.3);
+        color: var(--color-accent-primary);
+        border-color: var(--color-accent-primary);
     }
 
     .type-indicator.action {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-        border-color: rgba(16, 185, 129, 0.3);
+        color: var(--color-accent-success);
+        border-color: var(--color-accent-success);
     }
 
     .type-icon {
-        font-size: 0.875rem;
-        animation: pulse 2s infinite;
+        font-size: var(--font-size-sm);
     }
 
     /* Timestamp */
     .timestamp {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        font-weight: bold;
-        color: #fbbf24;
-        min-width: 180px;
-        font-size: 0.8rem;
+        gap: var(--spacing-xs);
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-secondary);
+        min-width: 160px;
+        font-size: var(--font-size-xs);
     }
 
     .terminal-prompt {
-        color: #34d399;
-        font-size: 1rem;
+        color: var(--color-accent-success);
+        font-size: var(--font-size-sm);
     }
 
     .time-value {
-        color: #fbbf24;
+        color: var(--color-text-primary);
     }
 
     /* Data Fields */
     .data-fields {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: var(--spacing-xs);
         flex: 1;
         align-items: center;
     }
@@ -218,21 +208,21 @@
     .datafield {
         display: inline-flex;
         align-items: center;
-        padding: 0.25rem 0.5rem;
-        background: rgba(71, 85, 105, 0.3);
-        border-left: 2px solid rgba(148, 163, 184, 0.5);
-        border-radius: 0.15rem;
-        font-size: 0.75rem;
-        max-width: 250px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        background: var(--color-bg-tertiary);
+        border-left: 2px solid var(--color-border-medium);
+        border-radius: var(--border-radius-sm);
+        font-size: var(--font-size-xs);
+        max-width: 200px;
     }
 
     .field-label {
-        color: #94a3b8;
-        margin-right: 0.25rem;
+        color: var(--color-text-tertiary);
+        margin-right: var(--spacing-xs);
     }
 
     .field-value {
-        color: #e2e8f0;
+        color: var(--color-text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -241,31 +231,29 @@
     /* Actions */
     .actions {
         display: flex;
-        gap: 0.5rem;
+        gap: var(--spacing-xs);
         margin-left: auto;
         flex-shrink: 0;
     }
 
     .action-btn {
-        background: rgba(71, 85, 105, 0.4);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        border-radius: 0.25rem;
-        padding: 0.4rem 0.6rem;
+        background: var(--color-bg-tertiary);
+        border: 1px solid var(--color-border-medium);
+        border-radius: var(--border-radius-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
         cursor: pointer;
-        transition: all 0.2s ease;
-        font-size: 1rem;
+        transition: all var(--transition-fast);
+        font-size: var(--font-size-sm);
     }
 
     .action-btn:hover {
-        background: rgba(71, 85, 105, 0.7);
-        border-color: #34d399;
-        box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+        background: var(--color-bg-hover);
+        border-color: var(--color-accent-primary);
         transform: scale(1.05);
     }
 
     .action-btn.details:hover {
-        border-color: #60a5fa;
-        box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+        border-color: var(--color-accent-secondary);
     }
 
     .btn-icon {
@@ -274,17 +262,8 @@
 
     /* Related Entities */
     .related-entities {
-        margin-top: 0.5rem;
-        padding-left: 1rem;
-        border-left: 2px dashed rgba(148, 163, 184, 0.3);
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.5;
-        }
+        margin-top: var(--spacing-sm);
+        padding-left: var(--spacing-lg);
+        border-left: 2px dashed var(--color-border-subtle);
     }
 </style>

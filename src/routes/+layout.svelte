@@ -148,6 +148,154 @@
 
 </script>
 
+<style>
+	.action-dock {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		background: var(--color-bg-secondary);
+		border-top: 1px solid var(--color-border-medium);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: var(--spacing-sm) var(--spacing-md);
+		z-index: 100;
+		box-shadow: var(--shadow-md);
+	}
+
+	.dock-section {
+		display: flex;
+		gap: var(--spacing-sm);
+		align-items: center;
+	}
+
+	.icon-btn {
+		width: 2rem;
+		height: 2rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-sm);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		font-size: var(--font-size-md);
+	}
+
+	.icon-btn:hover {
+		background: var(--color-bg-hover);
+		border-color: var(--color-accent-primary);
+		transform: scale(1.05);
+	}
+
+	.icon-btn:active {
+		transform: scale(0.95);
+	}
+
+	.dropdown-wrapper {
+		position: relative;
+	}
+
+	.action-btn {
+		padding: var(--spacing-sm) var(--spacing-md);
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-sm);
+		color: var(--color-text-primary);
+		font-weight: var(--font-weight-medium);
+		font-size: var(--font-size-xs);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+	}
+
+	.action-btn:hover {
+		background: var(--color-bg-hover);
+		border-color: var(--color-accent-primary);
+	}
+
+	.action-btn:active {
+		transform: scale(0.98);
+	}
+
+	.action-btn.create {
+		border-color: var(--color-accent-success);
+		color: var(--color-accent-success);
+	}
+
+	.action-btn.create:hover {
+		border-color: var(--color-accent-success);
+		background: rgba(52, 211, 153, 0.1);
+	}
+
+	.action-btn.relate {
+		border-color: var(--color-accent-secondary);
+		color: var(--color-accent-secondary);
+	}
+
+	.action-btn.relate:hover {
+		border-color: var(--color-accent-secondary);
+		background: rgba(129, 140, 248, 0.1);
+	}
+
+	.action-btn.config {
+		border-color: var(--color-accent-warning);
+		color: var(--color-accent-warning);
+	}
+
+	.action-btn.config:hover {
+		border-color: var(--color-accent-warning);
+		background: rgba(251, 191, 36, 0.1);
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		bottom: calc(100% + var(--spacing-xs));
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 100;
+		min-width: 180px;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		overflow: hidden;
+		box-shadow: var(--shadow-md);
+	}
+
+	.dropdown-item {
+		display: block;
+		width: 100%;
+		padding: var(--spacing-sm) var(--spacing-md);
+		text-align: left;
+		color: var(--color-text-primary);
+		font-size: var(--font-size-xs);
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid var(--color-border-subtle);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.dropdown-item:last-child {
+		border-bottom: none;
+	}
+
+	.dropdown-item:hover {
+		background: var(--color-bg-hover);
+		color: var(--color-accent-primary);
+	}
+
+	.btn-icon {
+		font-size: var(--font-size-sm);
+	}
+</style>
+
 <!-- Generic Modal -->
 <GenericModal />
 
@@ -156,160 +304,71 @@
 
 {@render children?.()}
 
-<!-- Terminal-style Action Dock -->
-<div class="fixed bottom-0 left-0 w-full bg-slate-950/95 backdrop-blur-md border-t border-green-500/40 flex justify-between items-center px-3 py-1 z-[100] shadow-lg shadow-green-500/20 font-mono">
-	
-	<!-- Left Group: Navigation Shortcuts -->
-	<div class="flex gap-1.5 items-center">
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={() => goto("/")}
-			title="Home">
-			🏠
-		</button>
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={toggleTerminal}
-			title="Terminal">
-			🖲️
-		</button>
+<!-- Action Dock -->
+<div class="action-dock">
+	<!-- Left: Navigation -->
+	<div class="dock-section">
+		<button class="icon-btn" onclick={() => goto("/")} title="Home">🏠</button>
+		<button class="icon-btn" onclick={toggleTerminal} title="Terminal">🖲️</button>
 	</div>
 
-	<!-- Center Group: Main Actions -->
-	<div class="flex gap-2 items-center">
-		<!-- Create Entities Dropdown -->
-		<div class="relative">
-			<button 
-				class="px-3 py-1 bg-green-900/30 border border-green-500/50 rounded text-green-400 font-semibold text-xs uppercase tracking-wide hover:bg-green-900/50 hover:border-green-500 hover:text-green-300 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 active:scale-95 flex items-center gap-1.5" 
-				onclick={toggleCreateDropdown}>
-				<span class="text-sm">➕</span>
-				Create Entities
+	<!-- Center: Main Actions -->
+	<div class="dock-section">
+		<!-- Create Entities -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn create" onclick={toggleCreateDropdown}>
+				<span class="btn-icon">➕</span>
+				Create
 			</button>
 			{#if showCreateDropdown}
-				<div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-[100] min-w-[180px] bg-slate-900/95 backdrop-blur-md border border-green-500/50 rounded overflow-hidden shadow-2xl shadow-green-500/40">
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-green-300 text-xs hover:bg-green-500/20 hover:text-green-200 transition-colors duration-150 border-b border-green-500/20 hover:border-green-500/40" 
-						onclick={() => openModal("timeline_event")}>
-						<span class="text-green-500 mr-1.5">▸</span>Timeline Event
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-green-300 text-xs hover:bg-green-500/20 hover:text-green-200 transition-colors duration-150 border-b border-green-500/20 hover:border-green-500/40" 
-						onclick={() => openModal("entity")}>
-						<span class="text-green-500 mr-1.5">▸</span>Entity
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-green-300 text-xs hover:bg-green-500/20 hover:text-green-200 transition-colors duration-150 border-b border-green-500/20 hover:border-green-500/40" 
-						onclick={() => openModal("investigation_action")}>
-						<span class="text-green-500 mr-1.5">▸</span>Investigation Action
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-green-300 text-xs hover:bg-green-500/20 hover:text-green-200 transition-colors duration-150 border-b border-green-500/20 hover:border-green-500/40" 
-						onclick={() => openModal("incident")}>
-						<span class="text-green-500 mr-1.5">▸</span>Incident
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-green-300 text-xs hover:bg-green-500/20 hover:text-green-200 transition-colors duration-150" 
-						onclick={() => openModal("annotation")}>
-						<span class="text-green-500 mr-1.5">▸</span>Annotation
-					</button>
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openModal("timeline_event")}>Timeline Event</button>
+					<button class="dropdown-item" onclick={() => openModal("entity")}>Entity</button>
+					<button class="dropdown-item" onclick={() => openModal("investigation_action")}>Investigation Action</button>
+					<button class="dropdown-item" onclick={() => openModal("incident")}>Incident</button>
+					<button class="dropdown-item" onclick={() => openModal("annotation")}>Annotation</button>
 				</div>
 			{/if}
 		</div>
 
-		<!-- Relate Entities Dropdown -->
-		<div class="relative">
-			<button 
-				class="px-3 py-1 bg-purple-900/30 border border-purple-500/50 rounded text-purple-400 font-semibold text-xs uppercase tracking-wide hover:bg-purple-900/50 hover:border-purple-500 hover:text-purple-300 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30 active:scale-95 flex items-center gap-1.5" 
-				onclick={toggleRelateDropdown}>
-				<span class="text-sm">🔗</span>
-				Relate Entities
+		<!-- Relate Entities -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn relate" onclick={toggleRelateDropdown}>
+				<span class="btn-icon">🔗</span>
+				Relate
 			</button>
 			{#if showRelateDropdown}
-				<div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-[100] min-w-[200px] bg-slate-900/95 backdrop-blur-md border border-purple-500/50 rounded overflow-hidden shadow-2xl shadow-purple-500/40">
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-purple-300 text-xs hover:bg-purple-500/20 hover:text-purple-200 transition-colors duration-150 border-b border-purple-500/20 hover:border-purple-500/40" 
-						onclick={() => openRelationModal("ActionEventsRelation")}>
-						<span class="text-purple-500 mr-1.5">▸</span>Relate Action to Events
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-purple-300 text-xs hover:bg-purple-500/20 hover:text-purple-200 transition-colors duration-150 border-b border-purple-500/20 hover:border-purple-500/40" 
-						onclick={() => openRelationModal("ActionEntitiesRelation")}>
-						<span class="text-purple-500 mr-1.5">▸</span>Relate Action to Entities
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-purple-300 text-xs hover:bg-purple-500/20 hover:text-purple-200 transition-colors duration-150" 
-						onclick={() => openRelationModal("EventEntitiesRelation")}>
-						<span class="text-purple-500 mr-1.5">▸</span>Relate Event to Entities
-					</button>
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openRelationModal("ActionEventsRelation")}>Action → Events</button>
+					<button class="dropdown-item" onclick={() => openRelationModal("ActionEntitiesRelation")}>Action → Entities</button>
+					<button class="dropdown-item" onclick={() => openRelationModal("EventEntitiesRelation")}>Event → Entities</button>
 				</div>
 			{/if}
 		</div>
 
-		<!-- Configure Database Dropdown -->
-		<div class="relative">
-			<button 
-				class="px-3 py-1 bg-amber-900/30 border border-amber-500/50 rounded text-amber-400 font-semibold text-xs uppercase tracking-wide hover:bg-amber-900/50 hover:border-amber-500 hover:text-amber-300 transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/30 active:scale-95 flex items-center gap-1.5" 
-				onclick={toggleDatabaseDropdown}>
-				<span class="text-sm">⚙️</span>
-				Configure Database
+		<!-- Configure Database -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn config" onclick={toggleDatabaseDropdown}>
+				<span class="btn-icon">⚙️</span>
+				Configure
 			</button>
 			{#if showDatabaseDropdown}
-				<div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-[100] min-w-[180px] bg-slate-900/95 backdrop-blur-md border border-amber-500/50 rounded overflow-hidden shadow-2xl shadow-amber-500/40">
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-amber-300 text-xs hover:bg-amber-500/20 hover:text-amber-200 transition-colors duration-150 border-b border-amber-500/20 hover:border-amber-500/40" 
-						onclick={() => openModal("action_type")}>
-						<span class="text-amber-500 mr-1.5">▸</span>Add Action Type
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-amber-300 text-xs hover:bg-amber-500/20 hover:text-amber-200 transition-colors duration-150 border-b border-amber-500/20 hover:border-amber-500/40" 
-						onclick={() => openModal("entity_type")}>
-						<span class="text-amber-500 mr-1.5">▸</span>Add Entity Type
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-amber-300 text-xs hover:bg-amber-500/20 hover:text-amber-200 transition-colors duration-150 border-b border-amber-500/20 hover:border-amber-500/40" 
-						onclick={() => openModal("event_type")}>
-						<span class="text-amber-500 mr-1.5">▸</span>Add Event Type
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-amber-300 text-xs hover:bg-amber-500/20 hover:text-amber-200 transition-colors duration-150 border-b border-amber-500/20 hover:border-amber-500/40" 
-						onclick={() => openModal("annotation_type")}>
-						<span class="text-amber-500 mr-1.5">▸</span>Add Annotation Type
-					</button>
-					<button 
-						class="block w-full px-3 py-1.5 text-left text-amber-300 text-xs hover:bg-amber-500/20 hover:text-amber-200 transition-colors duration-150" 
-						onclick={() => openModal("analyst")}>
-						<span class="text-amber-500 mr-1.5">▸</span>Add Analyst
-					</button>
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openModal("action_type")}>Action Type</button>
+					<button class="dropdown-item" onclick={() => openModal("entity_type")}>Entity Type</button>
+					<button class="dropdown-item" onclick={() => openModal("event_type")}>Event Type</button>
+					<button class="dropdown-item" onclick={() => openModal("annotation_type")}>Annotation Type</button>
+					<button class="dropdown-item" onclick={() => openModal("analyst")}>Analyst</button>
 				</div>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Right Group: Utility Buttons -->
-	<div class="flex gap-1.5 items-center">
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={handleImport} 
-			title="Import data">
-			⬇️
-		</button>
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={handleExport} 
-			title="Export data">
-			⬆️
-		</button>
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={toggleTheme} 
-			title="Toggle theme">
-			🎞️
-		</button>
-		<button 
-			class="w-8 h-8 flex items-center justify-center bg-slate-900 border border-cyan-500/40 rounded hover:border-cyan-500 hover:bg-cyan-500/10 hover:scale-110 transition-all duration-200 text-base hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95" 
-			onclick={showHelp} 
-			title="Show help">
-			🤔
-		</button>
+	<!-- Right: Utilities -->
+	<div class="dock-section">
+		<button class="icon-btn" onclick={handleImport} title="Import">⬇️</button>
+		<button class="icon-btn" onclick={handleExport} title="Export">⬆️</button>
+		<button class="icon-btn" onclick={toggleTheme} title="Theme">🎞️</button>
+		<button class="icon-btn" onclick={showHelp} title="Help">🤔</button>
 	</div>
 </div>

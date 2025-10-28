@@ -135,74 +135,293 @@
 	}
 </script>
 
+<style>
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.8);
+		backdrop-filter: blur(4px);
+		z-index: 200;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-lg);
+	}
+
+	.modal-container {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-lg);
+		box-shadow: var(--shadow-md);
+		max-width: 600px;
+		width: 100%;
+		max-height: 90vh;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.modal-header {
+		background: var(--color-bg-tertiary);
+		border-bottom: 1px solid var(--color-border-subtle);
+		padding: var(--spacing-lg);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.header-content {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+	}
+
+	.header-icon {
+		font-size: var(--font-size-lg);
+	}
+
+	.header-title {
+		font-size: var(--font-size-md);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-primary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.close-btn {
+		background: transparent;
+		border: none;
+		color: var(--color-accent-error);
+		font-size: var(--font-size-lg);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		padding: var(--spacing-xs);
+		line-height: 1;
+	}
+
+	.close-btn:hover {
+		transform: scale(1.1);
+		color: var(--color-text-primary);
+	}
+
+	.modal-body {
+		padding: var(--spacing-lg);
+		overflow-y: auto;
+		max-height: calc(90vh - 180px);
+	}
+
+	.modal-form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-lg);
+	}
+
+	.field-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+	}
+
+	.field-label {
+		display: block;
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.field-required {
+		color: var(--color-accent-error);
+	}
+
+	.field-input,
+	.field-textarea,
+	.field-select {
+		width: 100%;
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-sm);
+		padding: var(--spacing-sm) var(--spacing-md);
+		color: var(--color-text-primary);
+		font-size: var(--font-size-sm);
+		transition: all var(--transition-fast);
+	}
+
+	.field-input::placeholder,
+	.field-textarea::placeholder {
+		color: var(--color-text-dim);
+	}
+
+	.field-input:focus,
+	.field-textarea:focus,
+	.field-select:focus {
+		outline: none;
+		border-color: var(--color-accent-primary);
+	}
+
+	.field-textarea {
+		resize: vertical;
+		min-height: 80px;
+	}
+
+	.field-select {
+		cursor: pointer;
+	}
+
+	.field-error {
+		color: var(--color-accent-error);
+		font-size: var(--font-size-xs);
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+	}
+
+	.field-help {
+		color: var(--color-text-tertiary);
+		font-size: var(--font-size-xs);
+	}
+
+	.modal-footer {
+		background: var(--color-bg-tertiary);
+		border-top: 1px solid var(--color-border-subtle);
+		padding: var(--spacing-lg);
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--spacing-md);
+	}
+
+	.btn {
+		padding: var(--spacing-sm) var(--spacing-lg);
+		border-radius: var(--border-radius-sm);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		border: 1px solid var(--color-border-medium);
+	}
+
+	.btn-cancel {
+		background: var(--color-bg-secondary);
+		color: var(--color-text-secondary);
+	}
+
+	.btn-cancel:hover {
+		background: var(--color-bg-hover);
+		color: var(--color-text-primary);
+	}
+
+	.btn-submit {
+		background: var(--color-accent-primary);
+		color: var(--color-bg-primary);
+		border-color: var(--color-accent-primary);
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+	}
+
+	.btn-submit:hover:not(:disabled) {
+		background: var(--color-accent-secondary);
+		border-color: var(--color-accent-secondary);
+	}
+
+	.btn-submit:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.spinner {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	/* Custom scrollbar */
+	.modal-body::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.modal-body::-webkit-scrollbar-track {
+		background: var(--color-bg-primary);
+	}
+
+	.modal-body::-webkit-scrollbar-thumb {
+		background: var(--color-border-strong);
+		border-radius: var(--border-radius-sm);
+	}
+
+	.modal-body::-webkit-scrollbar-thumb:hover {
+		background: var(--color-text-dim);
+	}
+
+	/* Datetime input styling */
+	input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+		filter: invert(0.7);
+		cursor: pointer;
+	}
+</style>
+
 {#if $modalStore}
 	<!-- Modal Overlay -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div 
-		class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
-		onclick={handleCancel}>
-		
+	<div class="modal-overlay" onclick={handleCancel}>
 		<!-- Modal Container -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div 
-			class="bg-slate-950/95 border-2 border-cyan-500/50 rounded-lg shadow-2xl shadow-cyan-500/30 max-w-2xl w-full max-h-[90vh] overflow-hidden"
-			onclick={(e) => e.stopPropagation()}>
-			
+		<div class="modal-container" onclick={(e) => e.stopPropagation()}>
 			<!-- Modal Header -->
-			<div class="bg-slate-900/80 border-b border-cyan-500/30 px-6 py-4">
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<span class="text-cyan-500 text-2xl">
-							{$modalStore.mode === 'create' ? '➕' : $modalStore.mode === 'edit' ? '✏️' : $modalStore.mode === 'delete' ? '🗑️' : '👁️'}
-						</span>
-						<h2 class="text-xl font-bold text-cyan-400 uppercase tracking-wider font-mono">
-							{$modalStore.mode} {$modalStore.title}
-						</h2>
-					</div>
-					<button 
-						class="text-red-400 hover:text-red-300 text-2xl hover:scale-110 transition-all"
-						onclick={handleCancel}>
-						✕
-					</button>
+			<div class="modal-header">
+				<div class="header-content">
+					<span class="header-icon">
+						{$modalStore.mode === 'create' ? '➕' : $modalStore.mode === 'edit' ? '✏️' : $modalStore.mode === 'delete' ? '🗑️' : '👁️'}
+					</span>
+					<h2 class="header-title">
+						{$modalStore.mode} {$modalStore.title}
+					</h2>
 				</div>
+				<button class="close-btn" onclick={handleCancel}>✕</button>
 			</div>
 			
-		<!-- Modal Body -->
-		<div class="px-6 py-4 overflow-y-auto max-h-[calc(90vh-180px)] font-mono">
-			<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
-				{#each enrichedFields as field}
+			<!-- Modal Body -->
+			<div class="modal-body">
+				<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="modal-form">
+					{#each enrichedFields as field}
 						{@const error = errors[field.key]}
 						
-						<div class="space-y-2">
-							<div class="block text-sm font-semibold text-cyan-400 uppercase tracking-wide">
+						<div class="field-group">
+							<div class="field-label">
 								{field.label}
 								{#if field.required}
-									<span class="text-red-400">*</span>
+									<span class="field-required">*</span>
 								{/if}
 							</div>
 							
 							{#if field.type === 'text'}
 								<input
 									type="text"
+									class="field-input"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
-									class="w-full bg-slate-900/50 border border-cyan-500/30 rounded px-3 py-2 text-green-400 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all"
 									required={field.required} />
 									
 							{:else if field.type === 'textarea'}
 								<textarea
+									class="field-textarea"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
 									rows="4"
-									class="w-full bg-slate-900/50 border border-cyan-500/30 rounded px-3 py-2 text-green-400 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all resize-none"
 									required={field.required}></textarea>
 									
 							{:else if field.type === 'select'}
 								<select
+									class="field-select"
 									bind:value={formData[field.key]}
-									class="w-full bg-slate-900/50 border border-cyan-500/30 rounded px-3 py-2 text-green-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all cursor-pointer"
 									required={field.required}>
 									<option value="">Select {field.label}</option>
 									{#each field.options || [] as option}
@@ -213,30 +432,30 @@
 							{:else if field.type === 'datetime'}
 								<input
 									type="datetime-local"
+									class="field-input"
 									value={formData[field.key] ? convertFromEpoch(formData[field.key]) : ''}
 									oninput={(e) => {
 										formData[field.key] = convertToEpoch(e.currentTarget.value);
 									}}
-									class="w-full bg-slate-900/50 border border-cyan-500/30 rounded px-3 py-2 text-green-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all"
 									required={field.required} />
 									
 							{:else if field.type === 'number'}
 								<input
 									type="number"
+									class="field-input"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
-									class="w-full bg-slate-900/50 border border-cyan-500/30 rounded px-3 py-2 text-green-400 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition-all"
 									required={field.required} />
 							{/if}
 							
 							{#if error}
-								<p class="text-red-400 text-xs flex items-center gap-1">
+								<p class="field-error">
 									<span>⚠</span> {error}
 								</p>
 							{/if}
 							
 							{#if field.helpText}
-								<p class="text-slate-400 text-xs">{field.helpText}</p>
+								<p class="field-help">{field.helpText}</p>
 							{/if}
 						</div>
 					{/each}
@@ -244,20 +463,17 @@
 			</div>
 			
 			<!-- Modal Footer -->
-			<div class="bg-slate-900/80 border-t border-cyan-500/30 px-6 py-4 flex justify-end gap-3">
-				<button
-					type="button"
-					class="px-4 py-2 bg-slate-800 border border-slate-600 rounded text-slate-300 hover:bg-slate-700 hover:border-slate-500 transition-all font-mono uppercase text-sm tracking-wide"
-					onclick={handleCancel}>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-cancel" onclick={handleCancel}>
 					Cancel
 				</button>
 				<button
 					type="submit"
+					class="btn btn-submit"
 					onclick={handleSubmit}
-					disabled={isSubmitting}
-					class="px-4 py-2 bg-cyan-900/50 border border-cyan-500 rounded text-cyan-400 hover:bg-cyan-900/70 hover:text-cyan-300 transition-all font-mono uppercase text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+					disabled={isSubmitting}>
 					{#if isSubmitting}
-						<span class="animate-spin">⚙️</span>
+						<span class="spinner">⚙️</span>
 						<span>Submitting...</span>
 					{:else}
 						<span>{$modalStore.mode === 'create' ? 'Create' : 'Save'}</span>
@@ -267,30 +483,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	/* Ensure proper datetime-local input styling */
-	input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-		filter: invert(0.7);
-		cursor: pointer;
-	}
-	
-	/* Custom scrollbar for modal body */
-	.overflow-y-auto::-webkit-scrollbar {
-		width: 8px;
-	}
-	
-	.overflow-y-auto::-webkit-scrollbar-track {
-		background: rgba(15, 23, 42, 0.5);
-		border-radius: 4px;
-	}
-	
-	.overflow-y-auto::-webkit-scrollbar-thumb {
-		background: rgba(34, 211, 153, 0.3);
-		border-radius: 4px;
-	}
-	
-	.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-		background: rgba(34, 211, 153, 0.5);
-	}
-</style>
