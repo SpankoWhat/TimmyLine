@@ -1,0 +1,27 @@
+meta {
+  name: New HTTP Request
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:5173/api/create/core/timeline_event
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "incident_id": "066030ac-c899-465b-9f9f-95bd227f0214",
+    "discovered_by": "1c9d4635-651d-48d7-9ac8-ed92663f2003",
+    "event_type": "file_created",
+    "discovered_at": "1761269305",
+    "event_data": "Bla as an example",
+    "occurred_at": "1761269305",
+    "severity": "high",
+    "confidence": "high",
+    "source_reliability": "A",
+    "source": "Trust me bro",
+    "tags": "tag1,tag2"
+  }
+}
