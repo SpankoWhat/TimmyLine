@@ -29,133 +29,199 @@
 	});
 </script>
 
-<!-- Main Container with dark background and gradient -->
-<div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-green-400 font-mono p-4 md:p-8">
-	<div class="max-w-7xl mx-auto space-y-6">
-		
-		<!-- Terminal Header -->
-		<div class="bg-slate-950/50 border-2 border-cyan-500/30 rounded-lg p-4 backdrop-blur-sm shadow-lg shadow-cyan-500/10">
-			<div class="flex items-center gap-2 mb-2">
-				<div class="flex gap-1.5">
-					<div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-					<div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse delay-75"></div>
-					<div class="w-3 h-3 rounded-full bg-green-500 animate-pulse delay-150"></div>
-				</div>
-				<span class="text-xs text-slate-500 ml-2">Timeline Terminal v2.0</span>
+<style>
+	.incident-page {
+		min-height: 100vh;
+		padding: var(--spacing-lg);
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	.page-header {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding: var(--spacing-md) var(--spacing-lg);
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.header-title {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-tertiary);
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.header-value {
+		font-size: var(--font-size-md);
+		color: var(--color-text-primary);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.stats-bar {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding: var(--spacing-md) var(--spacing-lg);
+		margin-bottom: var(--spacing-lg);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--spacing-lg);
+	}
+
+	.stats-title {
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.stats-group {
+		display: flex;
+		gap: var(--spacing-xl);
+	}
+
+	.stat-item {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		font-size: var(--font-size-sm);
+	}
+
+	.stat-label {
+		color: var(--color-text-tertiary);
+	}
+
+	.stat-value {
+		color: var(--color-text-primary);
+		font-weight: var(--font-weight-semibold);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-sm);
+	}
+
+	.timeline-section {
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+	}
+
+	.section-header {
+		padding: var(--spacing-md) var(--spacing-lg);
+		border-bottom: 1px solid var(--color-border-subtle);
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.section-content {
+		padding: var(--spacing-md);
+	}
+
+	.timeline-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		max-height: calc(100vh - 350px);
+		overflow-y: auto;
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: var(--spacing-2xl);
+		background: var(--color-bg-tertiary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+	}
+
+	.empty-icon {
+		font-size: 2rem;
+		margin-bottom: var(--spacing-md);
+		display: block;
+	}
+
+	.empty-title {
+		font-size: var(--font-size-base);
+		color: var(--color-text-secondary);
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.empty-description {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+	}
+
+	.empty-state.warning .empty-icon {
+		color: var(--color-accent-warning);
+	}
+
+	.empty-state.warning .empty-title {
+		color: var(--color-accent-warning);
+	}
+
+	.empty-state.info .empty-icon {
+		color: var(--color-accent-primary);
+	}
+
+	.empty-state.info .empty-title {
+		color: var(--color-accent-primary);
+	}
+</style>
+
+<div class="incident-page">
+	<!-- Header -->
+	<div class="page-header">
+		<div class="header-title">Viewing Incident</div>
+		<div class="header-value">{$currentSelectedIncident?.title || 'Loading...'}</div>
+	</div>
+
+	<!-- Timeline Stats -->
+	<div class="stats-bar">
+		<div class="stats-title">Timeline Statistics</div>
+		<div class="stats-group">
+			<div class="stat-item">
+				<span class="stat-label">Total:</span>
+				<span class="stat-value">{$combinedTimeline.length}</span>
 			</div>
-			<div class="text-sm md:text-base">
-				<span class="text-cyan-400 font-bold">incident@timeline:~$</span>
-				<span class="text-yellow-300 ml-2">viewing --incident=</span>
-				<span class="text-white animate-pulse">{$currentSelectedIncident?.title || 'Loading...'}</span>
+			<div class="stat-item">
+				<span class="stat-label">Events:</span>
+				<span class="stat-value">{$currentCachedTimelineEvents.length}</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Actions:</span>
+				<span class="stat-value">{$currentCachedInvestigationActions.length}</span>
 			</div>
 		</div>
+	</div>
 
-		<!-- Timeline Stats Card -->
-		<div class="bg-slate-950/40 border-2 border-purple-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-purple-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
-			<div class="flex items-center justify-between gap-4">
-				<div class="flex items-center gap-2">
-					<span class="text-purple-500 text-xl font-bold">{'>'}</span>
-					<h2 class="text-base font-bold text-purple-400 uppercase tracking-widest">
-						Timeline.Stats
-					</h2>
-				</div>
-				<div class="flex gap-6 text-sm">
-					<div class="flex items-center gap-2">
-						<span class="text-cyan-500">▸</span>
-						<span class="text-slate-400">Total:</span>
-						<span class="text-cyan-400 font-bold bg-cyan-500/10 px-3 py-1 rounded border border-cyan-500/30">
-							{$combinedTimeline.length}
-						</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<span class="text-blue-500">●</span>
-						<span class="text-slate-400">Events:</span>
-						<span class="text-blue-400 font-bold bg-blue-500/10 px-3 py-1 rounded border border-blue-500/30">
-							{$currentCachedTimelineEvents.length}
-						</span>
-					</div>
-					<div class="flex items-center gap-2">
-						<span class="text-green-500">▸</span>
-						<span class="text-slate-400">Actions:</span>
-						<span class="text-green-400 font-bold bg-green-500/10 px-3 py-1 rounded border border-green-500/30">
-							{$currentCachedInvestigationActions.length}
-						</span>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Timeline Events Container -->
-		<div class="bg-slate-950/40 border-2 border-green-500/40 rounded-lg p-5 backdrop-blur-sm hover:border-green-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
-			<div class="flex items-center gap-2 mb-4">
-				<span class="text-green-500 text-xl font-bold">{'>'}</span>
-				<h2 class="text-base font-bold text-green-400 uppercase tracking-widest">
-					Timeline.Events
-				</h2>
-			</div>
-
+	<!-- Timeline Events -->
+	<div class="timeline-section">
+		<div class="section-header">Timeline Events</div>
+		<div class="section-content">
 			{#if !$currentSelectedIncident?.uuid}
-				<div class="text-center py-12 px-4 bg-slate-900/50 border border-yellow-500/30 rounded">
-					<span class="text-yellow-500 text-4xl mb-4 block">⚠</span>
-					<p class="text-yellow-300 text-sm">
-						<span class="text-yellow-400 font-bold">WARNING:</span> No incident selected
-					</p>
-					<p class="text-slate-400 text-xs mt-2">
-						Select an active incident to view timeline events.
-					</p>
+				<div class="empty-state warning">
+					<span class="empty-icon">⚠</span>
+					<div class="empty-title">No incident selected</div>
+					<div class="empty-description">Select an active incident to view timeline events.</div>
 				</div>
 			{:else if $combinedTimeline.length === 0}
-				<div class="text-center py-12 px-4 bg-slate-900/50 border border-cyan-500/30 rounded">
-					<span class="text-cyan-500 text-4xl mb-4 block">📊</span>
-					<p class="text-cyan-300 text-sm">
-						<span class="text-cyan-400 font-bold">INFO:</span> No timeline data found
-					</p>
-					<p class="text-slate-400 text-xs mt-2">
-						No timeline events or investigation actions found for this incident.
-					</p>
+				<div class="empty-state info">
+					<span class="empty-icon">📊</span>
+					<div class="empty-title">No timeline data found</div>
+					<div class="empty-description">No timeline events or investigation actions found for this incident.</div>
 				</div>
 			{:else}
-				<div class="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-thin scrollbar-thumb-green-500/50 scrollbar-track-slate-900 pr-2">
+				<div class="timeline-list">
 					{#each $combinedTimeline as item}
 						<TimeLineRow {item} />
 					{/each}
 				</div>
 			{/if}
 		</div>
-
 	</div>
 </div>
 
-<style>
-	/* Custom scrollbar styling */
-	:global(.scrollbar-thin) {
-		scrollbar-width: thin;
-	}
-
-	:global(.scrollbar-thumb-green-500\/50::-webkit-scrollbar) {
-		width: 8px;
-	}
-
-	:global(.scrollbar-thumb-green-500\/50::-webkit-scrollbar-track) {
-		background: rgba(15, 23, 42, 0.5);
-		border-radius: 4px;
-	}
-
-	:global(.scrollbar-thumb-green-500\/50::-webkit-scrollbar-thumb) {
-		background: rgba(34, 197, 94, 0.5);
-		border-radius: 4px;
-	}
-
-	:global(.scrollbar-thumb-green-500\/50::-webkit-scrollbar-thumb:hover) {
-		background: rgba(34, 197, 94, 0.7);
-	}
-
-	/* Animation delays */
-	:global(.delay-75) {
-		animation-delay: 75ms;
-	}
-
-	:global(.delay-150) {
-		animation-delay: 150ms;
-	}
-</style>
