@@ -21,29 +21,30 @@
 			<span class="header-label">Analyst:</span>
 			<span class="header-value">{$currentSelectedAnalyst?.full_name || 'Not Selected'}</span>
 		</div>
-	</div>
-
-	<!-- Statistics -->
-	<div class="stats-grid">
-		<div class="stat-card critical">
-			<div class="stat-label">Critical</div>
-			<div class="stat-value">{$incidentStats.critical || 0}</div>
-		</div>
-		<div class="stat-card warning">
-			<div class="stat-label">High Priority</div>
-			<div class="stat-value">{$incidentStats.high || 0}</div>
-		</div>
-		<div class="stat-card info">
-			<div class="stat-label">Total</div>
-			<div class="stat-value">{$incidentStats.total || 0}</div>
-		</div>
-		<div class="stat-card info">
-			<div class="stat-label">In Progress</div>
-			<div class="stat-value">{$incidentStats.inProgress || 0}</div>
-		</div>
-		<div class="stat-card success">
-			<div class="stat-label">Closed</div>
-			<div class="stat-value">{$incidentStats.closed || 0}</div>
+		<!-- Statistics -->
+		<div class="stats-info">
+			<div class="stat-card info">
+				<div class="stat-label">Total</div>
+				<div class="stat-value">{$incidentStats.total || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card critical">
+				<div class="stat-label">Critical</div>
+				<div class="stat-value">{$incidentStats.critical || 0}</div>
+			</div>
+			<div class="stat-card warning">
+				<div class="stat-label">High</div>
+				<div class="stat-value">{$incidentStats.high || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card info">
+				<div class="stat-label">In Progress</div>
+				<div class="stat-value">{$incidentStats.inProgress || 0}</div>
+			</div>
+			<div class="stat-card success">
+				<div class="stat-label">Closed</div>
+				<div class="stat-value">{$incidentStats.closed || 0}</div>
+			</div>
 		</div>
 	</div>
 
@@ -117,7 +118,8 @@
 	.dashboard {
 		min-height: 100vh;
 		padding: var(--spacing-lg);
-		max-width: 1400px;
+		max-width: 1000px;
+		min-width: 700px;
 		margin: 0 auto;
 	}
 
@@ -125,11 +127,11 @@
 		background: var(--color-bg-secondary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding: var(--spacing-xs) var(--spacing-sm);
 		margin-bottom: var(--spacing-lg);
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: left;
 	}
 
 	.header-info {
@@ -148,18 +150,21 @@
 		font-weight: var(--font-weight-medium);
 	}
 
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: var(--spacing-md);
-		margin-bottom: var(--spacing-lg);
+	.stats-info {
+		display: flex;
+		gap: var(--spacing-sm);
+		margin-left: auto;
+
 	}
 
 	.stat-card {
+		display: flex;
+		flex-direction: row;
 		background: var(--color-bg-secondary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding-left: var(--spacing-md);
+		padding-right: var(--spacing-md);
 	}
 
 	.stat-label {
@@ -167,12 +172,12 @@
 		color: var(--color-text-tertiary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-xs);
 	}
 
 	.stat-value {
-		font-size: var(--font-size-lg);
+		font-size: var(--font-size-xs);
 		font-weight: var(--font-weight-semibold);
+		padding-left: var(--spacing-sm);
 		color: var(--color-text-primary);
 	}
 
@@ -186,10 +191,11 @@
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
 		margin-bottom: var(--spacing-lg);
+
 	}
 
 	.section-header {
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding: var(--spacing-xs) var(--spacing-sm);
 		border-bottom: 1px solid var(--color-border-subtle);
 		font-size: var(--font-size-sm);
 		font-weight: var(--font-weight-semibold);
@@ -202,6 +208,12 @@
 		padding: var(--spacing-md);
 	}
 
+	.divider {
+		color: var(--color-text-tertiary);
+		font-size: var(--font-size-sm);
+		align-self: center;
+	}
+
 	.incident-list {
 		display: flex;
 		flex-direction: column;
@@ -212,9 +224,8 @@
 
 	.incident-item {
 		display: flex;
-		align-items: center;
 		gap: var(--spacing-md);
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: var(--spacing-xs) var(--spacing-xs);
 		background: var(--color-bg-tertiary);
 		border: 1px solid var(--color-border-subtle);
 		border-radius: var(--border-radius-sm);
@@ -229,12 +240,16 @@
 
 	.incident-number {
 		font-size: var(--font-size-xs);
+		align-content: center;
 		color: var(--color-text-dim);
 		font-variant-numeric: tabular-nums;
 		min-width: 1.5rem;
 	}
 
 	.incident-content {
+		display: flex;
+		align-content: center;
+		flex-direction: row;
 		flex: 1;
 		min-width: 0;
 	}
@@ -244,9 +259,10 @@
 		font-weight: var(--font-weight-medium);
 		color: var(--color-text-primary);
 		white-space: nowrap;
+		padding-right: var(--spacing-sm);
 		overflow: hidden;
 		text-overflow: ellipsis;
-		margin-bottom: var(--spacing-xs);
+		align-content: center;
 	}
 
 	.incident-meta {

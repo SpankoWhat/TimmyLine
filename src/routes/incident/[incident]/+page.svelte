@@ -29,6 +29,59 @@
 	});
 </script>
 
+<div class="incident-page">
+	<!-- Header -->
+	<div class="page-header">
+		<div class="header-title">Viewing Incident</div>
+		<div class="header-value">{$currentSelectedIncident?.title || 'Loading...'}</div>
+	</div>
+
+	<!-- Timeline Stats -->
+	<div class="stats-bar">
+		<div class="stats-title">Timeline Statistics</div>
+		<div class="stats-group">
+			<div class="stat-item">
+				<span class="stat-label">Total:</span>
+				<span class="stat-value">{$combinedTimeline.length}</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Events:</span>
+				<span class="stat-value">{$currentCachedTimelineEvents.length}</span>
+			</div>
+			<div class="stat-item">
+				<span class="stat-label">Actions:</span>
+				<span class="stat-value">{$currentCachedInvestigationActions.length}</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Timeline Events -->
+	<div class="timeline-section">
+		<div class="section-header">Timeline Events</div>
+		<div class="section-content">
+			{#if !$currentSelectedIncident?.uuid}
+				<div class="empty-state warning">
+					<span class="empty-icon">⚠</span>
+					<div class="empty-title">No incident selected</div>
+					<div class="empty-description">Select an active incident to view timeline events.</div>
+				</div>
+			{:else if $combinedTimeline.length === 0}
+				<div class="empty-state info">
+					<span class="empty-icon">📊</span>
+					<div class="empty-title">No timeline data found</div>
+					<div class="empty-description">No timeline events or investigation actions found for this incident.</div>
+				</div>
+			{:else}
+				<div class="timeline-list">
+					{#each $combinedTimeline as item}
+						<TimeLineRow {item} />
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</div>
+</div>
+
 <style>
 	.incident-page {
 		min-height: 100vh;
@@ -171,57 +224,3 @@
 		color: var(--color-accent-primary);
 	}
 </style>
-
-<div class="incident-page">
-	<!-- Header -->
-	<div class="page-header">
-		<div class="header-title">Viewing Incident</div>
-		<div class="header-value">{$currentSelectedIncident?.title || 'Loading...'}</div>
-	</div>
-
-	<!-- Timeline Stats -->
-	<div class="stats-bar">
-		<div class="stats-title">Timeline Statistics</div>
-		<div class="stats-group">
-			<div class="stat-item">
-				<span class="stat-label">Total:</span>
-				<span class="stat-value">{$combinedTimeline.length}</span>
-			</div>
-			<div class="stat-item">
-				<span class="stat-label">Events:</span>
-				<span class="stat-value">{$currentCachedTimelineEvents.length}</span>
-			</div>
-			<div class="stat-item">
-				<span class="stat-label">Actions:</span>
-				<span class="stat-value">{$currentCachedInvestigationActions.length}</span>
-			</div>
-		</div>
-	</div>
-
-	<!-- Timeline Events -->
-	<div class="timeline-section">
-		<div class="section-header">Timeline Events</div>
-		<div class="section-content">
-			{#if !$currentSelectedIncident?.uuid}
-				<div class="empty-state warning">
-					<span class="empty-icon">⚠</span>
-					<div class="empty-title">No incident selected</div>
-					<div class="empty-description">Select an active incident to view timeline events.</div>
-				</div>
-			{:else if $combinedTimeline.length === 0}
-				<div class="empty-state info">
-					<span class="empty-icon">📊</span>
-					<div class="empty-title">No timeline data found</div>
-					<div class="empty-description">No timeline events or investigation actions found for this incident.</div>
-				</div>
-			{:else}
-				<div class="timeline-list">
-					{#each $combinedTimeline as item}
-						<TimeLineRow {item} />
-					{/each}
-				</div>
-			{/if}
-		</div>
-	</div>
-</div>
-
