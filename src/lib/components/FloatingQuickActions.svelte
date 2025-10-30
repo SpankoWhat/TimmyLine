@@ -1,3 +1,4 @@
+/*Decommissioned*/
 <script lang="ts">
 	import { 
 		currentSelectedAnalyst,

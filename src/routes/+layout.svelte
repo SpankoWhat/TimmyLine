@@ -3,21 +3,27 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { 
 		initializeAllCaches,
-		setupIncidentWatcher,
 		currentSelectedAnalyst, 
 		analysts,
+		setupIncidentWatcher,
 		currentSelectedIncident,
-		currentCachedIncidents
+		currentCachedIncidents,
+		currentCachedTimelineEvents,
+		currentCachedInvestigationActions,
+		incidentStats,
+		combinedTimeline
 	} from '$lib/stores/cacheStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import { goto } from '$app/navigation';
-	import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
+	// import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
 	import GenericModal from '$lib/components/GenericModal.svelte';
+    import { page } from "$app/state";
 	
 	let { children } = $props();
 	let showCreateDropdown = $state(false);
 	let showRelateDropdown = $state(false);
 	let showDatabaseDropdown = $state(false);
+	let showOtherDropdown = $state(false);
 	let unsubscribe: (() => void) | undefined;
 	
 	onMount(async () => {
@@ -48,6 +54,8 @@
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
 	});
+
+	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));
 	
 	// Simplified modal opening function
 	async function openModal(entityType: string, mode: 'create' | 'edit' = 'create') {
@@ -123,21 +131,36 @@
 	
 	function toggleCreateDropdown() {
 		showCreateDropdown = !showCreateDropdown;
+		showRelateDropdown = false;
+		showDatabaseDropdown = false;
+		showOtherDropdown = false;
 	}
 	
 	function toggleRelateDropdown() {
 		showRelateDropdown = !showRelateDropdown;
+		showCreateDropdown = false;
+		showDatabaseDropdown = false;
+		showOtherDropdown = false;
 	}
 	
 	function toggleDatabaseDropdown() {
 		showDatabaseDropdown = !showDatabaseDropdown;
+		showCreateDropdown = false;
+		showRelateDropdown = false;
+		showOtherDropdown = false;
+	}
+
+	function toggleOtherDropdown() {
+		showOtherDropdown = !showOtherDropdown;
+		showCreateDropdown = false;
+		showRelateDropdown = false;
+		showDatabaseDropdown = false;
 	}
 	
 	function handleImport() {}
 	function handleExport() {}
 	function toggleTheme() {}
 	function showHelp() {}
-	function toggleTerminal() {}
 	
 	// TODO: Implement relation modals (these need custom handling)
 	function openRelationModal(relationType: string) {
@@ -148,21 +171,223 @@
 
 </script>
 
+<!-- Generic Modal -->
+<GenericModal />
+
+<!-- DECOMISSIONED - Floating Quick Actions Menu -->
+<!-- <FloatingQuickActions /> -->
+
+{@render children?.()}
+
+<div class="header">
+	<div class="header-info">
+		<span class="header-label">Analyst:</span>
+		<span class="header-value">{$currentSelectedAnalyst?.full_name || 'Not Selected'}</span>
+	</div>
+	<div class="header-info">
+		<span class="header-label">Incident:</span>
+		<span class="header-value">{$currentSelectedIncident?.title || 'Not Selected'}</span>
+	</div>
+
+	{#if !isIncidentPage}
+		<!-- Landing Page Statistics -->
+		<div class="stats-info">
+			<div class="stat-card info">
+				<div class="stat-label">Total</div>
+				<div class="stat-value">{$incidentStats.total || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card critical">
+				<div class="stat-label">Critical</div>
+				<div class="stat-value">{$incidentStats.critical || 0}</div>
+			</div>
+			<div class="stat-card warning">
+				<div class="stat-label">High</div>
+				<div class="stat-value">{$incidentStats.high || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card info">
+				<div class="stat-label">In Progress</div>
+				<div class="stat-value">{$incidentStats.inProgress || 0}</div>
+			</div>
+			<div class="stat-card success">
+				<div class="stat-label">Closed</div>
+				<div class="stat-value">{$incidentStats.closed || 0}</div>
+			</div>
+		</div>
+	{:else}
+		<!-- Show if page is incident -->
+		<div class="stats-info">
+			<div class="stat-card success">
+				<span class="stat-label">Total</span>
+				<span class="stat-value">{$combinedTimeline.length || 0}</span>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card info">
+				<span class="stat-label">Events</span>
+				<span class="stat-value">{$currentCachedTimelineEvents.length || 0}</span>
+			</div>
+			<div class="stat-card info">
+				<span class="stat-label">Actions</span>
+				<span class="stat-value">{$currentCachedInvestigationActions.length || 0}</span>
+			</div>
+		</div>
+	{/if}
+</div>
+
+
+<!-- Action Dock -->
+<div class="action-dock">
+	<!-- Left: Navigation -->
+	<div class="dock-section">
+		<button class="action-btn home" onclick={() => goto("/")} title="Home">Home</button>
+		<!-- <button class="icon-btn" onclick={toggleTerminal} title="Terminal">🖲️</button> -->
+	</div>
+
+	<!-- Center: Main Actions -->
+	<div class="dock-section">
+		<!-- Create Entities -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn create" onclick={toggleCreateDropdown}>Create</button>
+			{#if showCreateDropdown}
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openModal("timeline_event")}>Timeline Event</button>
+					<button class="dropdown-item" onclick={() => openModal("entity")}>Entity</button>
+					<button class="dropdown-item" onclick={() => openModal("investigation_action")}>Investigation Action</button>
+					<button class="dropdown-item" onclick={() => openModal("incident")}>Incident</button>
+					<button class="dropdown-item" onclick={() => openModal("annotation")}>Annotation</button>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Relate Entities -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn relate" onclick={toggleRelateDropdown}>Relate</button>
+			{#if showRelateDropdown}
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openRelationModal("ActionEventsRelation")}>Action → Events</button>
+					<button class="dropdown-item" onclick={() => openRelationModal("ActionEntitiesRelation")}>Action → Entities</button>
+					<button class="dropdown-item" onclick={() => openRelationModal("EventEntitiesRelation")}>Event → Entities</button>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Configure Database -->
+		<div class="dropdown-wrapper">
+			<button class="action-btn config" onclick={toggleDatabaseDropdown}>Configure</button>
+			{#if showDatabaseDropdown}
+				<div class="dropdown-menu">
+					<button class="dropdown-item" onclick={() => openModal("action_type")}>Action Type</button>
+					<button class="dropdown-item" onclick={() => openModal("entity_type")}>Entity Type</button>
+					<button class="dropdown-item" onclick={() => openModal("event_type")}>Event Type</button>
+					<button class="dropdown-item" onclick={() => openModal("annotation_type")}>Annotation Type</button>
+					<button class="dropdown-item" onclick={() => openModal("analyst")}>Analyst</button>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<!-- Right: Utilities -->
+	<div class="dock-section">
+		<button class="action-btn other" onclick={toggleOtherDropdown} title="Import">Other</button>
+		{#if showOtherDropdown}
+			<div class="dropdown-menu other-menu">
+				<button class="dropdown-item" onclick={handleImport}>Import Data</button>
+				<button class="dropdown-item" onclick={handleExport}>Export Data</button>
+				<button class="dropdown-item" onclick={toggleTheme}>Toggle Theme</button>
+				<button class="dropdown-item" onclick={showHelp}>Help</button>
+			</div>
+		{/if}
+	</div>
+</div>
+
 <style>
 	.action-dock {
 		position: fixed;
 		bottom: 0;
 		left: 0;
 		width: 100%;
+		height: 2rem;
 		background: var(--color-bg-secondary);
 		border-top: 1px solid var(--color-border-medium);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: var(--spacing-xs) var(--spacing-md);
 		z-index: 100;
-		box-shadow: var(--shadow-md);
 	}
+
+	.header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		display: flex;
+		justify-content: left;
+	}
+
+	.header-info {
+		display: flex;
+		padding-left: var(--spacing-xs);
+		padding-right: var(--spacing-xs);
+		align-items: center;
+		gap: var(--spacing-xs);
+		font-size: var(--font-size-sm);
+	}
+
+	.header-label {
+		color: var(--color-text-tertiary);
+	}
+
+	.header-value {
+		color: var(--color-accent-primary);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.stats-info {
+		display: flex;
+		gap: var(--spacing-sm);
+		margin-left: auto;
+	}
+
+	.stat-card {
+		display: flex;
+		flex-direction: row;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding-left: var(--spacing-md);
+		padding-right: var(--spacing-md);
+	}
+
+	.stat-label {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.stat-value {
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-semibold);
+		padding-left: var(--spacing-sm);
+		color: var(--color-text-primary);
+	}
+
+	.stat-card.critical .stat-value { color: var(--color-accent-error); }
+	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
+	.stat-card.success .stat-value { color: var(--color-accent-success); }
+	.stat-card.info .stat-value { color: var(--color-accent-primary); }
+
+	.divider {
+		color: var(--color-text-tertiary);
+		font-size: var(--font-size-sm);
+		align-self: center;
+	}
+
 
 	.dock-section {
 		display: flex;
@@ -170,36 +395,12 @@
 		align-items: center;
 	}
 
-	.icon-btn {
-		width: 2rem;
-		height: 2rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-bg-tertiary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-sm);
-		cursor: pointer;
-		transition: all var(--transition-fast);
-		font-size: var(--font-size-md);
-	}
-
-	.icon-btn:hover {
-		background: var(--color-bg-hover);
-		border-color: var(--color-accent-primary);
-		transform: scale(1.05);
-	}
-
-	.icon-btn:active {
-		transform: scale(0.95);
-	}
-
 	.dropdown-wrapper {
 		position: relative;
 	}
 
 	.action-btn {
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: var(--spacing-xs) var(--spacing-md);
 		background: var(--color-bg-tertiary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-sm);
@@ -227,6 +428,11 @@
 	.action-btn.create {
 		border-color: var(--color-accent-success);
 		color: var(--color-accent-success);
+	}
+
+	.action-btn.home {
+		border-color: var(--color-border-subtle);
+		color: var(--color-accennt-primary);
 	}
 
 	.action-btn.create:hover {
@@ -267,6 +473,11 @@
 		overflow: hidden;
 		box-shadow: var(--shadow-md);
 	}
+	.dropdown-menu.other-menu {
+		right: 0;
+		left: auto;
+		transform: none;
+	}
 
 	.dropdown-item {
 		display: block;
@@ -290,85 +501,4 @@
 		background: var(--color-bg-hover);
 		color: var(--color-accent-primary);
 	}
-
-	.btn-icon {
-		font-size: var(--font-size-sm);
-	}
 </style>
-
-<!-- Generic Modal -->
-<GenericModal />
-
-<!-- Floating Quick Actions Menu -->
-<FloatingQuickActions />
-
-{@render children?.()}
-
-<!-- Action Dock -->
-<div class="action-dock">
-	<!-- Left: Navigation -->
-	<div class="dock-section">
-		<button class="icon-btn" onclick={() => goto("/")} title="Home">🏠</button>
-		<button class="icon-btn" onclick={toggleTerminal} title="Terminal">🖲️</button>
-	</div>
-
-	<!-- Center: Main Actions -->
-	<div class="dock-section">
-		<!-- Create Entities -->
-		<div class="dropdown-wrapper">
-			<button class="action-btn create" onclick={toggleCreateDropdown}>
-				<span class="btn-icon">➕</span>
-				Create
-			</button>
-			{#if showCreateDropdown}
-				<div class="dropdown-menu">
-					<button class="dropdown-item" onclick={() => openModal("timeline_event")}>Timeline Event</button>
-					<button class="dropdown-item" onclick={() => openModal("entity")}>Entity</button>
-					<button class="dropdown-item" onclick={() => openModal("investigation_action")}>Investigation Action</button>
-					<button class="dropdown-item" onclick={() => openModal("incident")}>Incident</button>
-					<button class="dropdown-item" onclick={() => openModal("annotation")}>Annotation</button>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Relate Entities -->
-		<div class="dropdown-wrapper">
-			<button class="action-btn relate" onclick={toggleRelateDropdown}>
-				<span class="btn-icon">🔗</span>
-				Relate
-			</button>
-			{#if showRelateDropdown}
-				<div class="dropdown-menu">
-					<button class="dropdown-item" onclick={() => openRelationModal("ActionEventsRelation")}>Action → Events</button>
-					<button class="dropdown-item" onclick={() => openRelationModal("ActionEntitiesRelation")}>Action → Entities</button>
-					<button class="dropdown-item" onclick={() => openRelationModal("EventEntitiesRelation")}>Event → Entities</button>
-				</div>
-			{/if}
-		</div>
-
-		<!-- Configure Database -->
-		<div class="dropdown-wrapper">
-			<button class="action-btn config" onclick={toggleDatabaseDropdown}>
-				<span class="btn-icon">⚙️</span>
-				Configure
-			</button>
-			{#if showDatabaseDropdown}
-				<div class="dropdown-menu">
-					<button class="dropdown-item" onclick={() => openModal("action_type")}>Action Type</button>
-					<button class="dropdown-item" onclick={() => openModal("entity_type")}>Entity Type</button>
-					<button class="dropdown-item" onclick={() => openModal("event_type")}>Event Type</button>
-					<button class="dropdown-item" onclick={() => openModal("annotation_type")}>Annotation Type</button>
-					<button class="dropdown-item" onclick={() => openModal("analyst")}>Analyst</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-
-	<!-- Right: Utilities -->
-	<div class="dock-section">
-		<button class="icon-btn" onclick={handleImport} title="Import">⬇️</button>
-		<button class="icon-btn" onclick={handleExport} title="Export">⬆️</button>
-		<button class="icon-btn" onclick={toggleTheme} title="Theme">🎞️</button>
-		<button class="icon-btn" onclick={showHelp} title="Help">🤔</button>
-	</div>
-</div>
