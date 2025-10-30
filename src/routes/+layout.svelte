@@ -3,16 +3,21 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { 
 		initializeAllCaches,
-		setupIncidentWatcher,
 		currentSelectedAnalyst, 
 		analysts,
+		setupIncidentWatcher,
 		currentSelectedIncident,
-		currentCachedIncidents
+		currentCachedIncidents,
+		currentCachedTimelineEvents,
+		currentCachedInvestigationActions,
+		incidentStats,
+		combinedTimeline
 	} from '$lib/stores/cacheStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import { goto } from '$app/navigation';
-	import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
+	// import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
 	import GenericModal from '$lib/components/GenericModal.svelte';
+    import { page } from "$app/state";
 	
 	let { children } = $props();
 	let showCreateDropdown = $state(false);
@@ -49,6 +54,8 @@
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
 	});
+
+	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));
 	
 	// Simplified modal opening function
 	async function openModal(entityType: string, mode: 'create' | 'edit' = 'create') {
@@ -172,6 +179,63 @@
 
 {@render children?.()}
 
+<div class="header">
+	<div class="header-info">
+		<span class="header-label">Analyst:</span>
+		<span class="header-value">{$currentSelectedAnalyst?.full_name || 'Not Selected'}</span>
+	</div>
+	<div class="header-info">
+		<span class="header-label">Incident:</span>
+		<span class="header-value">{$currentSelectedIncident?.title || 'Not Selected'}</span>
+	</div>
+
+	{#if !isIncidentPage}
+		<!-- Landing Page Statistics -->
+		<div class="stats-info">
+			<div class="stat-card info">
+				<div class="stat-label">Total</div>
+				<div class="stat-value">{$incidentStats.total || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card critical">
+				<div class="stat-label">Critical</div>
+				<div class="stat-value">{$incidentStats.critical || 0}</div>
+			</div>
+			<div class="stat-card warning">
+				<div class="stat-label">High</div>
+				<div class="stat-value">{$incidentStats.high || 0}</div>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card info">
+				<div class="stat-label">In Progress</div>
+				<div class="stat-value">{$incidentStats.inProgress || 0}</div>
+			</div>
+			<div class="stat-card success">
+				<div class="stat-label">Closed</div>
+				<div class="stat-value">{$incidentStats.closed || 0}</div>
+			</div>
+		</div>
+	{:else}
+		<!-- Show if page is incident -->
+		<div class="stats-info">
+			<div class="stat-card success">
+				<span class="stat-label">Total</span>
+				<span class="stat-value">{$combinedTimeline.length || 0}</span>
+			</div>
+			<div class="divider"> | </div>
+			<div class="stat-card info">
+				<span class="stat-label">Events</span>
+				<span class="stat-value">{$currentCachedTimelineEvents.length || 0}</span>
+			</div>
+			<div class="stat-card info">
+				<span class="stat-label">Actions</span>
+				<span class="stat-value">{$currentCachedInvestigationActions.length || 0}</span>
+			</div>
+		</div>
+	{/if}
+</div>
+
+
 <!-- Action Dock -->
 <div class="action-dock">
 	<!-- Left: Navigation -->
@@ -252,6 +316,78 @@
 		padding: var(--spacing-xs) var(--spacing-md);
 		z-index: 100;
 	}
+
+	.header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		display: flex;
+		justify-content: left;
+	}
+
+	.header-info {
+		display: flex;
+		padding-left: var(--spacing-xs);
+		padding-right: var(--spacing-xs);
+		align-items: center;
+		gap: var(--spacing-xs);
+		font-size: var(--font-size-sm);
+	}
+
+	.header-label {
+		color: var(--color-text-tertiary);
+	}
+
+	.header-value {
+		color: var(--color-accent-primary);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.stats-info {
+		display: flex;
+		gap: var(--spacing-sm);
+		margin-left: auto;
+	}
+
+	.stat-card {
+		display: flex;
+		flex-direction: row;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border-medium);
+		border-radius: var(--border-radius-md);
+		padding-left: var(--spacing-md);
+		padding-right: var(--spacing-md);
+	}
+
+	.stat-label {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.stat-value {
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-semibold);
+		padding-left: var(--spacing-sm);
+		color: var(--color-text-primary);
+	}
+
+	.stat-card.critical .stat-value { color: var(--color-accent-error); }
+	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
+	.stat-card.success .stat-value { color: var(--color-accent-success); }
+	.stat-card.info .stat-value { color: var(--color-accent-primary); }
+
+	.divider {
+		color: var(--color-text-tertiary);
+		font-size: var(--font-size-sm);
+		align-self: center;
+	}
+
 
 	.dock-section {
 		display: flex;
@@ -364,9 +500,5 @@
 	.dropdown-item:hover {
 		background: var(--color-bg-hover);
 		color: var(--color-accent-primary);
-	}
-
-	.btn-icon {
-		font-size: var(--font-size-sm);
 	}
 </style>
