@@ -3,6 +3,7 @@ import type { NewTimelineEvent } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
@@ -30,6 +31,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		.insert(schema.timeline_events)
 		.values(timelineEventData)
 		.returning();
+
+		const io = getSocketIO();
+		io.to(`incident:${body.incident_id}`).emit('core-entry-modified');
+
 	} catch (err) {
         throw error(500, `Database insertion error: ${(err as Error).message}`);
 	}

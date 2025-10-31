@@ -3,21 +3,24 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { 
 		initializeAllCaches,
-		currentSelectedAnalyst, 
+		updateIncidentCache,
 		analysts,
+		incidentStats,
+		combinedTimeline,
 		setupIncidentWatcher,
+		currentSelectedAnalyst,
 		currentSelectedIncident,
 		currentCachedIncidents,
 		currentCachedTimelineEvents,
 		currentCachedInvestigationActions,
-		incidentStats,
-		combinedTimeline
 	} from '$lib/stores/cacheStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import { goto } from '$app/navigation';
 	// import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
 	import GenericModal from '$lib/components/GenericModal.svelte';
     import { page } from "$app/state";
+	import { initializeSocket, getSocket, joinIncident, leaveIncident } from '$lib/stores/socketStore';
+	import { type Socket } from 'socket.io-client';
 	
 	let { children } = $props();
 	let showCreateDropdown = $state(false);
@@ -25,6 +28,7 @@
 	let showDatabaseDropdown = $state(false);
 	let showOtherDropdown = $state(false);
 	let unsubscribe: (() => void) | undefined;
+	let socket: Socket | null = null;
 	
 	onMount(async () => {
 		// Initialize all caches first
@@ -48,11 +52,31 @@
 				currentSelectedIncident.set(allIncidents[0]);
 			}
 		}
+
+		// Initialize socket connection
+        socket = initializeSocket();
+        
+		// Set up socket event listeners
+		// This is very crude - ideally we would have more granular events
+		socket?.on('core-entry-modified', async () => {
+			console.log('An update to core tables is available');
+			if (!$currentSelectedIncident) {
+				console.warn('No currentSelectedIncident set, skipping updateIncidentCache');
+				return;
+			}
+			await updateIncidentCache($currentSelectedIncident);
+		});
 	});
 	
 	onDestroy(() => {
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
+
+		// Leave incident room before disconnecting
+        if (socket && $currentSelectedIncident) {
+            leaveIncident($currentSelectedIncident.uuid);
+        }
+        socket?.disconnect();
 	});
 
 	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));
@@ -168,6 +192,14 @@
 		// These will need custom modal implementations since they're more complex
 		showRelateDropdown = false;
 	}
+
+	   // React to incident changes
+    $effect(() => {
+        if (socket && $currentSelectedIncident) {
+            // Leave previous room and join new one
+            joinIncident($currentSelectedIncident.uuid);
+        }
+    });
 
 </script>
 

@@ -3,6 +3,7 @@ import type { NewAnalyst } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
@@ -23,6 +24,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		.insert(schema.analysts)
 		.values(analystData)
 		.returning();
+
+		const io = getSocketIO();
+		io.to(`incident:all`).emit('core-entry-modified')
+
 	} catch (err) {
 		if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
             throw error(409, 'An analyst with this username already exists');
