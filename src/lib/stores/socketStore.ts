@@ -35,9 +35,11 @@ export function getSocket(): Socket {
 export function joinIncident(incidentUuid: string) {
     const socket = getSocket();
     socket.emit('join-incident', incidentUuid);
+    console.log(`Emitted join-incident for ${incidentUuid}`);
 }
 
 export function leaveIncident(incidentUuid: string) {
     const socket = getSocket();
     socket.emit('leave-incident', incidentUuid);
+    console.log(`Emitted leave-incident for ${incidentUuid}`);
 }

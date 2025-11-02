@@ -1,14 +1,13 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import {currentSelectedIncident, currentCachedIncidents, actionTypes} from '$lib/stores/cacheStore';
+	import {currentCachedIncidents, actionTypes} from '$lib/stores/cacheStore';
 	import type { Incident } from '$lib/server/database';
 	import { goto } from '$app/navigation';
 
 	let { data }: PageProps = $props();
 
 	function userSelectedIncident(incident: Incident) {
-		$currentSelectedIncident = incident;
-		console.log("Main - User selected incident:", incident);
+		console.log("Home - User selected incident:", incident.title);
 		goto(`/incident/${incident.uuid}`);
 	}
 

@@ -1,5 +1,4 @@
 import { Server } from 'socket.io';
-import type { Server as HTTPServer } from 'http';
 
 // Use globalThis to persist across HMR reloads
 const globalForSocket = globalThis as unknown as {
@@ -32,6 +31,7 @@ export function initializeSocketIO(server: import("http").Server | import("http2
         // Leave incident room
         socket.on('leave-incident', (incidentUuid: string) => {
             socket.leave(`incident:${incidentUuid}`);
+            console.log(`Client ${socket.id} left incident:${incidentUuid}`);
         });
         
         socket.on('disconnect', () => {

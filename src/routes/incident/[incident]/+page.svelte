@@ -1,30 +1,67 @@
 <script lang="ts">
+	// Svelte Imports
+	import { onMount, onDestroy} from 'svelte';
+	import type { PageProps } from './$types';
+	
+	// Store Imports
 	import {
-		currentCachedIncidents,
 		currentSelectedIncident,
-		combinedTimeline
+		combinedTimeline,
+		updateIncidentCache
 	} from "$lib/stores/cacheStore.js";
-    import type { PageProps } from './$types';
     import type { Incident } from '$lib/server/database';
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
-	import { onMount } from 'svelte';
+
+	// Socket Stuff
+	import { initializeSocket, getSocket, joinIncident, leaveIncident } from '$lib/stores/socketStore';
+	import { type Socket } from 'socket.io-client';
     	
     let { data }: PageProps = $props();
+	let socket: Socket | null = null;
     
-	// State: Find and set the current incident on mount
 	
 	onMount(() => {
-		// First try to use the incident loaded from the server
-		if (data.incident) {
-			currentSelectedIncident.set(data.incident as Incident);
-		} else {
-			// Fallback: try to find in cached incidents (for navigation from within app)
-			let incident = $currentCachedIncidents.find((inc) => inc.uuid === data.incidentuuid) as Incident;
-			if (incident) {
-				currentSelectedIncident.set(incident);
-			}
+		let incidentObj = data.incident as Incident;
+		if (!incidentObj) {
+			console.warn('No incident data found from server for incident uuid:', incidentObj);
+			return;
 		}
+		
+		currentSelectedIncident.set(incidentObj);
+		
+		// Initialize Socket Connection incase not already done and join
+		initializeSocketListeners();
+
+		if (socket && $currentSelectedIncident?.uuid) {
+			joinIncident($currentSelectedIncident.uuid);
+		}
+		
 	});
+
+	onDestroy(() => {
+		// Leave incident room before disconnecting
+        if (socket && $currentSelectedIncident) {
+			leaveIncident($currentSelectedIncident.uuid);
+        }
+		$currentSelectedIncident = null;
+        socket?.disconnect();
+	});
+
+	function initializeSocketListeners() {
+		socket = initializeSocket();
+
+		// Set up socket event listeners
+		// This is very crude - ideally we would have more granular events core-entry-modified
+		socket?.on('core-entry-modified', async () => {
+			console.log('An update to core tables is available');
+			if (!$currentSelectedIncident) {
+				console.warn('No currentSelectedIncident set, skipping updateIncidentCache');
+				return;
+			}
+			await updateIncidentCache($currentSelectedIncident);
+		});
+	}
+
 </script>
 
 <div class="incident-page">

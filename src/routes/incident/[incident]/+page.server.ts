@@ -12,7 +12,6 @@ export const load: PageServerLoad = async ({ params }) => {
 		.limit(1);
 	
 	return {
-		incidentuuid: params.incident,
 		incident: incident[0] || null
 	};
 };
