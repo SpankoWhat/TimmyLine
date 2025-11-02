@@ -1,24 +1,26 @@
 <script lang="ts">
+	// Core stuff
 	import "../app.css";
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from "$app/state";
+	
+	// Stores
 	import { 
 		initializeAllCaches,
-		currentSelectedAnalyst, 
 		analysts,
+		incidentStats,
+		combinedTimeline,
 		setupIncidentWatcher,
+		currentSelectedAnalyst,
 		currentSelectedIncident,
-		currentCachedIncidents,
 		currentCachedTimelineEvents,
 		currentCachedInvestigationActions,
-		incidentStats,
-		combinedTimeline
 	} from '$lib/stores/cacheStore';
 	import { modalStore } from '$lib/stores/modalStore';
-	import { goto } from '$app/navigation';
-	// import FloatingQuickActions from '$lib/components/FloatingQuickActions.svelte';
 	import GenericModal from '$lib/components/GenericModal.svelte';
-    import { page } from "$app/state";
 	
+	// Local Props and State
 	let { children } = $props();
 	let showCreateDropdown = $state(false);
 	let showRelateDropdown = $state(false);
@@ -33,6 +35,7 @@
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();
 
+		// Env setup: select default analyst and incident if none selected
 		if ($currentSelectedAnalyst === null) {
 			const allAnalysts = $analysts;
 			if (allAnalysts.length > 0) {
@@ -41,13 +44,6 @@
 			}
 		}
 
-		if ($currentSelectedIncident === null) {
-			const allIncidents = $currentCachedIncidents;
-			if (allIncidents.length > 0) {
-				// Set the first incident as the current selected incident
-				currentSelectedIncident.set(allIncidents[0]);
-			}
-		}
 	});
 	
 	onDestroy(() => {
@@ -119,14 +115,16 @@
 					throw new Error(errorData.error || 'Failed to save');
 				}
 				
-				// Refresh caches
-				await initializeAllCaches();
+				// Refresh caches - removed to opt in for the event listener socket approach
+				// await initializeAllCaches();
 			}
 		});
 		
 		// Close dropdowns
 		showCreateDropdown = false;
+		showRelateDropdown = false;
 		showDatabaseDropdown = false;
+		showOtherDropdown = false;
 	}
 	
 	function toggleCreateDropdown() {
