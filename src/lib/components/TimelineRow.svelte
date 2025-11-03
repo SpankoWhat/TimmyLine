@@ -1,36 +1,64 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
+    import TimelineRow from './TimelineRow.svelte';
     
-    export let item: TimelineItem;
-    export let childLeftMarginOffset = "0rem";
+    let { 
+        item, 
+        childLeftMarginOffset = "0rem", 
+        index = 0 
+    }: { 
+        item: TimelineItem; 
+        childLeftMarginOffset?: string; 
+        index?: number;
+    } = $props();
 
-    let relations: TimelineItem[] = [];
-    let showDetails = false;
+    let relations = $state<TimelineItem[]>([]);
+    let showDetails = $state(false);
+    let showExpandedDetails = $state(false);
+    let isVisible = $state(false);
+
+    $effect(() => {
+        // Small delay to trigger animation after mount
+        const timeout = setTimeout(() => {
+            isVisible = true;
+        }, 10);
+        
+        return () => clearTimeout(timeout);
+    });
 
     // Combined display field configuration for both events and actions
+    // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
     const displayFieldsConfig = {
         event: [
-            { key: "event_type", label: "", class: "event-time" },
-            { key: "source", label: "Source: ", class: "event-source" },
+            { key: "event_type", label: "", class: "event-time", tag: true },
+            { key: "source", label: "Source", class: "event-source", tag: true },
             {
                 key: "source_reliability",
-                label: "Grade: ",
+                label: "Grade",
                 class: "event-type",
+                tag: true,
             },
-            { key: "severity", label: "Sev: ", class: "event-description" },
+            { key: "severity", label: "Sev", class: "event-description", tag: true },
         ],
         action: [
-            { key: "action_type", label: "", class: "action-type" },
-            { key: "result", label: "Result: ", class: "action-result" },
-            { key: "outcome", label: "Outcome: ", class: "action-outcome" },
+            { key: "action_type", label: "", class: "action-type", tag: true },
+            { key: "result", label: "Result", class: "action-result", tag: true },
+            { key: "outcome", label: "Outcome", class: "action-outcome", tag: true },
             {
                 key: "tool_used",
-                label: "Tool Used: ",
+                label: "Tool",
                 class: "action-toolUsed",
+                tag: true,
             },
-            { key: "notes", label: "Notes: ", class: "action-notes" },
-            { key: "tags", label: "Tags: ", class: "action-tags" },
+            { key: "notes", label: "Notes", class: "action-notes", tag: false },
+            { key: "tags", label: "Tags", class: "action-tags", tag: false },
         ],
+    };
+
+    // Fields to show in expanded details view
+    const detailFieldsConfig = {
+        event: ["description", "notes", "tags"],
+        action: ["notes", "tags", "analyst_notes"],
     };
 
     // Function to format epoch timestamp to human-readable time
@@ -61,15 +89,24 @@
         // TODO: Implement fetching related entities
         showDetails = !showDetails;
     }
+
+    function toggleExpandedDetails() {
+        showExpandedDetails = !showExpandedDetails;
+    }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="timeline-item {item.type}" style="margin-left: {childLeftMarginOffset};">
+<div 
+    class="timeline-item {item.type}" 
+    class:visible={isVisible}
+    style="margin-left: {childLeftMarginOffset}; animation-delay: {index * 50}ms;" 
+    onclick={toggleExpandedDetails}
+>
     <!-- Type Indicator Badge -->
     <div class="type-indicator {item.type}">
         <span class="type-icon">
-            {item.type === 'event' ? '●' : '▸'}
+            {item.type === 'event' ? '🔸' : '🔹'}
         </span>
         <span class="type-label">{item.displayType}</span>
     </div>
@@ -83,17 +120,27 @@
     <!-- Data Fields Container -->
     <div class="data-fields">
         {#each displayFieldsConfig[item.type] as field}
-            <span class="datafield">
-                {#if field.label}
-                    <span class="field-label">{field.label}</span>
-                {/if}
-                <span class="field-value">{(item.data as any)[field.key] || '—'}</span>
-            </span>
+            {#if field.tag}
+                <!-- Display as tag -->
+                <span class="datafield tag">
+                    {#if field.label}
+                        <span class="field-label">{field.label}</span>
+                    {/if}
+                    <span class="field-value">{(item.data as any)[field.key] || '—'}</span>
+                </span>
+            <!-- {:else}
+                {#if (item.data as any)[field.key]}
+                    <span class="datafield inline">
+                        <span class="field-label">{field.label}:</span>
+                        <span class="field-value-inline">{((item.data as any)[field.key] || '').substring(0, 50)}{((item.data as any)[field.key] || '').length > 50 ? '...' : ''}</span>
+                    </span>
+                {/if}-->
+            {/if} 
         {/each}
     </div>
 
     <!-- Action Buttons -->
-    <div class="actions">
+    <div class="actions" onclick={(e) => e.stopPropagation()}>
         <button
             class="action-btn details"
             title="Show Related Entities"
@@ -109,12 +156,33 @@
     </div>
 </div>
 
+<!-- Expanded Details View -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+{#if showExpandedDetails}
+    <div class="expanded-details" onclick={(e) => e.stopPropagation()}>
+        <div class="details-content">
+            <h4 class="details-title">Full Details</h4>
+            <div class="details-grid">
+                {#each Object.entries(item.data) as [key, value]}
+                    {#if value}
+                        <div class="detail-item">
+                            <span class="detail-label">{key.replace(/_/g, ' ')}:</span>
+                            <span class="detail-value">{value}</span>
+                        </div>
+                    {/if}
+                {/each}
+            </div>
+        </div>
+    </div>
+{/if}
+
 <!-- Related Entities (Child Items) -->
 {#if showDetails}
     <div class="related-entities">
-        {#each relations as child}
-            <!-- Recursive render: this component is TimelineMainRow itself -->
-            <svelte:self item={child} childLeftMarginOffset={"1.5rem"} />
+        {#each relations as child, childIndex}
+            <!-- Recursive render using self-import -->
+            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"} index={childIndex} />
         {/each}
     </div>
 {/if}
@@ -125,12 +193,32 @@
         flex-direction: row;
         align-items: center;
         gap: var(--spacing-sm);
-        padding: var(--spacing-sm) var(--spacing-md);
+        padding: var(--spacing-xs) var(--spacing-sm);
         border-left: 2px solid var(--color-border-strong);
         background: var(--color-bg-secondary);
         border-radius: var(--border-radius-sm);
         margin-bottom: var(--spacing-xs);
         transition: all var(--transition-fast);
+        cursor: pointer;
+        opacity: 0;
+        transform: translateX(-20px);
+        animation: fadeInSlide 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeInSlide {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .timeline-item.visible {
+        opacity: 1;
+        transform: translateX(0);
     }
 
     .timeline-item.event {
@@ -151,7 +239,7 @@
         display: flex;
         align-items: center;
         gap: var(--spacing-xs);
-        padding: var(--spacing-xs) var(--spacing-sm);
+        padding: 2px var(--spacing-xs);
         border-radius: var(--border-radius-sm);
         font-size: var(--font-size-xs);
         font-weight: var(--font-weight-semibold);
@@ -205,10 +293,11 @@
         align-items: center;
     }
 
-    .datafield {
+    /* Tag-style fields */
+    .datafield.tag {
         display: inline-flex;
         align-items: center;
-        padding: var(--spacing-xs) var(--spacing-sm);
+        padding: 2px var(--spacing-xs);
         background: var(--color-bg-tertiary);
         border-left: 2px solid var(--color-border-medium);
         border-radius: var(--border-radius-sm);
@@ -216,16 +305,40 @@
         max-width: 200px;
     }
 
-    .field-label {
+    .datafield.tag .field-label {
         color: var(--color-text-tertiary);
         margin-right: var(--spacing-xs);
+        font-size: 10px;
     }
 
-    .field-value {
+    .datafield.tag .field-value {
         color: var(--color-text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    /* Inline text fields */
+    .datafield.inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--font-size-xs);
+        color: var(--color-text-secondary);
+    }
+
+    .datafield.inline .field-label {
+        color: var(--color-text-tertiary);
+        font-weight: var(--font-weight-medium);
+    }
+
+    .field-value-inline {
+        color: var(--color-text-secondary);
+        font-style: italic;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* Actions */
@@ -240,7 +353,7 @@
         background: var(--color-bg-tertiary);
         border: 1px solid var(--color-border-medium);
         border-radius: var(--border-radius-sm);
-        padding: var(--spacing-xs) var(--spacing-sm);
+        padding: 2px var(--spacing-xs);
         cursor: pointer;
         transition: all var(--transition-fast);
         font-size: var(--font-size-sm);
@@ -258,6 +371,74 @@
 
     .btn-icon {
         display: block;
+    }
+
+    /* Expanded Details View */
+    .expanded-details {
+        margin-top: var(--spacing-xs);
+        margin-bottom: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--color-bg-tertiary);
+        border-left: 3px solid var(--color-accent-secondary);
+        border-radius: var(--border-radius-sm);
+        animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .details-content {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .details-title {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-accent-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--color-border-subtle);
+        padding-bottom: var(--spacing-xs);
+    }
+
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-sm);
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: var(--spacing-xs);
+        background: var(--color-bg-secondary);
+        border-radius: var(--border-radius-sm);
+    }
+
+    .detail-label {
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-tertiary);
+        text-transform: capitalize;
+    }
+
+    .detail-value {
+        font-size: var(--font-size-sm);
+        color: var(--color-text-primary);
+        word-wrap: break-word;
+        white-space: pre-wrap;
     }
 
     /* Related Entities */

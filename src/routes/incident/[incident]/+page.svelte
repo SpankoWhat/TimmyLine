@@ -13,7 +13,7 @@
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
 
 	// Socket Stuff
-	import { initializeSocket, getSocket, joinIncident, leaveIncident } from '$lib/stores/socketStore';
+	import { initializeSocket, joinIncident, leaveIncident } from '$lib/stores/socketStore';
 	import { type Socket } from 'socket.io-client';
     	
     let { data }: PageProps = $props();
@@ -83,8 +83,8 @@
 				</div>
 			{:else}
 				<div class="timeline-list">
-					{#each $combinedTimeline as item}
-						<TimeLineRow {item} />
+					{#each $combinedTimeline as item, index}
+						<TimeLineRow {item} {index} />
 					{/each}
 				</div>
 			{/if}
