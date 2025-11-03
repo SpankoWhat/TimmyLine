@@ -135,6 +135,124 @@
 	}
 </script>
 
+{#if $modalStore}
+	<!-- Modal Overlay -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="modal-overlay" onclick={handleCancel}>
+		<!-- Modal Container -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<div class="modal-container" onclick={(e) => e.stopPropagation()}>
+			<!-- Modal Header -->
+			<div class="modal-header">
+				<div class="header-content">
+					<span class="header-icon">
+						{$modalStore.mode === 'create' ? '➕' : $modalStore.mode === 'edit' ? '✏️' : $modalStore.mode === 'delete' ? '🗑️' : '👁️'}
+					</span>
+					<h2 class="header-title">
+						{$modalStore.mode} {$modalStore.title}
+					</h2>
+				</div>
+				<button class="close-btn" onclick={handleCancel}>✕</button>
+			</div>
+			
+			<!-- Modal Body -->
+			<div class="modal-body">
+				<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="modal-form">
+					{#each enrichedFields as field}
+						{@const error = errors[field.key]}
+						
+						<div class="field-group">
+							<div class="field-label">
+								{field.label}
+								{#if field.required}
+									<span class="field-required">*</span>
+								{/if}
+							</div>
+							
+							{#if field.type === 'text'}
+								<input
+									type="text"
+									class="field-input"
+									bind:value={formData[field.key]}
+									placeholder={field.placeholder}
+									required={field.required} />
+									
+							{:else if field.type === 'textarea'}
+								<textarea
+									class="field-textarea"
+									bind:value={formData[field.key]}
+									placeholder={field.placeholder}
+									rows="4"
+									required={field.required}></textarea>
+									
+							{:else if field.type === 'select'}
+								<select
+									class="field-select"
+									bind:value={formData[field.key]}
+									required={field.required}>
+									<option value="">Select {field.label}</option>
+									{#each field.options || [] as option}
+										<option value={option.value}>{option.label}</option>
+									{/each}
+								</select>
+								
+							{:else if field.type === 'datetime'}
+								<input
+									type="datetime-local"
+									class="field-input"
+									value={formData[field.key] ? convertFromEpoch(formData[field.key]) : ''}
+									oninput={(e) => {
+										formData[field.key] = convertToEpoch(e.currentTarget.value);
+									}}
+									required={field.required} />
+									
+							{:else if field.type === 'number'}
+								<input
+									type="number"
+									class="field-input"
+									bind:value={formData[field.key]}
+									placeholder={field.placeholder}
+									required={field.required} />
+							{/if}
+							
+							{#if error}
+								<p class="field-error">
+									<span>⚠</span> {error}
+								</p>
+							{/if}
+							
+							{#if field.helpText}
+								<p class="field-help">{field.helpText}</p>
+							{/if}
+						</div>
+					{/each}
+				</form>
+			</div>
+			
+			<!-- Modal Footer -->
+			<div class="modal-footer">
+				<button type="button" class="btn btn-cancel" onclick={handleCancel}>
+					Cancel
+				</button>
+				<button
+					type="submit"
+					class="btn btn-submit"
+					onclick={handleSubmit}
+					disabled={isSubmitting}>
+					{#if isSubmitting}
+						<span class="spinner">⚙️</span>
+						<span>Submitting...</span>
+					{:else}
+						<span>{$modalStore.mode === 'create' ? 'Create' : 'Save'}</span>
+					{/if}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.modal-overlay {
 		position: fixed;
@@ -365,121 +483,3 @@
 		cursor: pointer;
 	}
 </style>
-
-{#if $modalStore}
-	<!-- Modal Overlay -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div class="modal-overlay" onclick={handleCancel}>
-		<!-- Modal Container -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="modal-container" onclick={(e) => e.stopPropagation()}>
-			<!-- Modal Header -->
-			<div class="modal-header">
-				<div class="header-content">
-					<span class="header-icon">
-						{$modalStore.mode === 'create' ? '➕' : $modalStore.mode === 'edit' ? '✏️' : $modalStore.mode === 'delete' ? '🗑️' : '👁️'}
-					</span>
-					<h2 class="header-title">
-						{$modalStore.mode} {$modalStore.title}
-					</h2>
-				</div>
-				<button class="close-btn" onclick={handleCancel}>✕</button>
-			</div>
-			
-			<!-- Modal Body -->
-			<div class="modal-body">
-				<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="modal-form">
-					{#each enrichedFields as field}
-						{@const error = errors[field.key]}
-						
-						<div class="field-group">
-							<div class="field-label">
-								{field.label}
-								{#if field.required}
-									<span class="field-required">*</span>
-								{/if}
-							</div>
-							
-							{#if field.type === 'text'}
-								<input
-									type="text"
-									class="field-input"
-									bind:value={formData[field.key]}
-									placeholder={field.placeholder}
-									required={field.required} />
-									
-							{:else if field.type === 'textarea'}
-								<textarea
-									class="field-textarea"
-									bind:value={formData[field.key]}
-									placeholder={field.placeholder}
-									rows="4"
-									required={field.required}></textarea>
-									
-							{:else if field.type === 'select'}
-								<select
-									class="field-select"
-									bind:value={formData[field.key]}
-									required={field.required}>
-									<option value="">Select {field.label}</option>
-									{#each field.options || [] as option}
-										<option value={option.value}>{option.label}</option>
-									{/each}
-								</select>
-								
-							{:else if field.type === 'datetime'}
-								<input
-									type="datetime-local"
-									class="field-input"
-									value={formData[field.key] ? convertFromEpoch(formData[field.key]) : ''}
-									oninput={(e) => {
-										formData[field.key] = convertToEpoch(e.currentTarget.value);
-									}}
-									required={field.required} />
-									
-							{:else if field.type === 'number'}
-								<input
-									type="number"
-									class="field-input"
-									bind:value={formData[field.key]}
-									placeholder={field.placeholder}
-									required={field.required} />
-							{/if}
-							
-							{#if error}
-								<p class="field-error">
-									<span>⚠</span> {error}
-								</p>
-							{/if}
-							
-							{#if field.helpText}
-								<p class="field-help">{field.helpText}</p>
-							{/if}
-						</div>
-					{/each}
-				</form>
-			</div>
-			
-			<!-- Modal Footer -->
-			<div class="modal-footer">
-				<button type="button" class="btn btn-cancel" onclick={handleCancel}>
-					Cancel
-				</button>
-				<button
-					type="submit"
-					class="btn btn-submit"
-					onclick={handleSubmit}
-					disabled={isSubmitting}>
-					{#if isSubmitting}
-						<span class="spinner">⚙️</span>
-						<span>Submitting...</span>
-					{:else}
-						<span>{$modalStore.mode === 'create' ? 'Create' : 'Save'}</span>
-					{/if}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
