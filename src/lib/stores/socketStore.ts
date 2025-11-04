@@ -27,19 +27,24 @@ export function initializeSocket() {
     return socket;
 }
 
-export function getSocket(): Socket {
-    if (!socket) throw new Error('Socket not initialized');
+export function getSocket(): Socket | null {
     return socket;
 }
 
 export function joinIncident(incidentUuid: string) {
-    const socket = getSocket();
+    if (!socket) {
+        console.warn('Socket not initialized, cannot join incident');
+        return;
+    }
     socket.emit('join-incident', incidentUuid);
     console.log(`Emitted join-incident for ${incidentUuid}`);
 }
 
 export function leaveIncident(incidentUuid: string) {
-    const socket = getSocket();
+    if (!socket) {
+        console.warn('Socket not initialized, cannot leave incident');
+        return;
+    }
     socket.emit('leave-incident', incidentUuid);
     console.log(`Emitted leave-incident for ${incidentUuid}`);
 }

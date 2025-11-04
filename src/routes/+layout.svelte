@@ -8,6 +8,7 @@
 	// Stores
 	import { 
 		initializeAllCaches,
+		initializeCacheSync,
 		analysts,
 		incidentStats,
 		combinedTimeline,
@@ -31,6 +32,9 @@
 	onMount(async () => {
 		// Initialize all caches first
 		await initializeAllCaches();
+		
+		// Initialize socket connection and real-time sync
+		initializeCacheSync();
 		
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();

@@ -6,19 +6,12 @@
 	// Store Imports
 	import {
 		currentSelectedIncident,
-		combinedTimeline,
-		updateIncidentCache
+		combinedTimeline
 	} from "$lib/stores/cacheStore.js";
     import type { Incident } from '$lib/server/database';
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
-
-	// Socket Stuff
-	import { initializeSocket, joinIncident, leaveIncident } from '$lib/stores/socketStore';
-	import { type Socket } from 'socket.io-client';
     	
     let { data }: PageProps = $props();
-	let socket: Socket | null = null;
-    
 	
 	onMount(() => {
 		let incidentObj = data.incident as Incident;
@@ -28,39 +21,11 @@
 		}
 		
 		currentSelectedIncident.set(incidentObj);
-		
-		// Initialize Socket Connection incase not already done and join
-		initializeSocketListeners();
-
-		if (socket && $currentSelectedIncident?.uuid) {
-			joinIncident($currentSelectedIncident.uuid);
-		}
-		
 	});
 
 	onDestroy(() => {
-		// Leave incident room before disconnecting
-        if (socket && $currentSelectedIncident) {
-			leaveIncident($currentSelectedIncident.uuid);
-        }
 		$currentSelectedIncident = null;
-        socket?.disconnect();
 	});
-
-	function initializeSocketListeners() {
-		socket = initializeSocket();
-
-		// Set up socket event listeners
-		// This is very crude - ideally we would have more granular events core-entry-modified
-		socket?.on('core-entry-modified', async () => {
-			console.log('An update to core tables is available');
-			if (!$currentSelectedIncident) {
-				console.warn('No currentSelectedIncident set, skipping updateIncidentCache');
-				return;
-			}
-			await updateIncidentCache($currentSelectedIncident);
-		});
-	}
 
 </script>
 
