@@ -1,6 +1,7 @@
 import { writable, derived, get, type Writable} from 'svelte/store';
 import { browser } from '$app/environment';
-import { initializeSocket, joinIncident, leaveIncident, getSocket } from './socketStore';
+import { initializeSocket, getSocket } from './socketStore';
+import { joinIncidentWithPresence, leaveIncidentWithPresence } from './presenceStore';
 import type {
 	Incident,
 	TimelineEvent,
@@ -303,12 +304,12 @@ export function initializeCacheSync() {
 	currentSelectedIncident.subscribe((incident) => {
 		// Leave previous incident room
 		if (previousIncidentUuid) {
-			leaveIncident(previousIncidentUuid);
+			leaveIncidentWithPresence(previousIncidentUuid);
 		}
 
 		// Join new incident room
 		if (incident?.uuid) {
-			joinIncident(incident.uuid);
+			joinIncidentWithPresence(incident.uuid);
 			previousIncidentUuid = incident.uuid;
 		} else {
 			previousIncidentUuid = null;

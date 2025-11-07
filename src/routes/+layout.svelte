@@ -18,8 +18,10 @@
 		currentCachedTimelineEvents,
 		currentCachedInvestigationActions,
 	} from '$lib/stores/cacheStore';
+	import { initializePresence, cleanupPresence } from '$lib/stores/presenceStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import GenericModal from '$lib/components/GenericModal.svelte';
+	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	
 	// Local Props and State
 	let { children } = $props();
@@ -35,6 +37,9 @@
 		
 		// Initialize socket connection and real-time sync
 		initializeCacheSync();
+		
+		// Initialize presence tracking
+		initializePresence();
 		
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();
@@ -53,6 +58,7 @@
 	onDestroy(() => {
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
+		cleanupPresence();
 	});
 
 	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));
@@ -190,6 +196,11 @@
 		<span class="header-label">Incident:</span>
 		<span class="header-value">{$currentSelectedIncident?.title || 'Not Selected'}</span>
 	</div>
+	
+	<!-- Active Users Indicator -->
+	{#if isIncidentPage}
+		<ActiveUsersIndicator />
+	{/if}
 
 	{#if !isIncidentPage}
 		<!-- Landing Page Statistics -->
@@ -352,6 +363,7 @@
 	.stats-info {
 		display: flex;
 		gap: var(--spacing-sm);
+		align-self: center;
 		margin-left: auto;
 	}
 
@@ -384,11 +396,7 @@
 	.stat-card.success .stat-value { color: var(--color-accent-success); }
 	.stat-card.info .stat-value { color: var(--color-accent-primary); }
 
-	.divider {
-		color: var(--color-text-tertiary);
-		font-size: var(--font-size-sm);
-		align-self: center;
-	}
+
 
 
 	.dock-section {

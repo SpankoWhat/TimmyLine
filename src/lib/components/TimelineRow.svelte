@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
+    import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore';
     import TimelineRow from './TimelineRow.svelte';
     
     let { 
@@ -16,6 +17,10 @@
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
     let isVisible = $state(false);
+    let isHovered = $state(false);
+
+    // Get users currently viewing/editing this row
+    let usersHere = $derived($getUsersOnRow(item.uuid));
 
     $effect(() => {
         // Small delay to trigger animation after mount
@@ -25,6 +30,17 @@
         
         return () => clearTimeout(timeout);
     });
+
+    // Emit presence when hovering
+    function handleMouseEnter() {
+        isHovered = true;
+        emitRowViewing(item.uuid);
+    }
+
+    function handleMouseLeave() {
+        isHovered = false;
+        emitRowIdle();
+    }
 
     // Combined display field configuration for both events and actions
     // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
@@ -100,9 +116,32 @@
 <div 
     class="timeline-item {item.type}" 
     class:visible={isVisible}
+    class:has-presence={usersHere.length > 0}
     style="margin-left: {childLeftMarginOffset}; animation-delay: {index * 50}ms;" 
     onclick={toggleExpandedDetails}
+    onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave}
 >
+    <!-- Presence Indicators -->
+    {#if usersHere.length > 0}
+        <div class="presence-indicators">
+            {#each usersHere as user}
+                <div 
+                    class="user-avatar"
+                    class:editing={user.action === 'editing'}
+                    style:border-color={user.color}
+                    style:background-color={user.color}
+                    title={`${user.analystName} is ${user.action}`}
+                >
+                    <span class="avatar-initial">{user.analystName.charAt(0).toUpperCase()}</span>
+                    {#if user.action === 'editing'}
+                        <span class="editing-badge">✏️</span>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    {/if}
+
     <!-- Type Indicator Badge -->
     <div class="type-indicator {item.type}">
         <span class="type-icon">
@@ -447,4 +486,75 @@
         padding-left: var(--spacing-lg);
         border-left: 2px dashed var(--color-border-subtle);
     }
+
+    /* Presence Indicators */
+    .presence-indicators {
+        position: absolute;
+        top: -8px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+        z-index: 10;
+    }
+
+    .user-avatar {
+        position: relative;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: var(--font-weight-bold);
+        color: var(--color-text-inverted);
+        background-clip: padding-box;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease;
+        cursor: help;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.15);
+    }
+
+    .user-avatar.editing {
+        animation: pulse 2s infinite;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    .avatar-initial {
+        display: block;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .editing-badge {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 16px;
+        height: 16px;
+        background: var(--color-bg-primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border: 1px solid var(--color-border-medium);
+    }
+
+    .timeline-item.has-presence {
+        border-left-width: 3px;
+    }
 </style>
+

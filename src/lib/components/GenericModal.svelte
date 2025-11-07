@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import { modalStore } from '$lib/stores/modalStore';
 	import { entityFieldConfigs, type FieldConfig } from '$lib/config/modalFields';
 	import { 
@@ -7,10 +8,12 @@
 		entityTypes, 
 		annotationTypes
 	} from '$lib/stores/cacheStore';
+	import { emitRowEditing, emitRowIdle } from '$lib/stores/presenceStore';
 	
 	let formData = $state<Record<string, any>>({});
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
+	let editingRowUuid: string | null = null;
 
 	let currentModal = $derived($modalStore);
 	
@@ -30,6 +33,18 @@
 			});
 			
 			formData = newFormData;
+			
+			// Emit editing presence if we have a UUID
+			if (currentModal.mode === 'edit' && currentModal.data?.uuid) {
+				editingRowUuid = currentModal.data.uuid;
+				if (editingRowUuid) {
+					emitRowEditing(editingRowUuid);
+				}
+			}
+		} else if (editingRowUuid) {
+			// Modal closed, emit idle
+			emitRowIdle();
+			editingRowUuid = null;
 		}
 	});
 	
@@ -118,6 +133,11 @@
 	function handleCancel() {
 		if (currentModal?.onCancel) {
 			currentModal.onCancel();
+		}
+		// Emit idle before closing
+		if (editingRowUuid) {
+			emitRowIdle();
+			editingRowUuid = null;
 		}
 		modalStore.close();
 	}
