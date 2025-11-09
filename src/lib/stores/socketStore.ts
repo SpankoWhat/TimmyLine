@@ -31,6 +31,7 @@ export function getSocket(): Socket | null {
     return socket;
 }
 
+// Keeping these here incase we need them later
 export function joinIncident(incidentUuid: string) {
     if (!socket) {
         console.warn('Socket not initialized, cannot join incident');

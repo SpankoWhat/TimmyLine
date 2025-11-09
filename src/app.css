@@ -60,6 +60,11 @@
     padding: 0;
 }
 
+.divider {
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-sm);
+    align-self: center;
+}
 body {
     font-family: 'JetBrains Mono', 'Segoe UI', 'Inter', sans-serif;
     background-color: var(--color-bg-primary);

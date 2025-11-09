@@ -1,30 +1,34 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
+    import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore';
     import TimelineRow from './TimelineRow.svelte';
     
     let { 
         item, 
-        childLeftMarginOffset = "0rem", 
-        index = 0 
+        childLeftMarginOffset = "0rem"
     }: { 
         item: TimelineItem; 
-        childLeftMarginOffset?: string; 
-        index?: number;
+        childLeftMarginOffset?: string;
     } = $props();
 
     let relations = $state<TimelineItem[]>([]);
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
-    let isVisible = $state(false);
+    let isHovered = $state(false);
 
-    $effect(() => {
-        // Small delay to trigger animation after mount
-        const timeout = setTimeout(() => {
-            isVisible = true;
-        }, 10);
-        
-        return () => clearTimeout(timeout);
-    });
+    // Get users currently viewing/editing this row
+    let usersHere = $derived($getUsersOnRow(item.uuid));
+
+    // Emit presence when hovering
+    function handleMouseEnter() {
+        isHovered = true;
+        emitRowViewing(item.uuid);
+    }
+
+    function handleMouseLeave() {
+        isHovered = false;
+        emitRowIdle();
+    }
 
     // Combined display field configuration for both events and actions
     // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
@@ -53,12 +57,6 @@
             { key: "notes", label: "Notes", class: "action-notes", tag: false },
             { key: "tags", label: "Tags", class: "action-tags", tag: false },
         ],
-    };
-
-    // Fields to show in expanded details view
-    const detailFieldsConfig = {
-        event: ["description", "notes", "tags"],
-        action: ["notes", "tags", "analyst_notes"],
     };
 
     // Function to format epoch timestamp to human-readable time
@@ -91,16 +89,24 @@
     }
 
     function toggleExpandedDetails() {
-        showExpandedDetails = !showExpandedDetails;
+        if (showExpandedDetails) {
+            showExpandedDetails = false;
+            emitRowIdle();
+            return;
+        }
+        showExpandedDetails = true;
+        emitRowViewing(item.uuid);
     }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave} -->
 <div 
-    class="timeline-item {item.type}" 
-    class:visible={isVisible}
-    style="margin-left: {childLeftMarginOffset}; animation-delay: {index * 50}ms;" 
+    class="timeline-item {item.type}"
+    class:has-presence={usersHere.length > 0}
+    style="margin-left: {childLeftMarginOffset};" 
     onclick={toggleExpandedDetails}
 >
     <!-- Type Indicator Badge -->
@@ -154,6 +160,25 @@
             <span class="btn-icon">📝</span>
         </button>
     </div>
+        
+    <!-- Presence Indicators -->
+    {#if usersHere.length > 0}
+        <div class="presence-indicators">
+            {#each usersHere as user}
+                <div 
+                    class="user-avatar"
+                    class:editing={user.action === 'editing'}
+                    style:border-color={user.color}
+                    style:background-color={user.color}
+                    title={`${user.analystName} is ${user.action}`}
+                >
+                    {#if user.action === 'editing'}
+                        <span class="editing-badge">✏️</span>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    {/if}
 </div>
 
 <!-- Expanded Details View -->
@@ -182,7 +207,7 @@
     <div class="related-entities">
         {#each relations as child, childIndex}
             <!-- Recursive render using self-import -->
-            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"} index={childIndex} />
+            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"}/>
         {/each}
     </div>
 {/if}
@@ -200,33 +225,6 @@
         margin-bottom: var(--spacing-xs);
         transition: all var(--transition-fast);
         cursor: pointer;
-        opacity: 0;
-        transform: translateX(-20px);
-        animation: fadeInSlide 0.3s ease-out forwards;
-    }
-
-    @keyframes fadeInSlide {
-        from {
-            opacity: 0;
-            transform: translateX(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    .timeline-item.visible {
-        opacity: 1;
-        transform: translateX(0);
-    }
-
-    .timeline-item.event {
-        border-left-color: var(--color-accent-primary);
-    }
-
-    .timeline-item.action {
-        border-left-color: var(--color-accent-success);
     }
 
     .timeline-item:hover {
@@ -447,4 +445,56 @@
         padding-left: var(--spacing-lg);
         border-left: 2px dashed var(--color-border-subtle);
     }
+
+    /* Presence Indicators */
+    .presence-indicators {
+        display: flex;
+        z-index: 10;
+    }
+
+    .user-avatar {
+        width: 5px;
+        height: 14px;
+        border: 2px solid;
+        cursor: help;
+    }
+
+    .user-avatar.editing {
+        animation: pulse 2s infinite;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    .avatar-initial {
+        display: block;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .editing-badge {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 16px;
+        height: 16px;
+        background: var(--color-bg-primary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border: 1px solid var(--color-border-medium);
+    }
+
+    .timeline-item.has-presence {
+        border-left-width: 3px;
+    }
 </style>
+

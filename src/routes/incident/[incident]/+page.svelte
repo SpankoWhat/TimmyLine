@@ -48,8 +48,8 @@
 				</div>
 			{:else}
 				<div class="timeline-list">
-					{#each $combinedTimeline as item, index}
-						<TimeLineRow {item} {index} />
+					{#each $combinedTimeline as item}
+						<TimeLineRow {item} />
 					{/each}
 				</div>
 			{/if}
