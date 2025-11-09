@@ -5,31 +5,19 @@
     
     let { 
         item, 
-        childLeftMarginOffset = "0rem", 
-        index = 0 
+        childLeftMarginOffset = "0rem"
     }: { 
         item: TimelineItem; 
-        childLeftMarginOffset?: string; 
-        index?: number;
+        childLeftMarginOffset?: string;
     } = $props();
 
     let relations = $state<TimelineItem[]>([]);
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
-    let isVisible = $state(false);
     let isHovered = $state(false);
 
     // Get users currently viewing/editing this row
     let usersHere = $derived($getUsersOnRow(item.uuid));
-
-    $effect(() => {
-        // Small delay to trigger animation after mount
-        const timeout = setTimeout(() => {
-            isVisible = true;
-        }, 10);
-        
-        return () => clearTimeout(timeout);
-    });
 
     // Emit presence when hovering
     function handleMouseEnter() {
@@ -71,12 +59,6 @@
         ],
     };
 
-    // Fields to show in expanded details view
-    const detailFieldsConfig = {
-        event: ["description", "notes", "tags"],
-        action: ["notes", "tags", "analyst_notes"],
-    };
-
     // Function to format epoch timestamp to human-readable time
     function formatTimestamp(epochTime: number): string {
         if (!epochTime) return "N/A";
@@ -107,41 +89,26 @@
     }
 
     function toggleExpandedDetails() {
-        showExpandedDetails = !showExpandedDetails;
+        if (showExpandedDetails) {
+            showExpandedDetails = false;
+            emitRowIdle();
+            return;
+        }
+        showExpandedDetails = true;
+        emitRowViewing(item.uuid);
     }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave} -->
 <div 
-    class="timeline-item {item.type}" 
-    class:visible={isVisible}
+    class="timeline-item {item.type}"
     class:has-presence={usersHere.length > 0}
-    style="margin-left: {childLeftMarginOffset}; animation-delay: {index * 50}ms;" 
+    style="margin-left: {childLeftMarginOffset};" 
     onclick={toggleExpandedDetails}
-    onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave}
 >
-    <!-- Presence Indicators -->
-    {#if usersHere.length > 0}
-        <div class="presence-indicators">
-            {#each usersHere as user}
-                <div 
-                    class="user-avatar"
-                    class:editing={user.action === 'editing'}
-                    style:border-color={user.color}
-                    style:background-color={user.color}
-                    title={`${user.analystName} is ${user.action}`}
-                >
-                    <span class="avatar-initial">{user.analystName.charAt(0).toUpperCase()}</span>
-                    {#if user.action === 'editing'}
-                        <span class="editing-badge">✏️</span>
-                    {/if}
-                </div>
-            {/each}
-        </div>
-    {/if}
-
     <!-- Type Indicator Badge -->
     <div class="type-indicator {item.type}">
         <span class="type-icon">
@@ -193,6 +160,25 @@
             <span class="btn-icon">📝</span>
         </button>
     </div>
+        
+    <!-- Presence Indicators -->
+    {#if usersHere.length > 0}
+        <div class="presence-indicators">
+            {#each usersHere as user}
+                <div 
+                    class="user-avatar"
+                    class:editing={user.action === 'editing'}
+                    style:border-color={user.color}
+                    style:background-color={user.color}
+                    title={`${user.analystName} is ${user.action}`}
+                >
+                    {#if user.action === 'editing'}
+                        <span class="editing-badge">✏️</span>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    {/if}
 </div>
 
 <!-- Expanded Details View -->
@@ -221,7 +207,7 @@
     <div class="related-entities">
         {#each relations as child, childIndex}
             <!-- Recursive render using self-import -->
-            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"} index={childIndex} />
+            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"}/>
         {/each}
     </div>
 {/if}
@@ -239,33 +225,6 @@
         margin-bottom: var(--spacing-xs);
         transition: all var(--transition-fast);
         cursor: pointer;
-        opacity: 0;
-        transform: translateX(-20px);
-        animation: fadeInSlide 0.3s ease-out forwards;
-    }
-
-    @keyframes fadeInSlide {
-        from {
-            opacity: 0;
-            transform: translateX(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    .timeline-item.visible {
-        opacity: 1;
-        transform: translateX(0);
-    }
-
-    .timeline-item.event {
-        border-left-color: var(--color-accent-primary);
-    }
-
-    .timeline-item.action {
-        border-left-color: var(--color-accent-success);
     }
 
     .timeline-item:hover {
@@ -489,34 +448,15 @@
 
     /* Presence Indicators */
     .presence-indicators {
-        position: absolute;
-        top: -8px;
-        right: 8px;
         display: flex;
-        gap: 4px;
         z-index: 10;
     }
 
     .user-avatar {
-        position: relative;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
+        width: 5px;
+        height: 14px;
         border: 2px solid;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-        font-weight: var(--font-weight-bold);
-        color: var(--color-text-inverted);
-        background-clip: padding-box;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s ease;
         cursor: help;
-    }
-
-    .user-avatar:hover {
-        transform: scale(1.15);
     }
 
     .user-avatar.editing {
