@@ -69,11 +69,35 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			options: [], // Populated dynamically from eventTypes store
 		},
 		{
+			key: 'occurred_at',
+			label: 'Occurred At',
+			type: 'datetime',
+			required: true,
+		},
+		{
+			key: 'severity',
+			label: 'Severity',
+			type: 'select',
+			required: true,
+			options: [
+				{ value: 'critical', label: 'Critical' },
+				{ value: 'high', label: 'High' },
+				{ value: 'medium', label: 'Medium' },
+				{ value: 'low', label: 'Low' },
+				{ value: 'info', label: 'Info' },
+			],
+		},
+		{
 			key: 'source',
 			label: 'Source',
 			type: 'text',
-			required: true,
 			placeholder: 'e.g., Firewall, EDR, SIEM',
+		},
+		{
+			key: 'discovered_at',
+			label: 'Discovered At',
+			type: 'datetime',
+			required: false,
 		},
 		{
 			key: 'source_reliability',
@@ -90,38 +114,8 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			],
 		},
 		{
-			key: 'severity',
-			label: 'Severity',
-			type: 'select',
-			required: true,
-			options: [
-				{ value: 'critical', label: 'Critical' },
-				{ value: 'high', label: 'High' },
-				{ value: 'medium', label: 'Medium' },
-				{ value: 'low', label: 'Low' },
-				{ value: 'info', label: 'Info' },
-			],
-		},
-		{
-			key: 'occurred_at',
-			label: 'Occurred At',
-			type: 'datetime',
-			required: true,
-		},
-		{
-			key: 'discovered_at',
-			label: 'Discovered At',
-			type: 'datetime',
-			required: false,
-		},
-		{
 			key: 'description',
 			label: 'Description',
-			type: 'textarea',
-		},
-		{
-			key: 'event_data',
-			label: 'Event Data',
 			type: 'textarea',
 		},
 	],
@@ -133,6 +127,12 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			type: 'select',
 			required: true,
 			options: [], // Populated from actionTypes store
+		},
+		{
+			key: 'performed_at',
+			label: 'Performed At',
+			type: 'datetime',
+			required: true,
 		},
 		{
 			key: 'result',
@@ -147,27 +147,25 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			],
 		},
 		{
-			key: 'outcome',
-			label: 'Outcome',
-			type: 'textarea',
-			placeholder: 'Describe the outcome of this action',
-		},
-		{
 			key: 'tool_used',
 			label: 'Tool Used',
 			type: 'text',
 			placeholder: 'e.g., Wireshark, Splunk, PowerShell',
 		},
 		{
-			key: 'performed_at',
-			label: 'Performed At',
-			type: 'datetime',
-			required: true,
-		},
-		{
 			key: 'notes',
 			label: 'Notes',
 			type: 'textarea',
+		},
+		{
+			key: 'next_steps',
+			label: 'Next Steps',
+			type: 'textarea',
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'text',
 		},
 	],
 	
@@ -180,15 +178,60 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			options: [], // Populated from entityTypes store
 		},
 		{
-			key: 'name',
-			label: 'Name',
+			key: 'first_seen',
+			label: 'First Seen',
+			type: 'datetime',
+		},
+		{
+			key: 'last_seen',
+			label: 'Last Seen',
+			type: 'datetime',
+		},
+		{
+			key: 'identifier',
+			label: 'Identifier',
 			type: 'text',
 			required: true,
 			placeholder: 'e.g., IP address, hostname, file hash',
 		},
 		{
-			key: 'description',
-			label: 'Description',
+			key: 'display_name',
+			label: 'Display Name',
+			type: 'text',
+			placeholder: 'Human-friendly name for the entity',
+		},
+		{
+			key: 'status',
+			label: 'Status',
+			type: 'select',
+			required: true,
+			options: [
+				{ value: 'active', label: 'Active' },
+				{ value: 'inactive', label: 'Inactive' },
+				{ value: 'unknown', label: 'Unknown' },
+			],
+		},
+		{
+			key: 'criticality',
+			label: 'Criticality',
+			type: 'select',
+			required: true,
+			options: [
+				{ value: 'critical', label: 'Critical' },
+				{ value: 'high', label: 'High' },
+				{ value: 'medium', label: 'Medium' },
+				{ value: 'low', label: 'Low' },
+				{ value: 'unknown', label: 'Unknown' },
+			],
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'text',
+		},
+		{
+			key: 'attributes',
+			label: 'Attributes',
 			type: 'textarea',
 		},
 	],
@@ -209,13 +252,63 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			placeholder: 'Add your note or observation',
 		},
 		{
-			key: 'created_at',
-			label: 'Created At',
-			type: 'datetime',
+			key: 'confidence',
+			label: 'Confidence',
+			type: 'select',
 			required: true,
+			options: [
+				{ value: 'high', label: 'High' },
+				{ value: 'medium', label: 'Medium' },
+				{ value: 'low', label: 'Low' },
+				{ value: 'guess', label: 'Guess' },
+			],
+		},
+		{
+			key: 'is_hypothesis',
+			label: 'Is Hypothesis',
+			type: 'checkbox',
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'text',
+			placeholder: 'Add your tags',
 		},
 	],
-	
+
+	analyst: [
+		{
+			key: 'username',
+			label: 'Username',
+			type: 'text',
+			required: true,
+			placeholder: 'Your username',
+		},
+		{
+			key: 'full_name',
+			label: 'Full Name',
+			type: 'text',
+			placeholder: 'John Doe',
+		},
+		{
+			key: 'role',
+			label: 'Role',
+			type: 'select',
+			options: [{
+				value: 'analyst',
+				label: 'Analyst'
+			}, {
+				value: 'on-point lead',
+				label: 'On-Point Lead'
+			}, {
+				value: 'observer',
+				label: 'Observer'
+			}],
+			defaultValue: 'analyst'
+		},
+
+	],
+
 	// Lookup tables (simpler configs)
 	action_type: [
 		{
@@ -279,26 +372,5 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			type: 'textarea',
 			placeholder: 'Describe this annotation type',
 		},
-	],
-	
-	analyst: [
-		{
-			key: 'full_name',
-			label: 'Full Name',
-			type: 'text',
-			required: true,
-			placeholder: 'John Doe',
-		},
-		{
-			key: 'email',
-			label: 'Email',
-			type: 'text',
-			required: true,
-			placeholder: 'john.doe@example.com',
-			validation: (value) => {
-				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-				return emailRegex.test(value) ? null : 'Invalid email format';
-			},
-		},
-	],
+	]
 };

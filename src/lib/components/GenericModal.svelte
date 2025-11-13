@@ -235,6 +235,12 @@
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
 									required={field.required} />
+							{:else if field.type === 'checkbox'}
+								<input
+									type="checkbox"
+									class="field-input checkbox-input"
+									bind:checked={formData[field.key]}
+									required={field.required} />
 							{/if}
 							
 							{#if error}
@@ -357,7 +363,6 @@
 	.field-group {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-sm);
 	}
 
 	.field-label {
@@ -367,6 +372,9 @@
 		color: var(--color-text-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+		position: relative;
+		top: 8px;
+		left: 4px;
 	}
 
 	.field-required {
