@@ -275,7 +275,12 @@ export function joinIncidentWithPresence(incidentUuid: string) {
  */
 export function leaveIncidentWithPresence(incidentUuid: string) {
 	const socket = getSocket();
-	if (!socket) return;
+	const analyst = getCurrentAnalyst();
+	if (!socket || !analyst) return;
 
-	socket.emit('leave-incident', incidentUuid);
+	socket.emit('leave-incident', {
+		incidentUuid,
+		analystUuid: analyst.uuid,
+		analystName: analyst.full_name || analyst.username
+	});
 }

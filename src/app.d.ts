@@ -3,7 +3,9 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			logger?: import('./lib/server/logging/index').Logger;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { socketLogger as logger } from '../logging/index';
 
 // Use globalThis to persist across HMR reloads
 const globalForSocket = globalThis as unknown as {
@@ -24,11 +25,11 @@ function generateColorFromId(id: string): string {
 
 export function initializeSocketIO(server: import("http").Server | import("http2").Http2Server | import("http2").Http2SecureServer) {
     if (globalForSocket.io) {
-        console.log('⚠️ Socket.IO already initialized, returning existing instance');
+        logger.info('Socket.IO already initialized, returning existing instance');
         return globalForSocket.io;
     }
-    
-    console.log('🚀 Creating new Socket.IO server instance');
+
+    logger.info('Creating new Socket.IO server instance');
     globalForSocket.io = new Server(server, {
         cors: {
             origin: process.env.ORIGIN || 'http://localhost:5173',
@@ -37,13 +38,13 @@ export function initializeSocketIO(server: import("http").Server | import("http2
     });
     
     globalForSocket.io.on('connection', (socket) => {
-        console.log(`Client connected: ${socket.id}`);
+        logger.debug(`Client connected with socket id: ${socket.id}`);
         
         // Join incident room with presence info
         socket.on('join-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string }) => {
             const roomName = `incident:${data.incidentUuid}`;
             socket.join(roomName);
-            console.log(`Client ${socket.id} (${data.analystName}) joined ${roomName}`);
+            logger.debug(`Client ${socket.id} (${data.analystName}) joined ${roomName}`);
 
             // Track user in room
             if (!roomUsers.has(data.incidentUuid)) {
@@ -78,24 +79,24 @@ export function initializeSocketIO(server: import("http").Server | import("http2
         });
         
         // Leave incident room
-        socket.on('leave-incident', (incidentUuid: string) => {
-            const roomName = `incident:${incidentUuid}`;
+        socket.on('leave-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string }) => {
+            const roomName = `incident:${data.incidentUuid}`;
             socket.leave(roomName);
-            console.log(`Client ${socket.id} left ${roomName}`);
+            logger.debug(`Client ${socket.id} (${data.analystName}) left ${roomName}`);
 
             // Remove user from room tracking
-            const room = roomUsers.get(incidentUuid);
+            const room = roomUsers.get(data.incidentUuid);
             if (room) {
                 room.delete(socket.id);
                 if (room.size === 0) {
-                    roomUsers.delete(incidentUuid);
+                    roomUsers.delete(data.incidentUuid);
                 }
             }
 
             // Notify others that user left
             socket.to(roomName).emit('user-left', {
                 socketId: socket.id,
-                incidentUuid
+                incidentUuid: data.incidentUuid
             });
         });
 
@@ -112,7 +113,7 @@ export function initializeSocketIO(server: import("http").Server | import("http2
         });
         
         socket.on('disconnect', () => {
-            console.log(`Client disconnected: ${socket.id}`);
+            logger.debug(`Client ${socket.id} disconnected`);
 
             // Clean up user from all rooms
             for (const [incidentUuid, room] of roomUsers.entries()) {
@@ -137,7 +138,10 @@ export function initializeSocketIO(server: import("http").Server | import("http2
 }
 
 export function getSocketIO(): Server {
-    console.log('Getting Socket.IO instance', globalForSocket.io ? 'exists' : 'null');
-    if (!globalForSocket.io) throw new Error('Socket.IO not initialized');
+    logger.debug('Getting Socket.IO instance');
+    if (!globalForSocket.io) {
+        logger.error('Socket.IO not initialized');
+        throw new Error('Socket.IO not initialized');
+    }
     return globalForSocket.io;
 }
