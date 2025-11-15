@@ -23,6 +23,11 @@ function generateColorFromId(id: string): string {
     return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
+/**
+ * Initialize Socket.IO server with all listeners and handlers
+ * @param server the server to attach to
+ * @returns io instance
+ */
 export function initializeSocketIO(server: import("http").Server | import("http2").Http2Server | import("http2").Http2SecureServer) {
     if (globalForSocket.io) {
         logger.info('Socket.IO already initialized, returning existing instance');

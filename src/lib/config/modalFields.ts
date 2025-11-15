@@ -1,3 +1,8 @@
+/**
+ * Configuration file that holds types and field values for the various modal forms.
+ * @todo Handle the dynamic population of the lookup tables as a function that can be called to get the latest values.
+ */
+
 export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'select' | 'multiselect' | 'checkbox';
 
 export type FieldConfig = {

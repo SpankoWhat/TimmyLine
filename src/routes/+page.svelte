@@ -7,7 +7,6 @@
 	let { data }: PageProps = $props();
 
 	function userSelectedIncident(incident: Incident) {
-		console.log("Home - User selected incident:", incident.title);
 		goto(`/incident/${incident.uuid}`);
 	}
 
@@ -20,11 +19,7 @@
 		<div class="section-content">
 			<div class="incident-list">
 				{#each $currentCachedIncidents as incident, i}
-					<button 
-						class="incident-item" 
-						onclick={() => userSelectedIncident(incident)}
-						type="button"
-					>
+					<button class="incident-item" onclick={() => userSelectedIncident(incident)} type="button">
 						<span class="incident-number">{String(i + 1).padStart(2, '0')}</span>
 						<div class="incident-content">
 							<div class="incident-title">{incident.title}</div>
