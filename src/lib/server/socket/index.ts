@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import type { Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
 
 // Use globalThis to persist across HMR reloads
@@ -34,6 +35,7 @@ export function initializeSocketIO(server: import("http").Server | import("http2
         return globalForSocket.io;
     }
 
+    // Initialize new Socket.IO server
     logger.info('Creating new Socket.IO server instance');
     globalForSocket.io = new Server(server, {
         cors: {
@@ -41,105 +43,116 @@ export function initializeSocketIO(server: import("http").Server | import("http2
             methods: ['GET', 'POST']
         }
     });
-    
+
     globalForSocket.io.on('connection', (socket) => {
-        logger.debug(`Client connected with socket id: ${socket.id}`);
-        
-        // Join incident room with presence info
-        socket.on('join-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string }) => {
-            const roomName = `incident:${data.incidentUuid}`;
-            socket.join(roomName);
-            logger.debug(`Client ${socket.id} (${data.analystName}) joined ${roomName}`);
+        registerJoinRoomEvent(socket);
+        registerLeaveRoomEvent(socket);
+        registerRowFocus(socket);
+        registerDisconnectEvent(socket);
+    });
 
-            // Track user in room
-            if (!roomUsers.has(data.incidentUuid)) {
-                roomUsers.set(data.incidentUuid, new Map());
-            }
-            const room = roomUsers.get(data.incidentUuid)!;
-            const userInfo = {
-                socketId: socket.id,
-                analystUuid: data.analystUuid,
-                analystName: data.analystName,
-                color: generateColorFromId(socket.id)
-            };
-            room.set(socket.id, userInfo);
+    return globalForSocket.io;
+}
 
-            // Broadcast to others in room that new user joined
-            socket.to(roomName).emit('user-joined', {
-                ...userInfo,
-                currentRow: null,
-                action: 'idle'
-            });
+function registerDisconnectEvent(socket: Socket) {
+    socket.on('disconnect', () => {
+        logger.debug(`Client ${socket.id} disconnected`);
 
-            // Send current room users to the new joiner
-            const roomUsersList = Array.from(room.values()).map(u => ({
-                ...u,
-                currentRow: null,
-                action: 'idle' as const
-            }));
-            socket.emit('room-users', {
-                incidentUuid: data.incidentUuid,
-                users: roomUsersList
-            });
-        });
-        
-        // Leave incident room
-        socket.on('leave-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string }) => {
-            const roomName = `incident:${data.incidentUuid}`;
-            socket.leave(roomName);
-            logger.debug(`Client ${socket.id} (${data.analystName}) left ${roomName}`);
-
-            // Remove user from room tracking
-            const room = roomUsers.get(data.incidentUuid);
-            if (room) {
+        // Clean up user from all rooms
+        for (const [incidentUuid, room] of roomUsers.entries()) {
+            if (room.has(socket.id)) {
                 room.delete(socket.id);
+
+                // Notify others in that room
+                socket.to(`incident:${incidentUuid}`).emit('user-left', {
+                    socketId: socket.id,
+                    incidentUuid
+                });
+
                 if (room.size === 0) {
-                    roomUsers.delete(data.incidentUuid);
+                    roomUsers.delete(incidentUuid);
                 }
             }
+        }
+    });
+}
 
-            // Notify others that user left
-            socket.to(roomName).emit('user-left', {
-                socketId: socket.id,
-                incidentUuid: data.incidentUuid
-            });
-        });
+function registerRowFocus(socket: Socket) {
+    socket.on('focus-row', (data: { incidentUuid: string; rowUuid: string | null; action: 'viewing' | 'editing' | 'idle'; }) => {
+        const roomName = `incident:${data.incidentUuid}`;
 
-        // Track user focus on specific row
-        socket.on('focus-row', (data: { incidentUuid: string; rowUuid: string | null; action: 'viewing' | 'editing' | 'idle' }) => {
-            const roomName = `incident:${data.incidentUuid}`;
-
-            // Broadcast focus change to others in room
-            socket.to(roomName).emit('user-focus-changed', {
-                socketId: socket.id,
-                rowUuid: data.rowUuid,
-                action: data.action
-            });
-        });
-        
-        socket.on('disconnect', () => {
-            logger.debug(`Client ${socket.id} disconnected`);
-
-            // Clean up user from all rooms
-            for (const [incidentUuid, room] of roomUsers.entries()) {
-                if (room.has(socket.id)) {
-                    room.delete(socket.id);
-
-                    // Notify others in that room
-                    socket.to(`incident:${incidentUuid}`).emit('user-left', {
-                        socketId: socket.id,
-                        incidentUuid
-                    });
-
-                    if (room.size === 0) {
-                        roomUsers.delete(incidentUuid);
-                    }
-                }
-            }
+        // Broadcast focus change to others in room
+        socket.to(roomName).emit('user-focus-changed', {
+            socketId: socket.id,
+            rowUuid: data.rowUuid,
+            action: data.action
         });
     });
-    
-    return globalForSocket.io;
+}
+
+function registerLeaveRoomEvent(socket: Socket) {
+    socket.on('leave-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string; }) => {
+        const roomName = `incident:${data.incidentUuid}`;
+        socket.leave(roomName);
+        logger.debug(`Client ${socket.id} (${data.analystName}) left ${roomName}`);
+
+        // Remove user from room tracking
+        const room = roomUsers.get(data.incidentUuid);
+        if (room) {
+            room.delete(socket.id);
+            if (room.size === 0) {
+                roomUsers.delete(data.incidentUuid);
+            }
+        }
+
+        // Notify others that user left
+        socket.to(roomName).emit('user-left', {
+            socketId: socket.id,
+            incidentUuid: data.incidentUuid
+        });
+    });
+}
+
+function registerJoinRoomEvent(socket: Socket) {
+    logger.debug(`Client connected with socket id: ${socket.id}`);
+
+    // Join incident room with presence info
+    socket.on('join-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string; }) => {
+        const roomName = `incident:${data.incidentUuid}`;
+        socket.join(roomName);
+        logger.debug(`Client ${socket.id} (${data.analystName}) joined ${roomName}`);
+
+        // Track user in room
+        if (!roomUsers.has(data.incidentUuid)) {
+            roomUsers.set(data.incidentUuid, new Map());
+        }
+        const room = roomUsers.get(data.incidentUuid)!;
+        const userInfo = {
+            socketId: socket.id,
+            analystUuid: data.analystUuid,
+            analystName: data.analystName,
+            color: generateColorFromId(socket.id)
+        };
+        room.set(socket.id, userInfo);
+
+        // Broadcast to others in room that new user joined
+        socket.to(roomName).emit('user-joined', {
+            ...userInfo,
+            currentRow: null,
+            action: 'idle'
+        });
+
+        // Send current room users to the new joiner
+        const roomUsersList = Array.from(room.values()).map(u => ({
+            ...u,
+            currentRow: null,
+            action: 'idle' as const
+        }));
+        socket.emit('room-users', {
+            incidentUuid: data.incidentUuid,
+            users: roomUsersList
+        });
+    });
 }
 
 export function getSocketIO(): Server {
