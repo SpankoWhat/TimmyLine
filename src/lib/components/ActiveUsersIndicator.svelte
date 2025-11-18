@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { currentRoomUsers } from '$lib/stores/presenceStore';
+	import { currentIncidentUserNames } from '$lib/stores/collabStore';
 	import { currentSelectedIncident } from '$lib/stores/cacheStore';
 </script>
 
-{#if $currentSelectedIncident && $currentRoomUsers.length > 0}
+{#if $currentSelectedIncident && $currentIncidentUserNames.length > 0}
 	<div class="active-users-indicator">
 		<span class="header-label">Users Viewing: </span>
-		<span class="header-value">{$currentRoomUsers.length}</span>
+		<span class="header-value">{$currentIncidentUserNames.length}</span>
 		<div class="users-tooltip">
-			{#each $currentRoomUsers as user}
+			{#each $currentIncidentUserNames as userName}
 				<div class="tooltip-user">
 					<div class="divider">| </div>
-					 <span class="user-name" style:color={user.color}>{user.analystName} </span>
+					 <span class="user-name">{userName} </span>
 				</div>
 			{/each}
 		</div>

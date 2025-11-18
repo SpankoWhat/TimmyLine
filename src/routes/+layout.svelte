@@ -8,7 +8,6 @@
 	// Stores
 	import { 
 		initializeAllCaches,
-		initializeCacheSync,
 		analysts,
 		incidentStats,
 		combinedTimeline,
@@ -18,7 +17,6 @@
 		currentCachedTimelineEvents,
 		currentCachedInvestigationActions,
 	} from '$lib/stores/cacheStore';
-	import { initializePresence, cleanupPresence } from '$lib/stores/presenceStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import GenericModal from '$lib/components/GenericModal.svelte';
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
@@ -34,12 +32,6 @@
 	onMount(async () => {
 		// Initialize all caches first
 		await initializeAllCaches();
-		
-		// Initialize socket connection and real-time sync
-		initializeCacheSync();
-		
-		// Initialize presence tracking
-		initializePresence();
 		
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();
@@ -58,7 +50,6 @@
 	onDestroy(() => {
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
-		cleanupPresence();
 	});
 
 	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));

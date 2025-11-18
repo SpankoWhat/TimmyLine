@@ -1,3 +1,5 @@
+// @todo Need to refactor this based on the changes made to the socket server $lib/server/socket/index.ts
+
 import { writable, derived, get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { getSocket } from './socketStore';

@@ -1,7 +1,4 @@
-import { writable, derived, get, type Writable} from 'svelte/store';
-import { browser } from '$app/environment';
-import { initializeSocket, getSocket } from './socketStore';
-import { joinIncidentWithPresence, leaveIncidentWithPresence } from './presenceStore';
+import { writable, derived, get, type Writable } from 'svelte/store';
 import type {
 	Incident,
 	TimelineEvent,
@@ -268,53 +265,3 @@ export function setupIncidentWatcher() {
 		}
 	});
 }
-
-// ============================================================================
-// SOCKET INTEGRATION
-// ============================================================================
-
-let socketInitialized = false;
-let previousIncidentUuid: string | null = null;
-
-/**
- * Initialize socket connection and set up real-time sync
- * Call this once during app initialization
- */
-export function initializeCacheSync() {
-	if (!browser || socketInitialized) return;
-
-	socketInitialized = true;
-	const socket = initializeSocket();
-
-	if (!socket) {
-		console.error('Failed to initialize socket');
-		return;
-	}
-
-	// Listen for data updates from other users
-	socket.on('core-entry-modified', async () => {
-		console.log('Real-time update received: core-entry-modified');
-		const incident = get(currentSelectedIncident);
-		if (incident) {
-			await updateIncidentCache(incident);
-		}
-	});
-
-	// Auto-join/leave incident rooms when selection changes
-	currentSelectedIncident.subscribe((incident) => {
-		// Leave previous incident room
-		if (previousIncidentUuid) {
-			leaveIncidentWithPresence(previousIncidentUuid);
-		}
-
-		// Join new incident room
-		if (incident?.uuid) {
-			joinIncidentWithPresence(incident.uuid);
-			previousIncidentUuid = incident.uuid;
-		} else {
-			previousIncidentUuid = null;
-		}
-	});
-
-	console.log('✅ Cache sync with Socket.IO initialized');
-} 

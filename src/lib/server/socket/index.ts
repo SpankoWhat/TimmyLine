@@ -1,28 +1,15 @@
 import { Server } from 'socket.io';
 import type { Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
+import type { UserInfo, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
 
 // Use globalThis to persist across HMR reloads
 const globalForSocket = globalThis as unknown as {
     io: Server | undefined;
 };
 
-// Store for tracking users in rooms (for presence)
-const roomUsers = new Map<string, Map<string, { socketId: string; analystUuid: string; analystName: string; color: string }>>();
-
-/**
- * Generate a consistent color from socket ID
- */
-function generateColorFromId(id: string): string {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-        hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash % 360);
-    const saturation = 65 + (Math.abs(hash) % 20);
-    const lightness = 50 + (Math.abs(hash >> 8) % 15);
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-}
+// New - Store for tracking users in rooms (for presence)
+const allIncidents = new Map<IncidentUUID, Incident>(); 
 
 /**
  * Initialize Socket.IO server with all listeners and handlers
@@ -47,7 +34,7 @@ export function initializeSocketIO(server: import("http").Server | import("http2
     globalForSocket.io.on('connection', (socket) => {
         registerJoinRoomEvent(socket);
         registerLeaveRoomEvent(socket);
-        registerRowFocus(socket);
+        registerUserIncidentPresence(socket);
         registerDisconnectEvent(socket);
     });
 
@@ -56,109 +43,142 @@ export function initializeSocketIO(server: import("http").Server | import("http2
 
 function registerDisconnectEvent(socket: Socket) {
     socket.on('disconnect', () => {
-        logger.debug(`Client ${socket.id} disconnected`);
+        for (const [incidentUUID, incident] of allIncidents.entries()) {
+            // Skip if incident page does not have this socket (user)
+            if (!incident.has(socket.id)) continue;
 
-        // Clean up user from all rooms
-        for (const [incidentUuid, room] of roomUsers.entries()) {
-            if (room.has(socket.id)) {
-                room.delete(socket.id);
+            // Remove user from incident and notify others
+            socket.to(`incident:${incidentUUID}`).emit('user-left-incident', socket.id);
+            incident.delete(socket.id);
+            logger.debug(`Removed socket ${socket.id} from incident ${incidentUUID}`);
 
-                // Notify others in that room
-                socket.to(`incident:${incidentUuid}`).emit('user-left', {
-                    socketId: socket.id,
-                    incidentUuid
-                });
-
-                if (room.size === 0) {
-                    roomUsers.delete(incidentUuid);
-                }
-            }
+            // Skip cleaning allIncidents if Incident is not empty after deletion
+            if (incident.size > 0) continue;
+            allIncidents.delete(incidentUUID);
         }
     });
 }
 
-function registerRowFocus(socket: Socket) {
-    socket.on('focus-row', (data: { incidentUuid: string; rowUuid: string | null; action: 'viewing' | 'editing' | 'idle'; }) => {
-        const roomName = `incident:${data.incidentUuid}`;
+function registerUserIncidentPresence(socket: Socket) {
+    socket.on('inform-focus-change', (data: { incidentUUID: string; rowUUID: string | null; }) => {
+        const roomName = `incident:${data.incidentUUID}`;
 
-        // Broadcast focus change to others in room
-        socket.to(roomName).emit('user-focus-changed', {
-            socketId: socket.id,
-            rowUuid: data.rowUuid,
-            action: data.action
-        });
+        // Update internal tracking of user focus
+        try {
+            let incident = allIncidents.get(data.incidentUUID);
+            if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
+
+            let userInfo = incident.get(socket.id);
+            if (!userInfo) throw new Error(`User ${socket.id} not found in incident ${data.incidentUUID}`);
+
+            userInfo.rowUUID = data.rowUUID;
+            userInfo.isFocused = data.rowUUID ? true : false;
+            incident.set(socket.id, userInfo);
+
+            allIncidents.set(data.incidentUUID, incident);
+        } catch (error) {
+            logger.error(`Error occurred while informing focus change: ${error}`);
+            return;
+        }
+
+        // Notify others in room about focus change after updating internal state
+        socket.to(roomName).emit('user-focused-row', socket.id, data.rowUUID);
+        logger.debug(`Client ${socket.id} informed focus change in ${roomName} to row ${data.rowUUID}`);
     });
 }
 
 function registerLeaveRoomEvent(socket: Socket) {
-    socket.on('leave-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string; }) => {
-        const roomName = `incident:${data.incidentUuid}`;
-        socket.leave(roomName);
-        logger.debug(`Client ${socket.id} (${data.analystName}) left ${roomName}`);
+    socket.on('inform-leave-incident', (data: { incidentUUID: string; }) => {
+        const roomName = `incident:${data.incidentUUID}`;
 
-        // Remove user from room tracking
-        const room = roomUsers.get(data.incidentUuid);
-        if (room) {
-            room.delete(socket.id);
-            if (room.size === 0) {
-                roomUsers.delete(data.incidentUuid);
+        // Update internal tracking of user focus
+        try {
+            let incident = allIncidents.get(data.incidentUUID);
+            if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
+
+            let userInfo = incident.get(socket.id);
+            if (!userInfo) throw new Error(`User ${socket.id} not found in incident ${data.incidentUUID}`);
+
+            // Remove user from incident, if last user, remove incident entry
+            incident.delete(socket.id);
+            if (incident.size === 0) {
+                allIncidents.delete(data.incidentUUID);
+            } else {
+                allIncidents.set(data.incidentUUID, incident);
             }
+        } catch (error) {
+            logger.error(`Error occurred while removing user from incident: ${error}`);
+            return;
         }
 
+        socket.leave(roomName);
         // Notify others that user left
-        socket.to(roomName).emit('user-left', {
-            socketId: socket.id,
-            incidentUuid: data.incidentUuid
-        });
+        socket.to(roomName).emit('user-left-incident', socket.id);
+        logger.debug(`Client ${socket.id} left ${roomName}`);
     });
 }
 
 function registerJoinRoomEvent(socket: Socket) {
-    logger.debug(`Client connected with socket id: ${socket.id}`);
-
-    // Join incident room with presence info
-    socket.on('join-incident', (data: { incidentUuid: string; analystUuid: string; analystName: string; }) => {
-        const roomName = `incident:${data.incidentUuid}`;
+    socket.on('inform-join-incident', (data: { incidentUUID: string; analystUUID: string; analystName: string; }) => {
+        const roomName = `incident:${data.incidentUUID}`;
         socket.join(roomName);
-        logger.debug(`Client ${socket.id} (${data.analystName}) joined ${roomName}`);
 
-        // Track user in room
-        if (!roomUsers.has(data.incidentUuid)) {
-            roomUsers.set(data.incidentUuid, new Map());
+        // Update internal tracking of user focus
+        try {
+            let incident = allIncidents.get(data.incidentUUID);
+
+            // Create new incident entry if it doesn't exist - first user joining
+            if (!incident) {
+                incident = new Map<SocketId, UserInfo>();
+                allIncidents.set(data.incidentUUID, incident);
+                logger.debug(`Created new incident entry for ${data.incidentUUID}`);
+            }
+
+            let userInfo = incident.get(socket.id);
+
+            // Making sure user is not already in incident
+            if (userInfo) {
+                logger.debug(`User ${socket.id} is already in incident ${data.incidentUUID}`);
+                return;
+            }
+
+            // Initialize user info
+            userInfo = {
+                analystUUID: data.analystUUID,
+                analystName: data.analystName,
+                rowUUID: null,
+                isFocused: false,
+                isEditing: false
+            };
+
+            // Add user to incident and then add to global store
+            incident.set(socket.id, userInfo);
+            allIncidents.set(data.incidentUUID, incident);
+            logger.debug(`Added socket ${socket.id} to incident ${data.incidentUUID}`);
+        } catch (error) {
+            logger.error(`Error occurred while adding user to incident: ${error}`);
+            return;
         }
-        const room = roomUsers.get(data.incidentUuid)!;
-        const userInfo = {
-            socketId: socket.id,
-            analystUuid: data.analystUuid,
-            analystName: data.analystName,
-            color: generateColorFromId(socket.id)
-        };
-        room.set(socket.id, userInfo);
 
-        // Broadcast to others in room that new user joined
-        socket.to(roomName).emit('user-joined', {
-            ...userInfo,
-            currentRow: null,
-            action: 'idle'
-        });
+        let userInfo = allIncidents.get(data.incidentUUID)!.get(socket.id)!;
 
-        // Send current room users to the new joiner
-        const roomUsersList = Array.from(room.values()).map(u => ({
-            ...u,
-            currentRow: null,
-            action: 'idle' as const
-        }));
-        socket.emit('room-users', {
-            incidentUuid: data.incidentUuid,
-            users: roomUsersList
-        });
+        // Send new user details to others in the incident room
+        socket.to(roomName).emit('user-joined-incident', socket.id, userInfo);
+
+        // Send current incident state to the new user if others are present
+        const incident = allIncidents.get(data.incidentUUID)!;
+        if (incident.size > 1) {
+            socket.emit('enrich-newUser-incidentState', Object.fromEntries(incident));
+        }
+
     });
+
 }
 
 export function getSocketIO(): Server {
     logger.debug('Getting Socket.IO instance');
     if (!globalForSocket.io) {
-        logger.error('Socket.IO not initialized');
+        logger.fatal('Socket.IO not initialized');
         throw new Error('Socket.IO not initialized');
     }
     return globalForSocket.io;
