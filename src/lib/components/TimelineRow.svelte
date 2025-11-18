@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
-    import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore';
+    // import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore.txt';
+    import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import TimelineRow from './TimelineRow.svelte';
     
     let { 
@@ -15,19 +16,20 @@
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
     let isHovered = $state(false);
+    
+    // Reactive derived value - updates when incidentUsers changes
+    let usersOnThisRow = $derived($getUsersOnRow(item.uuid));
 
-    // Get users currently viewing/editing this row
-    let usersHere = $derived($getUsersOnRow(item.uuid));
 
     // Emit presence when hovering
     function handleMouseEnter() {
         isHovered = true;
-        emitRowViewing(item.uuid);
+        emitViewRow(item.uuid);
     }
 
     function handleMouseLeave() {
         isHovered = false;
-        emitRowIdle();
+        emitIdle();
     }
 
     // Combined display field configuration for both events and actions
@@ -91,11 +93,21 @@
     function toggleExpandedDetails() {
         if (showExpandedDetails) {
             showExpandedDetails = false;
-            emitRowIdle();
+            emitIdle();
             return;
         }
         showExpandedDetails = true;
-        emitRowViewing(item.uuid);
+        emitViewRow(item.uuid);
+    }
+
+    // Function to generate a consistent color from a string (e.g., username)
+    function randomColorFromString(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = hash % 360;
+        return `hsl(${hue}, 70%, 50%)`;
     }
 </script>
 
@@ -105,7 +117,6 @@
     onmouseleave={handleMouseLeave} -->
 <div 
     class="timeline-item {item.type}"
-    class:has-presence={usersHere.length > 0}
     style="margin-left: {childLeftMarginOffset};" 
     onclick={toggleExpandedDetails}
 >
@@ -162,19 +173,15 @@
     </div>
         
     <!-- Presence Indicators -->
-    {#if usersHere.length > 0}
+    {#if usersOnThisRow.length > 0}
         <div class="presence-indicators">
-            {#each usersHere as user}
+            {#each usersOnThisRow as user}
                 <div 
                     class="user-avatar"
-                    class:editing={user.action === 'editing'}
-                    style:border-color={user.color}
-                    style:background-color={user.color}
-                    title={`${user.analystName} is ${user.action}`}
+                    style:border-color={randomColorFromString(user.analystName)}
+                    style:background-color={randomColorFromString(user.analystName)}
+                    title={`${user.analystName} is ${user.isEditing ? 'editing' : 'viewing'} this item`}
                 >
-                    {#if user.action === 'editing'}
-                        <span class="editing-badge">✏️</span>
-                    {/if}
                 </div>
             {/each}
         </div>

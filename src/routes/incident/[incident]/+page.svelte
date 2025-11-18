@@ -4,13 +4,13 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import {
-		currentSelectedIncident,
-		combinedTimeline
-	} from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, analysts, initializeAllCaches } from "$lib/stores/cacheStore.js";
+	import { initializeSocket, joinIncident, leaveIncident, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
+	
+	// Prop Imports
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
-    	
+	
     let { data }: PageProps = $props();
 	
 	onMount(() => {
@@ -19,12 +19,23 @@
 			console.warn('No incident data found from server for incident uuid:', incidentObj);
 			return;
 		}
-		
 		currentSelectedIncident.set(incidentObj);
-	});
 
+		initializeAllCaches();
+		
+		// Now analyst is guaranteed to be set
+		if (initializeSocket() && $currentSelectedIncident?.uuid && $currentSelectedAnalyst?.uuid) {
+			console.log('Socket initialized successfully. Joining incident room...');
+			joinIncident();
+		} else {
+			console.error('Socket initialization failed.');
+		}
+	});
+	
 	onDestroy(() => {
 		$currentSelectedIncident = null;
+		leaveIncident();
+		disconnectSocket();
 	});
 
 </script>

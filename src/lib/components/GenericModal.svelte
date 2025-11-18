@@ -8,7 +8,7 @@
 		entityTypes, 
 		annotationTypes
 	} from '$lib/stores/cacheStore';
-	import { emitRowEditing, emitRowIdle } from '$lib/stores/presenceStore';
+	import { emitEditingRow, emitIdle } from '$lib/stores/collabStore';
 	
 	let formData = $state<Record<string, any>>({});
 	let errors = $state<Record<string, string>>({});
@@ -38,12 +38,12 @@
 			if (currentModal.mode === 'edit' && currentModal.data?.uuid) {
 				editingRowUuid = currentModal.data.uuid;
 				if (editingRowUuid) {
-					emitRowEditing(editingRowUuid);
+					emitEditingRow(editingRowUuid);
 				}
 			}
 		} else if (editingRowUuid) {
 			// Modal closed, emit idle
-			emitRowIdle();
+			emitIdle();
 			editingRowUuid = null;
 		}
 	});
@@ -136,7 +136,7 @@
 		}
 		// Emit idle before closing
 		if (editingRowUuid) {
-			emitRowIdle();
+			emitIdle();
 			editingRowUuid = null;
 		}
 		modalStore.close();
