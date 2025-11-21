@@ -4,7 +4,7 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, analysts, initializeAllCaches } from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches } from "$lib/stores/cacheStore.js";
 	import { initializeSocket, joinIncident, leaveIncident, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
@@ -37,7 +37,6 @@
 		leaveIncident();
 		disconnectSocket();
 	});
-
 </script>
 
 <div class="incident-page">
