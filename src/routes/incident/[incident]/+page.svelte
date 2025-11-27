@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Svelte Imports
-	import { onMount, onDestroy} from 'svelte';
+	import { onMount, onDestroy, getContext} from 'svelte';
 	import type { PageProps } from './$types';
 	
 	// Store Imports
@@ -10,8 +10,10 @@
 	
 	// Prop Imports
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
+	import IncidentStats from '$lib/components/IncidentStats.svelte';
 	
     let { data }: PageProps = $props();
+	let { register, unregister } : any = getContext('dynamicLayoutSlots');
 	
 	onMount(() => {
 		let incidentObj = data.incident as Incident;
@@ -30,10 +32,15 @@
 		} else {
 			console.error('Socket initialization failed.');
 		}
+
+		document.title = `Incident - ${$currentSelectedIncident?.title} - TimmyLine`;
+		register('stats', IncidentStats);
+
 	});
 	
 	onDestroy(() => {
 		$currentSelectedIncident = null;
+		unregister('stats');
 		leaveIncident();
 		disconnectSocket();
 	});

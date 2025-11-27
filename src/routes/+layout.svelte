@@ -1,25 +1,19 @@
 <script lang="ts">
 	// Core stuff
 	import "../app.css";
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, setContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from "$app/state";
 	
 	// Stores
 	import { 
 		initializeAllCaches,
 		analysts,
-		incidentStats,
-		combinedTimeline,
 		setupIncidentWatcher,
 		currentSelectedAnalyst,
 		currentSelectedIncident,
-		currentCachedTimelineEvents,
-		currentCachedInvestigationActions,
 	} from '$lib/stores/cacheStore';
 	import { modalStore } from '$lib/stores/modalStore';
 	import GenericModal from '$lib/components/GenericModal.svelte';
-	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	
 	// Local Props and State
 	let { children } = $props();
@@ -28,6 +22,21 @@
 	let showDatabaseDropdown = $state(false);
 	let showOtherDropdown = $state(false);
 	let unsubscribe: (() => void) | undefined;
+
+	// Dynamic HUD Info 
+	let dynamicComponents = $state<Record<string, any>>({});
+	type supportedSections = 'stats' | 'actions' | 'userActivity';
+
+	setContext('dynamicLayoutSlots', {
+		register: (section: supportedSections, component: any) => {
+			dynamicComponents[section] = component;
+		},
+		unregister: (section: supportedSections) => {
+			dynamicComponents[section] = null;
+		},
+	});
+
+
 	
 	onMount(async () => {
 		// Initialize all caches first
@@ -51,8 +60,6 @@
 		// Clean up subscription when layout unmounts
 		unsubscribe?.();
 	});
-
-	let isIncidentPage = $derived(page.url.pathname.startsWith('/incident/'));
 	
 	// Simplified modal opening function
 	async function openModal(entityType: string, mode: 'create' | 'edit' = 'create') {
@@ -188,59 +195,18 @@
 		<span class="header-value">{$currentSelectedIncident?.title || 'Not Selected'}</span>
 	</div>
 	
-	<!-- Active Users Indicator -->
-	{#if isIncidentPage}
-		<ActiveUsersIndicator />
-	{/if}
+	<!-- Active Users Indicator - section -->
 
-	{#if !isIncidentPage}
-		<!-- Landing Page Statistics -->
+	<!-- Current page Statistics - section -->
+	 {#if dynamicComponents.stats}
 		<div class="stats-info">
-			<div class="stat-card info">
-				<div class="stat-label">Total</div>
-				<div class="stat-value">{$incidentStats.total || 0}</div>
-			</div>
-			<div class="divider"> | </div>
-			<div class="stat-card critical">
-				<div class="stat-label">Critical</div>
-				<div class="stat-value">{$incidentStats.critical || 0}</div>
-			</div>
-			<div class="stat-card warning">
-				<div class="stat-label">High</div>
-				<div class="stat-value">{$incidentStats.high || 0}</div>
-			</div>
-			<div class="divider"> | </div>
-			<div class="stat-card info">
-				<div class="stat-label">In Progress</div>
-				<div class="stat-value">{$incidentStats.inProgress || 0}</div>
-			</div>
-			<div class="stat-card success">
-				<div class="stat-label">Closed</div>
-				<div class="stat-value">{$incidentStats.closed || 0}</div>
-			</div>
-		</div>
-	{:else}
-		<!-- Show if page is incident -->
-		<div class="stats-info">
-			<div class="stat-card success">
-				<span class="stat-label">Total</span>
-				<span class="stat-value">{$combinedTimeline.length || 0}</span>
-			</div>
-			<div class="divider"> | </div>
-			<div class="stat-card info">
-				<span class="stat-label">Events</span>
-				<span class="stat-value">{$currentCachedTimelineEvents.length || 0}</span>
-			</div>
-			<div class="stat-card info">
-				<span class="stat-label">Actions</span>
-				<span class="stat-value">{$currentCachedInvestigationActions.length || 0}</span>
-			</div>
+			{@render dynamicComponents.stats?.() }
 		</div>
 	{/if}
 </div>
 
 
-<!-- Action Dock -->
+<!-- Action Dock - section -->
 <div class="action-dock">
 	<!-- Left: Navigation -->
 	<div class="dock-section">
@@ -357,38 +323,6 @@
 		align-self: center;
 		margin-left: auto;
 	}
-
-	.stat-card {
-		display: flex;
-		flex-direction: row;
-		background: var(--color-bg-secondary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-md);
-		padding-left: var(--spacing-md);
-		padding-right: var(--spacing-md);
-	}
-
-	.stat-label {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.stat-value {
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-semibold);
-		padding-left: var(--spacing-sm);
-		color: var(--color-text-primary);
-	}
-
-	.stat-card.critical .stat-value { color: var(--color-accent-error); }
-	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
-	.stat-card.success .stat-value { color: var(--color-accent-success); }
-	.stat-card.info .stat-value { color: var(--color-accent-primary); }
-
-
-
 
 	.dock-section {
 		display: flex;
