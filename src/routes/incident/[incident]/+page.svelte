@@ -11,6 +11,7 @@
 	// Prop Imports
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
 	import IncidentStats from '$lib/components/IncidentStats.svelte';
+	import IncidentPageActions from '$lib/components/IncidentPageActions.svelte';
 	
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -35,12 +36,14 @@
 
 		document.title = `Incident - ${$currentSelectedIncident?.title} - TimmyLine`;
 		register('stats', IncidentStats);
+		register('actions', IncidentPageActions);
 
 	});
 	
 	onDestroy(() => {
 		$currentSelectedIncident = null;
 		unregister('stats');
+		unregister('actions');
 		leaveIncident();
 		disconnectSocket();
 	});

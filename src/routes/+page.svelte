@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import DashboardStats from '$lib/components/DashboardStats.svelte';
+	import HomePageActions from '$lib/components/HomePageActions.svelte';
 
 	let { data }: PageProps = $props();
 	const { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -16,10 +17,12 @@
 	onMount(() => {
 		document.title = `Dashboard - TimmyLine`;
 		register('stats', DashboardStats);
+		register('actions', HomePageActions);
 	});
 
 	onDestroy(() => {
 		unregister('stats');
+		unregister('actions');
 	});
 
 </script>
