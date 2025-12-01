@@ -12,6 +12,7 @@
 	import TimeLineRow from "$lib/components/TimelineRow.svelte";
 	import IncidentStats from '$lib/components/IncidentStats.svelte';
 	import IncidentPageActions from '$lib/components/IncidentPageActions.svelte';
+	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -37,6 +38,7 @@
 		document.title = `Incident - ${$currentSelectedIncident?.title} - TimmyLine`;
 		register('stats', IncidentStats);
 		register('actions', IncidentPageActions);
+		register('userActivity', ActiveUsersIndicator);
 
 	});
 	
@@ -89,10 +91,11 @@
 		background: var(--color-bg-secondary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
+		height: calc(100vh - var(--header-height) - 40px);
 	}
 
 	.section-header {
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding: var(--spacing-xs) var(--spacing-lg);
 		border-bottom: 1px solid var(--color-border-subtle);
 		font-size: var(--font-size-sm);
 		font-weight: var(--font-weight-semibold);
@@ -102,14 +105,14 @@
 	}
 
 	.section-content {
-		padding: var(--spacing-md);
+		padding: var(--spacing-xs);
+		height: 100%;
 	}
 
 	.timeline-list {
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-xs);
-		max-height: calc(100vh - 350px);
 		overflow-y: auto;
 	}
 

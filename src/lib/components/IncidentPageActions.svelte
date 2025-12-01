@@ -1,172 +1,120 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
-    type buttonLists = 'relate' | 'create' | 'config' | '';
+	import ActionDock from './ActionDock.svelte';
+	import { modalStore } from '$lib/stores/modalStore';
+	// Stores
+	import { 
+		currentSelectedAnalyst,
+		currentSelectedIncident,
+	} from '$lib/stores/cacheStore';
 
-    let currentButtonList = $state<buttonLists>('')
+	// Simplified modal opening function
+	async function openModal(entityType: string, mode: 'create' | 'edit' = 'create') {
+		modalStore.open({
+			title: entityType.replace(/_/g, ' '),
+			entityType: entityType as any,
+			mode,
+			onSubmit: async (data) => {
+				// Add current incident UUID for core entities
+				if (['timeline_event', 'investigation_action', 'annotation', 'entity'].includes(entityType)) {
+					data.incident_id = $currentSelectedIncident?.uuid;
+				}
+				
+				console.log('Submitting data:', data);
+				// Add specific fields based on entity type
+				switch (entityType) {
+					case 'timeline_event':
+						data.discovered_by = $currentSelectedAnalyst?.uuid;
+						break;
+					case 'investigation_action':
+						data.actioned_by = $currentSelectedAnalyst?.uuid;
+						break;
+					case 'annotation':
+						data.noted_by = $currentSelectedAnalyst?.uuid;
+						break;
+					case 'entity':
+						data.entered_by = $currentSelectedAnalyst?.uuid;
+						break;
+				}
+				
+				// Convert datetime fields to epoch if needed
+				if (data.occurred_at && typeof data.occurred_at === 'string') {
+					data.occurred_at = new Date(data.occurred_at).getTime();
+				}
+				if (data.discovered_at && typeof data.discovered_at === 'string') {
+					data.discovered_at = new Date(data.discovered_at).getTime();
+				}
+				if (data.performed_at && typeof data.performed_at === 'string') {
+					data.performed_at = new Date(data.performed_at).getTime();
+				}
+				if (data.created_at && typeof data.created_at === 'string') {
+					data.created_at = new Date(data.created_at).getTime();
+				}
+				
+				// Determine API endpoint based on entity type
+				let endpoint = '';
+				if (['action_type', 'entity_type', 'event_type', 'annotation_type'].includes(entityType)) {
+					endpoint = `/api/create/lookup`;
+				} else {
+					endpoint = `/api/create/core/${entityType}`;
+				}
+				
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(data),
+				});
+				
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.error || 'Failed to save');
+				}
+				
+				// Refresh caches - removed to opt in for the event listener socket approach
+				// await initializeAllCaches();
+			}
+		});
+	}
+
+	function openRelationModal(relationType: string) {
+		console.log('Opening relation modal:', relationType);
+		// TODO: Implement relation modal logic
+	}
+
+	const buttons = [
+		{
+			id: 'create',
+			label: 'Create',
+			variant: 'create' as const,
+			items: [
+				{ label: 'Timeline Event', action: () => openModal('timeline_event') },
+				{ label: 'Entity', action: () => openModal('entity') },
+				{ label: 'Investigation Action', action: () => openModal('investigation_action') },
+				{ label: 'Annotation', action: () => openModal('annotation') }
+			]
+		},
+		{
+			id: 'relate',
+			label: 'Relate',
+			variant: 'relate' as const,
+			items: [
+				{ label: 'Action → Events', action: () => openRelationModal('ActionEventsRelation') },
+				{ label: 'Action → Entities', action: () => openRelationModal('ActionEntitiesRelation') },
+				{ label: 'Event → Entities', action: () => openRelationModal('EventEntitiesRelation') }
+			]
+		},
+		{
+			id: 'config',
+			label: 'Configure',
+			variant: 'config' as const,
+			items: [
+				{ label: 'Action Type', action: () => openModal('action_type') },
+				{ label: 'Entity Type', action: () => openModal('entity_type') },
+				{ label: 'Event Type', action: () => openModal('event_type') },
+				{ label: 'Annotation Type', action: () => openModal('annotation_type') },
+				{ label: 'Analyst', action: () => openModal('analyst') }
+			]
+		}
+	];
 </script>
 
-<!-- Left: Navigation -->
-<div class="dock-section">
-    <button class="action-btn home" onclick={() => goto("/")} title="Home">Home</button>
-</div>
-
-<!-- Center: Main Actions -->
-<div class="dock-section">
-	<!-- Create Entities -->
-	<div class="dropdown-wrapper">
-		<button class="action-btn create" onclick={() => currentButtonList = 'create'}>Create</button>
-		{#if currentButtonList === 'create'}
-			<div class="dropdown-menu">
-				<button class="dropdown-item" onclick={() => openModal("timeline_event")}>Timeline Event</button>
-				<button class="dropdown-item" onclick={() => openModal("entity")}>Entity</button>
-				<button class="dropdown-item" onclick={() => openModal("investigation_action")}>Investigation Action</button>
-				<button class="dropdown-item" onclick={() => openModal("annotation")}>Annotation</button>
-			</div>
-		{/if}
-	</div>
-
-	<!-- Relate Entities -->
-	<div class="dropdown-wrapper">
-		<button class="action-btn relate" onclick={() => currentButtonList = 'relate'}>Relate</button>
-		{#if currentButtonList === 'relate'}
-			<div class="dropdown-menu">
-				<button class="dropdown-item" onclick={() => openRelationModal("ActionEventsRelation")}>Action → Events</button>
-				<button class="dropdown-item" onclick={() => openRelationModal("ActionEntitiesRelation")}>Action → Entities</button>
-				<button class="dropdown-item" onclick={() => openRelationModal("EventEntitiesRelation")}>Event → Entities</button>
-			</div>
-		{/if}
-	</div>
-
-	<!-- Configure Database -->
-	<div class="dropdown-wrapper">
-		<button class="action-btn config" onclick={() => currentButtonList = 'config'}>Configure</button>
-		{#if currentButtonList === 'config'}
-			<div class="dropdown-menu">
-				<button class="dropdown-item" onclick={() => openModal("action_type")}>Action Type</button>
-				<button class="dropdown-item" onclick={() => openModal("entity_type")}>Entity Type</button>
-				<button class="dropdown-item" onclick={() => openModal("event_type")}>Event Type</button>
-				<button class="dropdown-item" onclick={() => openModal("annotation_type")}>Annotation Type</button>
-				<button class="dropdown-item" onclick={() => openModal("analyst")}>Analyst</button>
-			</div>
-		{/if}
-	</div>
-</div>
-
-<!-- Right: Filler -->
-<div class="dock-section"></div>
-
-
-<style>
-    .dock-section {
-		display: flex;
-		gap: var(--spacing-sm);
-		align-items: center;
-	}
-
-	.dropdown-wrapper {
-		position: relative;
-	}
-
-	.action-btn {
-		padding: var(--spacing-xs) var(--spacing-md);
-		background: var(--color-bg-tertiary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-sm);
-		color: var(--color-text-primary);
-		font-weight: var(--font-weight-medium);
-		font-size: var(--font-size-xs);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		cursor: pointer;
-		transition: all var(--transition-fast);
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-	}
-
-	.action-btn:hover {
-		background: var(--color-bg-hover);
-		border-color: var(--color-accent-primary);
-	}
-
-	.action-btn:active {
-		transform: scale(0.98);
-	}
-
-	.action-btn.create {
-		border-color: var(--color-accent-success);
-		color: var(--color-accent-success);
-	}
-
-	.action-btn.home {
-		border-color: var(--color-border-subtle);
-		color: var(--color-accennt-primary);
-	}
-
-	.action-btn.create:hover {
-		border-color: var(--color-accent-success);
-		background: rgba(52, 211, 153, 0.1);
-	}
-
-	.action-btn.relate {
-		border-color: var(--color-accent-secondary);
-		color: var(--color-accent-secondary);
-	}
-
-	.action-btn.relate:hover {
-		border-color: var(--color-accent-secondary);
-		background: rgba(129, 140, 248, 0.1);
-	}
-
-	.action-btn.config {
-		border-color: var(--color-accent-warning);
-		color: var(--color-accent-warning);
-	}
-
-	.action-btn.config:hover {
-		border-color: var(--color-accent-warning);
-		background: rgba(251, 191, 36, 0.1);
-	}
-
-	.dropdown-menu {
-		position: absolute;
-		bottom: calc(100% + var(--spacing-xs));
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 100;
-		min-width: 180px;
-		background: var(--color-bg-secondary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-md);
-		overflow: hidden;
-		box-shadow: var(--shadow-md);
-	}
-	.dropdown-menu.other-menu {
-		right: 0;
-		left: auto;
-		transform: none;
-	}
-
-	.dropdown-item {
-		display: block;
-		width: 100%;
-		padding: var(--spacing-sm) var(--spacing-md);
-		text-align: left;
-		color: var(--color-text-primary);
-		font-size: var(--font-size-xs);
-		background: transparent;
-		border: none;
-		border-bottom: 1px solid var(--color-border-subtle);
-		cursor: pointer;
-		transition: all var(--transition-fast);
-	}
-
-	.dropdown-item:last-child {
-		border-bottom: none;
-	}
-
-	.dropdown-item:hover {
-		background: var(--color-bg-hover);
-		color: var(--color-accent-primary);
-	}
-</style>
+<ActionDock {buttons} />
