@@ -1,5 +1,8 @@
 node_modules
 
+# Vscode
+.vscode
+
 # Output
 .output
 .vercel
