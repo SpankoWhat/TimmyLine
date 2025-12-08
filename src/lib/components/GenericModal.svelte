@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
 	import { modalStore } from '$lib/stores/modalStore';
 	import { entityFieldConfigs, type FieldConfig } from '$lib/config/modalFields';
 	import { 

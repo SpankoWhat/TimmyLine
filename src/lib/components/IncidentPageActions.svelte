@@ -54,6 +54,7 @@
 				let endpoint = '';
 				if (['action_type', 'entity_type', 'event_type', 'annotation_type'].includes(entityType)) {
 					endpoint = `/api/create/lookup`;
+					data.table = entityType;
 				} else {
 					endpoint = `/api/create/core/${entityType}`;
 				}

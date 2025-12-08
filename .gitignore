@@ -25,6 +25,7 @@ vite.config.ts.timestamp-*
 # SQLite
 data/**
 **.sqlite
+data/timmyD.sqlite
 
 # Other
 /.github

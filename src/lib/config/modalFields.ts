@@ -353,7 +353,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 		},
 	],
 
-	// Lookup tables (simpler configs)
+	// Lookup tables
 	action_type: [
 		{
 			key: 'name',
