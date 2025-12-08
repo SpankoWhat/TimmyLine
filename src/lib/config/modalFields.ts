@@ -119,7 +119,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			],
 		},
 		{
-			key: 'description',
+			key: 'event_data',
 			label: 'Description',
 			type: 'textarea',
 		},

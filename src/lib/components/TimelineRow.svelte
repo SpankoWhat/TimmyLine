@@ -120,18 +120,19 @@
     style="margin-left: {childLeftMarginOffset};" 
     onclick={toggleExpandedDetails}
 >
+
+    <!-- Timestamp -->
+    <div class="timestamp" title="Occurred or Performed At">
+        <span class="terminal-prompt">></span>
+        <span class="time-value">{formatTimestamp(item.timestamp)}</span>
+    </div>
+
     <!-- Type Indicator Badge -->
     <div class="type-indicator {item.type}">
         <span class="type-icon">
             {item.type === 'event' ? '🔸' : '🔹'}
         </span>
         <span class="type-label">{item.displayType}</span>
-    </div>
-
-    <!-- Timestamp -->
-    <div class="timestamp" title="Occurred or Performed At">
-        <span class="terminal-prompt">></span>
-        <span class="time-value">{formatTimestamp(item.timestamp)}</span>
     </div>
 
     <!-- Data Fields Container -->
@@ -145,13 +146,6 @@
                     {/if}
                     <span class="field-value">{(item.data as any)[field.key] || '—'}</span>
                 </span>
-            <!-- {:else}
-                {#if (item.data as any)[field.key]}
-                    <span class="datafield inline">
-                        <span class="field-label">{field.label}:</span>
-                        <span class="field-value-inline">{((item.data as any)[field.key] || '').substring(0, 50)}{((item.data as any)[field.key] || '').length > 50 ? '...' : ''}</span>
-                    </span>
-                {/if}-->
             {/if} 
         {/each}
     </div>
@@ -229,7 +223,7 @@
         border-left: 2px solid var(--color-border-strong);
         background: var(--color-bg-secondary);
         border-radius: var(--border-radius-sm);
-        margin-bottom: var(--spacing-xs);
+        /* margin-bottom: var(--spacing-xs); */
         transition: all var(--transition-fast);
         cursor: pointer;
     }
@@ -276,7 +270,7 @@
         gap: var(--spacing-xs);
         font-weight: var(--font-weight-medium);
         color: var(--color-text-secondary);
-        min-width: 160px;
+        /* min-width: 160px; */
         font-size: var(--font-size-xs);
     }
 

@@ -1,14 +1,29 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import {currentCachedIncidents, actionTypes} from '$lib/stores/cacheStore';
+	import { currentCachedIncidents, actionTypes } from '$lib/stores/cacheStore';
 	import type { Incident } from '$lib/server/database';
 	import { goto } from '$app/navigation';
+	import { getContext, onMount, onDestroy } from 'svelte';
+	import DashboardStats from '$lib/components/DashboardStats.svelte';
+	import HomePageActions from '$lib/components/HomePageActions.svelte';
 
 	let { data }: PageProps = $props();
+	const { register, unregister } : any = getContext('dynamicLayoutSlots');
 
 	function userSelectedIncident(incident: Incident) {
 		goto(`/incident/${incident.uuid}`);
 	}
+
+	onMount(() => {
+		document.title = `Dashboard - TimmyLine`;
+		register('stats', DashboardStats);
+		register('actions', HomePageActions);
+	});
+
+	onDestroy(() => {
+		unregister('stats');
+		unregister('actions');
+	});
 
 </script>
 
