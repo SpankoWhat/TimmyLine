@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
+import { getSocketIO } from '$lib/server/socket';
 import * as schema from '$lib/server/database';
 import { eq } from 'drizzle-orm';
 
@@ -42,9 +43,16 @@ export const POST: RequestHandler = async ({ request }) => {
 			name,
 			description
 		}).where(eq(tableObj.name, old_name)).returning();
+
+		// Fetch updated lookup table
+		const allLookups = await db.select().from(tableObj);
+
+		// Broadcast to all connected clients
+		const io = getSocketIO();
+		io.emit('lookup-updated', table, allLookups);
+
+		return json({ lookupData: allLookups });
 	} catch (err) {
 		throw error(500, `Database update error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

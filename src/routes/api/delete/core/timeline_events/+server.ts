@@ -18,9 +18,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			.where(eq(timeline_events.uuid, body.uuid))
 			.returning();
 
+		// Broadcast to all users in the incident room
 		const io = getSocketIO();
 		if (body.incident_id) {
-			io.to(`incident:${body.incident_id}`).emit('core-entry-modified');
+			io.to(`incident:${body.incident_id}`).emit('entity-deleted', 'timeline_event', body.uuid);
 		}
 
 	} catch (err) {

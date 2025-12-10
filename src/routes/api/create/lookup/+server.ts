@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
+import { getSocketIO } from '$lib/server/socket';
 import * as schema from '$lib/server/database';
 
 // Should be using the type lookup tables: event_type, action_type, relation_type, annotation_type, entity_type instead of this
@@ -33,13 +34,20 @@ export const POST: RequestHandler = async ({ request }) => {
 	const tableObj = tableMap[table as TableName];
 
 	try {
-		await db.insert(tableObj).values({
+		const [createdLookup] = await db.insert(tableObj).values({
 			name,
 			description
 		}).returning();
+
+		// Fetch updated lookup table
+		const allLookups = await db.select().from(tableObj);
+
+		// Broadcast to all connected clients (lookups are global)
+		const io = getSocketIO();
+		io.emit('lookup-updated', table, allLookups);
+
+		return json({ lookupData: allLookups });
 	} catch (err) {
 		throw error(500, `Database insertion error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

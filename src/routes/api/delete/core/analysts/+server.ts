@@ -18,8 +18,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			.where(eq(analysts.uuid, body.uuid))
 			.returning();
 
+		// Broadcast to all connected clients
 		const io = getSocketIO();
-		io.to(`incident:all`).emit('core-entry-modified');
+		io.emit('entity-deleted', 'analyst', body.uuid);
 
 	} catch (err) {
 		throw error(500, `Database deletion error: ${(err as Error).message}`);

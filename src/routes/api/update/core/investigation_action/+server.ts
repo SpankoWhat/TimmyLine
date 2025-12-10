@@ -3,6 +3,7 @@ import type { NewInvestigationAction } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -30,14 +31,18 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [updatedAction] = await db
 		.update(schema.investigation_actions)
 		.set(investigationActionData)
 		.where(eq(schema.investigation_actions.uuid, body.uuid))
 		.returning();
+
+		// Broadcast to all users in the incident room
+		const io = getSocketIO();
+		io.to(`incident:${body.incident_id}`).emit('entity-updated', 'investigation_action', updatedAction);
+
+		return json(updatedAction);
 	} catch (err) {
         throw error(500, `Database update error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

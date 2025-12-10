@@ -25,21 +25,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [updatedAnalyst] = await db
 		.update(schema.analysts)
 		.set(analystData)
 		.where(eq(schema.analysts.uuid, body.uuid))
 		.returning();
 
+		// Broadcast to all connected clients
 		const io = getSocketIO();
-		io.to(`incident:all`).emit('core-entry-modified')
+		io.emit('entity-updated', 'analyst', updatedAnalyst);
 
+		return json(updatedAnalyst);
 	} catch (err) {
 		if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
             throw error(409, 'An analyst with this username already exists');
         }
         throw error(500, `Database update error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

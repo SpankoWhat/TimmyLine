@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { incidents } from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -16,6 +17,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			.delete(incidents)
 			.where(eq(incidents.uuid, body.uuid))
 			.returning();
+
+		// Broadcast to all connected clients
+		const io = getSocketIO();
+		io.emit('entity-deleted', 'incident', body.uuid);
 
 	} catch (err) {
 		throw error(500, `Database deletion error: ${(err as Error).message}`);

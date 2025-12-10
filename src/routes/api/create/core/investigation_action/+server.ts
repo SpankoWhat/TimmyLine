@@ -3,6 +3,7 @@ import type { NewInvestigationAction } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
@@ -25,13 +26,17 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [createdAction] = await db
 		.insert(schema.investigation_actions)
 		.values(investigationActionData)
 		.returning();
+
+		// Broadcast to all users in the incident room
+		const io = getSocketIO();
+		io.to(`incident:${body.incident_id}`).emit('entity-created', 'investigation_action', createdAction);
+
+		return json(createdAction);
 	} catch (err) {
         throw error(500, `Database insertion error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

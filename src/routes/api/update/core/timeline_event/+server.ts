@@ -32,18 +32,18 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [updatedEvent] = await db
 		.update(schema.timeline_events)
 		.set(timelineEventData)
 		.where(eq(schema.timeline_events.uuid, body.uuid))
 		.returning();
 
+		// Broadcast to all users in the incident room
 		const io = getSocketIO();
-		io.to(`incident:${body.incident_id}`).emit('core-entry-modified');
+		io.to(`incident:${body.incident_id}`).emit('entity-updated', 'timeline_event', updatedEvent);
 
+		return json(updatedEvent);
 	} catch (err) {
         throw error(500, `Database update error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

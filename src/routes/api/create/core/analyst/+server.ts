@@ -20,20 +20,20 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [createdAnalyst] = await db
 		.insert(schema.analysts)
 		.values(analystData)
 		.returning();
 
+		// Broadcast to all connected clients (analysts are global)
 		const io = getSocketIO();
-		io.to(`incident:all`).emit('core-entry-modified')
+		io.emit('entity-created', 'analyst', createdAnalyst);
 
+		return json(createdAnalyst);
 	} catch (err) {
 		if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
             throw error(409, 'An analyst with this username already exists');
         }
         throw error(500, `Database insertion error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

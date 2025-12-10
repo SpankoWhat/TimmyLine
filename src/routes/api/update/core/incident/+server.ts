@@ -3,6 +3,7 @@ import type { NewIncident } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -24,17 +25,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [updatedIncident] = await db
 		.update(schema.incidents)
 		.set(incidentData)
 		.where(eq(schema.incidents.uuid, body.uuid))
 		.returning();
+
+		// Broadcast to all connected clients
+		const io = getSocketIO();
+		io.emit('entity-updated', 'incident', updatedIncident);
+
+		return json(updatedIncident);
 	} catch (err) {
 		if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
             throw error(409, 'An incident with this SOAR ticket ID already exists');
         }
         throw error(500, `Database update error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };
