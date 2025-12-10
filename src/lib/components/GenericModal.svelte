@@ -1,12 +1,6 @@
 <script lang="ts">
-	import { modalStore } from '$lib/stores/modalStore';
-	import { entityFieldConfigs, type FieldConfig } from '$lib/config/modalFields';
-	import { 
-		eventTypes, 
-		actionTypes, 
-		entityTypes, 
-		annotationTypes
-	} from '$lib/stores/cacheStore';
+	import { modalStore, getHandler, validateFormData, submitFormData } from '$lib/modals/ModalRegistry';
+	import type { FieldConfig } from '$lib/config/modalFields';
 	import { emitEditingRow, emitIdle } from '$lib/stores/collabStore';
 	
 	let formData = $state<Record<string, any>>({});
@@ -20,7 +14,8 @@
 	// by dynamically deciding based on the currentModal mode (create/edit)
 	$effect(() => {
 		if (currentModal?.isOpen) {
-			const fields = entityFieldConfigs[currentModal.entityType] || [];
+			const handler = getHandler(currentModal.entityType);
+			const fields = handler.fields;
 			const newFormData: Record<string, any> = {};
 			
 			fields.forEach(field => {
@@ -47,79 +42,47 @@
 		}
 	});
 	
-	// Enrich fields with options from the cached lookup stores
-	// Will also be used loop through in the form rendering
+	// Get enriched fields from the handler (with dropdown options populated)
 	let enrichedFields = $derived.by(() => {
 		if (!currentModal?.isOpen) return [];
 		
-		const fields = entityFieldConfigs[currentModal.entityType] || [];
-		
-		return fields.map(field => {
-			const enrichedField = { ...field };
-			
-			if (field.key === 'event_type') {
-				enrichedField.options = $eventTypes.map(et => ({
-					value: et.name,
-					label: et.name
-				}));
-			} else if (field.key === 'action_type') {
-				enrichedField.options = $actionTypes.map(at => ({
-					value: at.name,
-					label: at.name
-				}));
-			} else if (field.key === 'entity_type') {
-				enrichedField.options = $entityTypes.map(et => ({
-					value: et.name,
-					label: et.name
-				}));
-			} else if (field.key === 'annotation_type') {
-				enrichedField.options = $annotationTypes.map(at => ({
-					value: at.name,
-					label: at.name
-				}));
-			}
-			
-			return enrichedField;
-		}) as FieldConfig[];
+		const handler = getHandler(currentModal.entityType);
+		return handler.getEnrichedFields() as FieldConfig[];
 	});
-	
-	function validateField(field: FieldConfig, value: any): string | null {
-		if (field.required && (!value || value === '')) {
-			return `${field.label} is required`;
-		}
-		
-		if (field.validation) {
-			return field.validation(value);
-		}
-		
-		return null;
-	}
 	
 	async function handleSubmit() {
 		const currentModal = $modalStore;
 		if (!currentModal) return;
 		
-		// Validate all fields
+		// Validate using ModalRegistry by passing data and fields
+		// to the validate function of the respective modal handler
+		const handler = getHandler(currentModal.entityType);
+		const validationErrors = validateFormData(
+			currentModal.entityType,
+			formData,
+			handler.fields
+		);
+		
+		if (validationErrors) {
+			errors = validationErrors;
+			return;
+		}
+		
 		errors = {};
-		const fields = entityFieldConfigs[currentModal.entityType];
-		let hasErrors = false;
 		
-		fields.forEach(field => {
-			const error = validateField(field, formData[field.key]);
-			if (error) {
-				errors[field.key] = error;
-				hasErrors = true;
-			}
-		});
-		
-		if (hasErrors) return;
-		
-		// Submit
+		// Submit using ModalRegistry
 		isSubmitting = true;
 		try {
-			if (currentModal.onSubmit) {
-				await currentModal.onSubmit(formData);
-			}
+			await submitFormData(
+				currentModal.entityType,
+				currentModal.mode,
+				formData
+			);
+			
+			// Server broadcasts socket events to all clients (including us)
+			// Our socket listeners in collabStore will update the cache automatically
+			// No need to manually update cache or emit socket events here!
+			
 			modalStore.close();
 		} catch (error) {
 			console.error('Form submission error:', error);
@@ -139,11 +102,6 @@
 			editingRowUuid = null;
 		}
 		modalStore.close();
-	}
-	
-	function convertToEpoch(dateTimeLocalValue: string): number {
-		if (!dateTimeLocalValue) return Date.now();
-		return new Date(dateTimeLocalValue).getTime();
 	}
 	
 	function convertFromEpoch(epochTime: number): string {
@@ -223,7 +181,7 @@
 									class="field-input"
 									value={formData[field.key] ? convertFromEpoch(formData[field.key]) : ''}
 									oninput={(e) => {
-										formData[field.key] = convertToEpoch(e.currentTarget.value);
+										formData[field.key] = e.currentTarget.value;
 									}}
 									required={field.required} />
 									

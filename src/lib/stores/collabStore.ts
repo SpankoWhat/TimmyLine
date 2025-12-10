@@ -3,7 +3,7 @@
 import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
-import { currentSelectedIncident, currentSelectedAnalyst} from './cacheStore';
+import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
 import type { UserInfo, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
@@ -147,6 +147,27 @@ function registerEventListeners(socket: Socket) {
             }
             return incident; // Return the SAME map after modifying it
         });
+    });
+
+    // Data synchronization events
+    socket.on('entity-created', (entityType: string, entity: any) => {
+        console.debug('entity-created event received:', entityType, entity);
+        upsertEntity(entityType, entity);
+    });
+
+    socket.on('entity-updated', (entityType: string, entity: any) => {
+        console.debug('entity-updated event received:', entityType, entity);
+        upsertEntity(entityType, entity);
+    });
+
+    socket.on('entity-deleted', (entityType: string, uuid: string) => {
+        console.debug('entity-deleted event received:', entityType, uuid);
+        removeEntity(entityType, uuid);
+    });
+
+    socket.on('lookup-updated', (lookupType: string, data: any[]) => {
+        console.debug('lookup-updated event received:', lookupType, data);
+        updateLookupTable(lookupType, data);
     });
 }
 

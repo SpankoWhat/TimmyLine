@@ -22,8 +22,16 @@ These things dictate what n eeds to be stored in data and what listeners to setu
 | `user-left-incident` | inform users in room that a user left the room (incident) | `socketId: string` |
 | `inform-focus-change` | inform server that focus has changed |  `incidentUUID: string, rowUUID: string \| null` |
 | `user-focused-row` | inform users in room that a user has focused on a row | `socketId: string, rowUUID: string` |
-| `inform-edit-row` | infrom server that user's editing status | `incidentUUID:string, rowUUID: string \| null`|
-| `user-editing-row` | infrom server that user's editing status | `incidentUUID:string, rowUUID: string \| null`|
+| `inform-edit-row` | inform server that user's editing status | `incidentUUID:string, rowUUID: string \| null`|
+| `user-editing-row` | inform server that user's editing status | `incidentUUID:string, rowUUID: string \| null`|
+| `entity-created` | (client→server) inform server that an entity was created | `incidentUUID: string, entityType: string, entity: any` |
+| `entity-created` | (server→client) inform users in room that an entity was created | `entityType: string, entity: any` |
+| `entity-updated` | (client→server) inform server that an entity was updated | `incidentUUID: string, entityType: string, entity: any` |
+| `entity-updated` | (server→client) inform users in room that an entity was updated | `entityType: string, entity: any` |
+| `entity-deleted` | (client→server) inform server that an entity was deleted | `incidentUUID: string, entityType: string, uuid: string` |
+| `entity-deleted` | (server→client) inform users in room that an entity was deleted | `entityType: string, uuid: string` |
+| `lookup-updated` | (client→server) inform server that a lookup table was updated | `lookupType: string, data: any[]` |
+| `lookup-updated` | (server→client) broadcast to ALL users that a lookup table was updated | `lookupType: string, data: any[]` |
 
 # Current Local-Server Data store
 To achieve the things described above this is what I decided to store:

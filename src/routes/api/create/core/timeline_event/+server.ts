@@ -27,17 +27,18 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	try {
-		await db
+		const [createdEvent] = await db
 		.insert(schema.timeline_events)
 		.values(timelineEventData)
 		.returning();
 
+		// Broadcast to all users in the incident room (including sender for confirmation)
 		const io = getSocketIO();
-		io.to(`incident:${body.incident_id}`).emit('core-entry-modified');
+		io.to(`incident:${body.incident_id}`).emit('entity-created', 'timeline_event', createdEvent);
+
+		return json(createdEvent);
 
 	} catch (err) {
         throw error(500, `Database insertion error: ${(err as Error).message}`);
 	}
- 
-	return json(true);
 };

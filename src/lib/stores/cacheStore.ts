@@ -265,3 +265,144 @@ export function setupIncidentWatcher() {
 		}
 	});
 }
+
+// ============================================================================
+// INCREMENTAL CACHE UPDATE FUNCTIONS (for Socket.IO sync)
+// ============================================================================
+
+/**
+ * Add or update a single entity in the appropriate cache store
+ * Called when receiving socket events for real-time updates
+ */
+export function upsertEntity(entityType: string, entity: any) {
+	switch (entityType) {
+		case 'timeline_event':
+			currentCachedTimelineEvents.update((events) => {
+				const index = events.findIndex((e) => e.uuid === entity.uuid);
+				if (index >= 0) {
+					events[index] = entity;
+				} else {
+					events.push(entity);
+				}
+				return events;
+			});
+			break;
+
+		case 'investigation_action':
+			currentCachedInvestigationActions.update((actions) => {
+				const index = actions.findIndex((a) => a.uuid === entity.uuid);
+				if (index >= 0) {
+					actions[index] = entity;
+				} else {
+					actions.push(entity);
+				}
+				return actions;
+			});
+			break;
+
+		case 'annotation':
+			currentCachedAnnotations.update((annotations) => {
+				const index = annotations.findIndex((a) => a.uuid === entity.uuid);
+				if (index >= 0) {
+					annotations[index] = entity;
+				} else {
+					annotations.push(entity);
+				}
+				return annotations;
+			});
+			break;
+
+		case 'entity':
+			currentCachedEntities.update((entities) => {
+				const index = entities.findIndex((e) => e.uuid === entity.uuid);
+				if (index >= 0) {
+					entities[index] = entity;
+				} else {
+					entities.push(entity);
+				}
+				return entities;
+			});
+			break;
+
+		case 'incident':
+			currentCachedIncidents.update((incidents) => {
+				const index = incidents.findIndex((i) => i.uuid === entity.uuid);
+				if (index >= 0) {
+					incidents[index] = entity;
+				} else {
+					incidents.push(entity);
+				}
+				return incidents;
+			});
+			break;
+
+		default:
+			console.warn(`Unknown entity type for upsert: ${entityType}`);
+	}
+}
+
+/**
+ * Remove a single entity from the appropriate cache store
+ * Called when receiving socket events for deletions
+ */
+export function removeEntity(entityType: string, uuid: string) {
+	switch (entityType) {
+		case 'timeline_event':
+			currentCachedTimelineEvents.update((events) => events.filter((e) => e.uuid !== uuid));
+			break;
+
+		case 'investigation_action':
+			currentCachedInvestigationActions.update((actions) => actions.filter((a) => a.uuid !== uuid));
+			break;
+
+		case 'annotation':
+			currentCachedAnnotations.update((annotations) => annotations.filter((a) => a.uuid !== uuid));
+			break;
+
+		case 'entity':
+			currentCachedEntities.update((entities) => entities.filter((e) => e.uuid !== uuid));
+			break;
+
+		case 'incident':
+			currentCachedIncidents.update((incidents) => incidents.filter((i) => i.uuid !== uuid));
+			break;
+
+		default:
+			console.warn(`Unknown entity type for remove: ${entityType}`);
+	}
+}
+
+/**
+ * Update lookup table cache
+ * Called when receiving socket events for lookup table changes
+ */
+export function updateLookupTable(lookupType: string, data: any[]) {
+	switch (lookupType) {
+		case 'event_type':
+			eventTypes.set(data);
+			break;
+
+		case 'action_type':
+			actionTypes.set(data);
+			break;
+
+		case 'entity_type':
+			entityTypes.set(data);
+			break;
+
+		case 'annotation_type':
+			annotationTypes.set(data);
+			break;
+
+		case 'relation_type':
+			relationTypes.set(data);
+			break;
+
+		case 'analyst':
+			analysts.set(data);
+			break;
+
+		default:
+			console.warn(`Unknown lookup type: ${lookupType}`);
+	}
+}

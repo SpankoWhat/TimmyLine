@@ -7,7 +7,7 @@
 		analysts,
 		initializeAllCaches
 	} from '$lib/stores/cacheStore';
-	import { modalStore } from '$lib/stores/modalStore';
+	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import { goto } from '$app/navigation';
 	import type { Incident, Analyst } from '$lib/server/database';
 
@@ -35,43 +35,7 @@
 	}
 
 	async function createEntity(entityType: string) {
-		modalStore.open({
-			title: entityType.replace(/_/g, ' '),
-			entityType: entityType as any,
-			mode: 'create',
-			onSubmit: async (data) => {
-				// Add current incident UUID for core entities
-				if (['timeline_event', 'investigation_action', 'annotation', 'entity'].includes(entityType)) {
-					data.incident_id = $currentSelectedIncident?.uuid;
-				}
-				
-				// Add analyst UUID
-				data.analyst_id = $currentSelectedAnalyst?.uuid;
-				
-				// Determine API endpoint based on entity type
-				let endpoint = '';
-				if (['action_type', 'entity_type', 'event_type', 'annotation_type'].includes(entityType)) {
-					endpoint = `/api/create/lookup`;
-				} else {
-					endpoint = `/api/create/core/${entityType}`;
-				}
-				
-				const response = await fetch(endpoint, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(data),
-				});
-				
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || 'Failed to save');
-				}
-				
-				// Refresh caches
-				await initializeAllCaches();
-			}
-		});
-		
+		modalStore.open(createModalConfig(entityType as any, 'create'));
 		showCreateMenu = false;
 	}
 </script>

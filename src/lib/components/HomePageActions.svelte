@@ -1,29 +1,10 @@
 <script lang="ts">
 	import ActionDock from './ActionDock.svelte';
-	import { modalStore } from '$lib/stores/modalStore';
+	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
+	import type { EntityType } from '$lib/modals/types';
 
 	function openModal(entityType: string) {
-		modalStore.open({
-			title: entityType.replace(/_/g, ' '),
-			entityType: entityType as any,
-			mode: 'create',
-			onSubmit: async (data) => {
-				console.log('Creating:', data);
-				// Determine API endpoint
-				const endpoint = `/api/create/core/${entityType}`;
-				
-				const response = await fetch(endpoint, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(data)
-				});
-				
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || 'Failed to save');
-				}
-			}
-		});
+		modalStore.open(createModalConfig(entityType as EntityType, 'create'));
 	}
 
 	function handleImport() {
