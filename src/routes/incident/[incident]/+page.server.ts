@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server';
-import { incidents } from '$lib/server/database/02_01_core_incidents';
+import { incidents, analysts } from '$lib/server/database/';
 import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -10,8 +10,13 @@ export const load: PageServerLoad = async ({ params }) => {
 		.from(incidents)
 		.where(eq(incidents.uuid, params.incident))
 		.limit(1);
-	
+
+	const analystALl = await db
+		.select()
+		.from(analysts)
+
 	return {
-		incident: incident[0] || null
+		incident: incident[0] || null,
+		analyst: analystALl[0] || null
 	};
 };

@@ -5,7 +5,7 @@
 	
 	// Store Imports
 	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches } from "$lib/stores/cacheStore.js";
-	import { initializeSocket, joinIncident, leaveIncident, disconnectSocket } from "$lib/stores/collabStore.js";
+	import { initializeSocket, joinIncident, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
 	// Prop Imports
@@ -26,16 +26,17 @@
 		currentSelectedIncident.set(incidentObj);
 
 		initializeAllCaches();
+		currentSelectedAnalyst.set(data.analyst || null);
 		
 		// Now analyst is guaranteed to be set
 		if (initializeSocket() && $currentSelectedIncident?.uuid && $currentSelectedAnalyst?.uuid) {
 			console.log('Socket initialized successfully. Joining incident room...');
 			joinIncident();
 		} else {
-			console.error('Socket initialization failed.');
+			console.warn('Socket initialization skipped');
 		}
 
-		document.title = `Incident - ${$currentSelectedIncident?.title} - TimmyLine`;
+		document.title = `Incident - ${$currentSelectedIncident?.title}`;
 		register('stats', IncidentStats);
 		register('actions', IncidentPageActions);
 		register('userActivity', ActiveUsersIndicator);
@@ -46,7 +47,7 @@
 		$currentSelectedIncident = null;
 		unregister('stats');
 		unregister('actions');
-		leaveIncident();
+		leaveIncidentSocket();
 		disconnectSocket();
 	});
 </script>
@@ -70,7 +71,7 @@
 				</div>
 			{:else}
 				<div class="timeline-list">
-					{#each $combinedTimeline as item}
+					{#each $combinedTimeline as item (item.uuid)}
 						<TimeLineRow {item} />
 					{/each}
 				</div>

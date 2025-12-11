@@ -193,7 +193,7 @@ export function joinIncident() {
     localLastIncidentUUID = incident!.uuid as IncidentUUID;
 }
 
-export function leaveIncident() {
+export function leaveIncidentSocket() {
     if (!browser || !socket) return;
 
     socket.emit('inform-leave-incident', {incidentUUID:localLastIncidentUUID})

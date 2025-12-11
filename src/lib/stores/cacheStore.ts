@@ -23,11 +23,11 @@ import type {
  */
 export type TimelineItem = {
 	uuid: string;
-	type: 'event' | 'action';
+	type: 'event' | 'action' | 'annotation';
 	timestamp: number;
-	displayType: 'EVENT' | 'ACTION';
+	displayType: 'EVENT' | 'ACTION' | 'ANNOTATION';
 	// Reference to the full data object
-	data: TimelineEvent | InvestigationAction;
+	data: TimelineEvent | InvestigationAction | Annotation;
 };
 
 // ============================================================================
@@ -104,8 +104,8 @@ export const actionStats = derived(currentCachedInvestigationActions, ($actions)
  * Automatically updates when timeline events or investigation actions change
  */
 export const combinedTimeline = derived(
-	[currentCachedTimelineEvents, currentCachedInvestigationActions],
-	([$events, $actions]) => {
+	[currentCachedTimelineEvents, currentCachedInvestigationActions, currentCachedAnnotations],
+	([$events, $actions, $annotations]) => {
 		const timeline: TimelineItem[] = [];
 
 		// Add timeline events
@@ -130,6 +130,18 @@ export const combinedTimeline = derived(
 				data: action
 			}));
 			timeline.push(...investigationActions);
+		}
+
+		// Add annotations
+		if ($annotations && Array.isArray($annotations)) {
+			const annotationItems: TimelineItem[] = $annotations.map((annotation) => ({
+				uuid: annotation.uuid,
+				type: 'annotation' as const,
+				timestamp: annotation.created_at || 0,
+				displayType: 'ANNOTATION' as const,
+				data: annotation
+			}));
+			timeline.push(...annotationItems);
 		}
 
 		// Sort by timestamp (ascending order - oldest first)

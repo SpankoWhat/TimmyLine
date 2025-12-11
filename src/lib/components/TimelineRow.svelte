@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
+    import { currentSelectedIncident } from '$lib/stores/cacheStore';
     // import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore.txt';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import TimelineRow from './TimelineRow.svelte';
@@ -15,22 +16,9 @@
     let relations = $state<TimelineItem[]>([]);
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
-    let isHovered = $state(false);
     
     // Reactive derived value - updates when incidentUsers changes
     let usersOnThisRow = $derived($getUsersOnRow(item.uuid));
-
-
-    // Emit presence when hovering
-    function handleMouseEnter() {
-        isHovered = true;
-        emitViewRow(item.uuid);
-    }
-
-    function handleMouseLeave() {
-        isHovered = false;
-        emitIdle();
-    }
 
     // Combined display field configuration for both events and actions
     // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
@@ -59,6 +47,10 @@
             { key: "notes", label: "Notes", class: "action-notes", tag: false },
             { key: "tags", label: "Tags", class: "action-tags", tag: false },
         ],
+        annotation: [
+            { key: "annotation_type", label: "", class: "annotation-type", tag: true },
+            { key: "content", label: "Annotation", class: "annotation-content", tag: false },
+        ]
     };
 
     // Function to format epoch timestamp to human-readable time
@@ -81,15 +73,6 @@
         });
     }
 
-    function promptRelationModal() {
-        //modalState.update((state) => ({ ...state, relation: true }));
-    }
-
-    function showChilds(uuid: string) {
-        // TODO: Implement fetching related entities
-        showDetails = !showDetails;
-    }
-
     function toggleExpandedDetails() {
         if (showExpandedDetails) {
             showExpandedDetails = false;
@@ -108,6 +91,42 @@
         }
         const hue = hash % 360;
         return `hsl(${hue}, 70%, 50%)`;
+    }
+
+    async function deleteEntity(uuid: string) {
+        if (!confirm('Are you sure you want to delete this item?')) {
+            return;
+        }
+
+        // Determine the endpoint based on item type
+        const endpoint = item.type === 'event' 
+            ? '/api/delete/core/timeline_events'
+            : item.type === 'action'
+            ? '/api/delete/core/investigation_actions'
+            : '/api/delete/core/annotations';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    uuid,
+                    incident_id: $currentSelectedIncident?.uuid
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Failed to delete: ${error}`);
+            }
+
+            console.log(`Successfully deleted ${item.type} with uuid: ${uuid}`);
+        } catch (error) {
+            console.error('Error deleting entity:', error);
+            alert(`Failed to delete ${item.type}: ${(error as Error).message}`);
+        }
     }
 </script>
 
@@ -154,15 +173,9 @@
     <div class="actions" onclick={(e) => e.stopPropagation()}>
         <button
             class="action-btn details"
-            title="Show Related Entities"
-            onclick={() => showChilds(item.uuid)}>
-            <span class="btn-icon">🔍</span>
-        </button>
-        <button
-            class="action-btn annotate"
-            title="Add Annotation"
-            onclick={() => promptRelationModal()}>
-            <span class="btn-icon">📝</span>
+            title="Delete"
+            onclick={() => deleteEntity(item.uuid)}>
+            <span class="btn-icon">❌</span>
         </button>
     </div>
         
@@ -346,6 +359,10 @@
         gap: var(--spacing-xs);
         margin-left: auto;
         flex-shrink: 0;
+        display: none;
+    }
+    .timeline-item:hover .actions {
+        display: flex;
     }
 
     .action-btn {

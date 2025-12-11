@@ -5,7 +5,7 @@
 	
 	// Stores
 	import { 
-		initializeAllCaches,
+		updateLookupCache,
 		analysts,
 		setupIncidentWatcher,
 		currentSelectedAnalyst,
@@ -34,20 +34,10 @@
 	
 	onMount(async () => {
 		// Initialize all caches first
-		await initializeAllCaches();
+		await updateLookupCache();
 		
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();
-
-		// Env setup: select default analyst and incident if none selected
-		if ($currentSelectedAnalyst === null) {
-			const allAnalysts = $analysts;
-			if (allAnalysts.length > 0) {
-				// Set the first analyst as the current selected analyst
-				currentSelectedAnalyst.set(allAnalysts[0]);
-			}
-		}
-
 	});
 	
 	onDestroy(() => {
