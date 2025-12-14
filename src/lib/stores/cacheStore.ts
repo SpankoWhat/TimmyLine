@@ -42,8 +42,8 @@ export const currentSelectedAnalyst: Writable<Analyst | null> = writable(null);
 // ============================================================================
 
 export const currentCachedIncidents: Writable<Incident[]> = writable([]);
-export const currentCachedTimelineEvents: Writable<TimelineEvent[]> = writable([]);
-export const currentCachedInvestigationActions: Writable<InvestigationAction[]> = writable([]);
+export const currentCachedEvents: Writable<TimelineEvent[]> = writable([]);
+export const currentCachedActions: Writable<InvestigationAction[]> = writable([]);
 export const currentCachedAnnotations: Writable<Annotation[]> = writable([]);
 export const currentCachedEntities: Writable<Entity[]> = writable([]);
 
@@ -80,7 +80,7 @@ export const incidentStats = derived(currentCachedIncidents, ($incidents) => ({
 /**
  * Timeline event statistics for the current incident
  */
-export const timelineStats = derived(currentCachedTimelineEvents, ($events) => ({
+export const timelineStats = derived(currentCachedEvents, ($events) => ({
 	total: $events.length,
 	critical: $events.filter((e) => e.severity === 'critical').length,
 	high: $events.filter((e) => e.severity === 'high').length,
@@ -91,7 +91,7 @@ export const timelineStats = derived(currentCachedTimelineEvents, ($events) => (
 /**
  * Investigation action statistics for the current incident
  */
-export const actionStats = derived(currentCachedInvestigationActions, ($actions) => ({
+export const actionStats = derived(currentCachedActions, ($actions) => ({
 	total: $actions.length,
 	success: $actions.filter((a) => a.result === 'success').length,
 	failed: $actions.filter((a) => a.result === 'failed').length,
@@ -104,8 +104,8 @@ export const actionStats = derived(currentCachedInvestigationActions, ($actions)
  * Automatically updates when timeline events or investigation actions change
  */
 export const combinedTimeline = derived(
-	[currentCachedTimelineEvents, currentCachedInvestigationActions, currentCachedAnnotations],
-	([$events, $actions, $annotations]) => {
+	[currentCachedEvents, currentCachedActions],
+	([$events, $actions]) => {
 		const timeline: TimelineItem[] = [];
 
 		// Add timeline events
@@ -131,19 +131,6 @@ export const combinedTimeline = derived(
 			}));
 			timeline.push(...investigationActions);
 		}
-
-		// Add annotations
-		if ($annotations && Array.isArray($annotations)) {
-			const annotationItems: TimelineItem[] = $annotations.map((annotation) => ({
-				uuid: annotation.uuid,
-				type: 'annotation' as const,
-				timestamp: annotation.created_at || 0,
-				displayType: 'ANNOTATION' as const,
-				data: annotation
-			}));
-			timeline.push(...annotationItems);
-		}
-
 		// Sort by timestamp (ascending order - oldest first)
 		timeline.sort((a, b) => a.timestamp - b.timestamp);
 
@@ -175,15 +162,15 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 			entitiesRes.json()
 		]);
 
-		currentCachedTimelineEvents.set(events as TimelineEvent[]);
-		currentCachedInvestigationActions.set(actions as InvestigationAction[]);
+		currentCachedEvents.set(events as TimelineEvent[]);
+		currentCachedActions.set(actions as InvestigationAction[]);
 		currentCachedAnnotations.set(annotations as Annotation[]);
 		currentCachedEntities.set(entities as Entity[]);
 	} catch (error) {
 		console.error('Failed to update incident cache:', error);
 		// Reset stores on error
-		currentCachedTimelineEvents.set([]);
-		currentCachedInvestigationActions.set([]);
+		currentCachedEvents.set([]);
+		currentCachedActions.set([]);
 		currentCachedAnnotations.set([]);
 		currentCachedEntities.set([]);
 	}
@@ -245,7 +232,7 @@ export async function updateLookupCache(): Promise<void> {
 }
 
 /**
- * Initialize all caches - call this on app mount
+ * Initializes all caches if an incident is selected
  */
 export async function initializeAllCaches(): Promise<void> {
 	await updateLookupCache();
@@ -270,8 +257,8 @@ export function setupIncidentWatcher() {
 			updateIncidentCache(incident);
 		} else if (incident === null) {
 			// Only clear if explicitly set to null (not undefined during initialization)
-			currentCachedTimelineEvents.set([]);
-			currentCachedInvestigationActions.set([]);
+			currentCachedEvents.set([]);
+			currentCachedActions.set([]);
 			currentCachedAnnotations.set([]);
 			currentCachedEntities.set([]);
 		}
@@ -289,7 +276,7 @@ export function setupIncidentWatcher() {
 export function upsertEntity(entityType: string, entity: any) {
 	switch (entityType) {
 		case 'timeline_event':
-			currentCachedTimelineEvents.update((events) => {
+			currentCachedEvents.update((events) => {
 				const index = events.findIndex((e) => e.uuid === entity.uuid);
 				if (index >= 0) {
 					events[index] = entity;
@@ -301,7 +288,7 @@ export function upsertEntity(entityType: string, entity: any) {
 			break;
 
 		case 'investigation_action':
-			currentCachedInvestigationActions.update((actions) => {
+			currentCachedActions.update((actions) => {
 				const index = actions.findIndex((a) => a.uuid === entity.uuid);
 				if (index >= 0) {
 					actions[index] = entity;
@@ -360,11 +347,11 @@ export function upsertEntity(entityType: string, entity: any) {
 export function removeEntity(entityType: string, uuid: string) {
 	switch (entityType) {
 		case 'timeline_event':
-			currentCachedTimelineEvents.update((events) => events.filter((e) => e.uuid !== uuid));
+			currentCachedEvents.update((events) => events.filter((e) => e.uuid !== uuid));
 			break;
 
 		case 'investigation_action':
-			currentCachedInvestigationActions.update((actions) => actions.filter((a) => a.uuid !== uuid));
+			currentCachedActions.update((actions) => actions.filter((a) => a.uuid !== uuid));
 			break;
 
 		case 'annotation':

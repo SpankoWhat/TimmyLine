@@ -1,6 +1,6 @@
 /**
  * Configuration file that holds types and field values for the various modal forms.
- * @todo Handle the dynamic population of the lookup tables as a function that can be called to get the latest values.
+ * Dynamic values are now handeled in the each modal handler's getEnrichedFields method.
  */
 
 export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'select' | 'multiselect' | 'checkbox';
@@ -18,6 +18,7 @@ export type FieldConfig = {
 };
 
 export const entityFieldConfigs: Record<string, FieldConfig[]> = {
+	// Core Tables
 	incident: [
 		{
 			key: 'title',
@@ -423,6 +424,88 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			type: 'textarea',
 			placeholder: 'Describe this annotation type',
 			helpText: 'Max 100 characters',
+		},
+	],
+
+	// Relation Tables
+	action_entities: [
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
+		},
+		{
+			key: 'action_uuid',
+			label: 'Action',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Action to correlate an Entity with',
+		},
+		{
+			key: 'entity_uuid',
+			label: 'Entity',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Entity to correlate an Action with',
+		},
+	],
+
+	action_events: [
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
+		},
+		{
+			key: 'action_uuid',
+			label: 'Action',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Action to correlate an Event with',
+		},
+		{
+			key: 'event_uuid',
+			label: 'Event',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'E to correlate an Action with',
+		},
+	],
+
+	event_entities: [
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
+		},
+		{
+			key: 'event_uuid',
+			label: 'Event',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Event to correlate an Event with',
+		},
+		{
+			key: 'entity_uuid',
+			label: 'Entity',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Entity to correlate an Event with',
 		},
 	]
 };

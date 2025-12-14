@@ -5,12 +5,21 @@
 
 import { writable } from 'svelte/store';
 import type { EntityType, ModalMode, EntityModalHandler, ModalConfig } from './types';
+
+// Entity Modal Handlers
 import { incidentHandler } from './entities/incident';
 import { timelineEventHandler } from './entities/timelineEvent';
 import { investigationActionHandler } from './entities/investigationAction';
 import { entityHandler } from './entities/entity';
 import { annotationHandler } from './entities/annotation';
 import { analystHandler } from './entities/analyst';
+
+// Relation Modal Handlers
+import { actionEntitiesHandler } from './relations/action_entities';
+import { actionEventsHandler } from './relations/action_events';
+import { eventEntitiesHandler } from './relations/event_entities';
+
+// Lookup Modal Handlers
 import { 
 	actionTypeHandler, 
 	entityTypeHandler, 
@@ -18,9 +27,6 @@ import {
 	annotationTypeHandler 
 } from './lookups';
 
-/**
- * Modal state store
- */
 const createModalStore = () => {
 	const { subscribe, set, update } = writable<ModalConfig | null>(null);
 
@@ -50,7 +56,10 @@ const handlers: Record<EntityType, EntityModalHandler> = {
 	action_type: actionTypeHandler,
 	entity_type: entityTypeHandler,
 	event_type: eventTypeHandler,
-	annotation_type: annotationTypeHandler
+	annotation_type: annotationTypeHandler,
+	action_entities: actionEntitiesHandler,
+	action_events: actionEventsHandler,
+	event_entities: eventEntitiesHandler
 };
 
 /**
@@ -154,22 +163,16 @@ export function createModalConfig(
 }
 
 /**
- * Quick shorthand for creating a "create" modal
+ * Quick shorthands
  */
 export function createModal(entityType: EntityType) {
 	return createModalConfig(entityType, 'create');
 }
 
-/**
- * Quick shorthand for creating an "edit" modal
- */
 export function editModal(entityType: EntityType, existingData: any) {
 	return createModalConfig(entityType, 'edit', existingData);
 }
 
-/**
- * Quick shorthand for creating a "view" modal
- */
 export function viewModal(entityType: EntityType, existingData: any) {
 	return createModalConfig(entityType, 'view', existingData);
 }

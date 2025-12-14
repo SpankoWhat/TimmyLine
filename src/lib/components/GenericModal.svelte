@@ -79,14 +79,9 @@
 				formData
 			);
 			
-			// Server broadcasts socket events to all clients (including us)
-			// Our socket listeners in collabStore will update the cache automatically
-			// No need to manually update cache or emit socket events here!
-			
 			modalStore.close();
 		} catch (error) {
 			console.error('Form submission error:', error);
-			// Show error to user (could add a toast notification here)
 		} finally {
 			isSubmitting = false;
 		}

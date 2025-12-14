@@ -8,11 +8,6 @@
 		modalStore.open(createModalConfig(entityType as EntityType, mode));
 	}
 
-	function openRelationModal(relationType: string) {
-		console.log('Opening relation modal:', relationType);
-		// TODO: Implement relation modal logic
-	}
-
 	const buttons = [
 		{
 			id: 'create',
@@ -30,9 +25,9 @@
 			label: 'Relate',
 			variant: 'relate' as const,
 			items: [
-				{ label: 'Action → Events', action: () => openRelationModal('ActionEventsRelation') },
-				{ label: 'Action → Entities', action: () => openRelationModal('ActionEntitiesRelation') },
-				{ label: 'Event → Entities', action: () => openRelationModal('EventEntitiesRelation') }
+				{ label: 'Action → Events', action: () => openModal('action_events') },
+				{ label: 'Action → Entities', action: () => openModal('action_entities') },
+				{ label: 'Event → Entities', action: () => openModal('event_entities') }
 			]
 		},
 		{

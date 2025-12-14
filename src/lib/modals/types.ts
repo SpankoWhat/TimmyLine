@@ -14,7 +14,10 @@ export type EntityType =
 	| 'entity_type' 
 	| 'event_type' 
 	| 'annotation_type' 
-	| 'analyst';
+	| 'analyst'
+	| 'action_entities'
+	| 'action_events'
+	| 'event_entities';
 
 export type ModalMode = 'create' | 'edit' | 'view' | 'delete';
 
