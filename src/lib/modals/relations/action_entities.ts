@@ -10,7 +10,7 @@ import {
 } from '$lib/stores/cacheStore';
 
 export const actionEntitiesHandler: EntityModalHandler = {
-	fields: entityFieldConfigs.entity,
+    fields: entityFieldConfigs.action_entities,
 	
 	getEnrichedFields: () => {
         return entityFieldConfigs.action_entities.map(field => {
@@ -57,6 +57,22 @@ export const actionEntitiesHandler: EntityModalHandler = {
 	},
 	
     submit: async (data, mode) => {
-        return {};
+        const endpoint = mode === 'create'
+            ? '/api/create/junction/action_entities'
+            : '/api/update/junction/action_entities';
+
+        const response = await fetch(endpoint, {
+            method: mode === 'create' ? 'POST' : 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || `Failed to ${mode} action-entity relationship`);
+        }
+
+        const result = await response.json();
+        return { entity: result };
     }
 };

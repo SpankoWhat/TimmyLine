@@ -1,8 +1,10 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql, relations } from 'drizzle-orm';
 import { incidents } from './02_01_core_incidents';
 import { analysts } from './02_00_core_analysts';
 import { event_type } from './01_01_lookup_event_type';
+import { event_entities } from './03_01_junction_event_entities';
+import { action_events } from './03_00_junction_action_events';
 
 // Timeline events table
 // Records all events in the incident timeline with rich metadata
@@ -28,6 +30,12 @@ export const timeline_events = sqliteTable('timeline_events', {
 	source: text('source', { length: 200 }),
 	tags: text('tags') // JSON array of tags
 });
+
+// Define relations for query API
+export const timelineEventsRelations = relations(timeline_events, ({ many }) => ({
+	eventEntities: many(event_entities),
+	actionEvents: many(action_events)
+}));
 
 // Export types for use throughout the app
 export type TimelineEvent = typeof timeline_events.$inferSelect;

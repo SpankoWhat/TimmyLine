@@ -145,27 +145,42 @@ export const combinedTimeline = derived(
 /**
  * Fetches and updates incident-specific data (timeline events, actions, annotations, entities)
  * Called automatically when currentSelectedIncident changes
+ * Now uses enriched endpoint to get events/actions with their relationships
  */
 export async function updateIncidentCache(incident: Incident): Promise<void> {
 	try {
-		const [eventsRes, actionsRes, annotationsRes, entitiesRes] = await Promise.all([
-			fetch(`/api/read/core/timeline_events?incident_id=${incident.uuid}`),
-			fetch(`/api/read/core/investigation_actions?incident_id=${incident.uuid}`),
-			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}`),
-			fetch(`/api/read/core/entities?incident_id=${incident.uuid}`)
+		const [timelineRes, annotationsRes] = await Promise.all([
+			fetch(`/api/read/core/timeline_enriched?incident_id=${incident.uuid}`),
+			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}`)
 		]);
 
-		const [events, actions, annotations, entities] = await Promise.all([
-			eventsRes.json(),
-			actionsRes.json(),
-			annotationsRes.json(),
-			entitiesRes.json()
+		const [timelineData, annotations] = await Promise.all([
+			timelineRes.json(),
+			annotationsRes.json()
 		]);
 
+		// Extract events and actions from enriched response
+		const { events, actions } = timelineData;
+
+		// Store the enriched data (with nested relationships)
 		currentCachedEvents.set(events as TimelineEvent[]);
 		currentCachedActions.set(actions as InvestigationAction[]);
 		currentCachedAnnotations.set(annotations as Annotation[]);
-		currentCachedEntities.set(entities as Entity[]);
+
+		// Extract unique entities from nested data for backwards compatibility
+		// This allows existing code to continue using currentCachedEntities
+		// Doing this instead of requesting another api call for entities
+		const entitiesFromEvents = events.flatMap((e: any) =>
+			(e.eventEntities || []).map((ee: any) => ee.entity)
+		);
+		const entitiesFromActions = actions.flatMap((a: any) =>
+			(a.actionEntities || []).map((ae: any) => ae.entity)
+		);
+		const allEntities = [...entitiesFromEvents, ...entitiesFromActions];
+
+		// Deduplicate entities by uuid
+		const uniqueEntities = [...new Map(allEntities.map((e: Entity) => [e.uuid, e])).values()];
+		currentCachedEntities.set(uniqueEntities);
 	} catch (error) {
 		console.error('Failed to update incident cache:', error);
 		// Reset stores on error
