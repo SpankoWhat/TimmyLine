@@ -1,8 +1,10 @@
 import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql, relations } from 'drizzle-orm';
 import { incidents } from './02_01_core_incidents';
 import { analysts } from './02_00_core_analysts';
 import { entity_type } from './01_05_lookup_entity_type';
+import { event_entities } from './03_01_junction_event_entities';
+import { action_entities } from './03_02_junction_action_entities';
 
 // Entities table
 // IOCs, assets, and other entities involved in incidents
@@ -34,6 +36,12 @@ export const entities = sqliteTable(
 		uniqueIndex('unique_incident_identifier').on(table.incident_id, table.identifier)
 	]
 );
+
+// Define relations for query API
+export const entitiesRelations = relations(entities, ({ many }) => ({
+	eventEntities: many(event_entities),
+	actionEntities: many(action_entities)
+}));
 
 // Export types for use throughout the app
 export type Entity = typeof entities.$inferSelect;

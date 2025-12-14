@@ -20,6 +20,21 @@
     // Reactive derived value - updates when incidentUsers changes
     let usersOnThisRow = $derived($getUsersOnRow(item.uuid));
 
+    // Extract related entities and events from enriched data
+    let relatedEntities = $derived(
+        item.type === 'event' 
+            ? (item.data as any).eventEntities || []
+            : item.type === 'action'
+            ? (item.data as any).actionEntities || []
+            : []
+    );
+
+    let linkedEvents = $derived(
+        item.type === 'action'
+            ? (item.data as any).actionEvents || []
+            : []
+    );
+
     // Combined display field configuration for both events and actions
     // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
     const displayFieldsConfig = {
@@ -167,6 +182,26 @@
                 </span>
             {/if} 
         {/each}
+
+        <!-- Related Entities Display -->
+        {#if relatedEntities.length > 0}
+            {#each relatedEntities as rel}
+                <span class="datafield tag entity-badge" title={rel.role || rel.relation_type || 'Related'}>
+                    <span class="field-label">{rel.entity.entity_type}</span>
+                    <span class="field-value">{rel.entity.identifier}</span>
+                </span>
+            {/each}
+        {/if}
+
+        <!-- Linked Events Display (for actions) -->
+        {#if linkedEvents.length > 0}
+            {#each linkedEvents as linkEvt}
+                <span class="datafield tag linked-event" title={linkEvt.relation_type || 'Related Event'}>
+                    <span class="field-label">→ {linkEvt.relation_type}</span>
+                    <span class="field-value">{linkEvt.event.event_type}</span>
+                </span>
+            {/each}
+        {/if}
     </div>
 
     <!-- Action Buttons -->
@@ -328,6 +363,28 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    /* Entity badge styling */
+    .datafield.tag.entity-badge {
+        background: var(--color-bg-tertiary);
+        border-left: 2px solid var(--color-accent-warning);
+    }
+
+    .datafield.tag.entity-badge .field-label {
+        color: var(--color-accent-warning);
+        text-transform: uppercase;
+        font-weight: var(--font-weight-semibold);
+    }
+
+    /* Linked event styling */
+    .datafield.tag.linked-event {
+        background: var(--color-bg-tertiary);
+        border-left: 2px solid var(--color-accent-info);
+    }
+
+    .datafield.tag.linked-event .field-label {
+        color: var(--color-accent-info);
     }
 
     /* Inline text fields */

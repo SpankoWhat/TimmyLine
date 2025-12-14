@@ -478,7 +478,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			type: 'select',
 			required: true,
 			options: [],
-			helpText: 'E to correlate an Action with',
+			helpText: 'Event to correlate an Action with',
 		},
 	],
 
@@ -497,7 +497,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			type: 'select',
 			required: true,
 			options: [],
-			helpText: 'Event to correlate an Event with',
+			helpText: 'Event to correlate with an Entity',
 		},
 		{
 			key: 'entity_uuid',

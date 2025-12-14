@@ -1,3 +1,10 @@
+import { type TimelineEvent } from './02_02_core_timeline_events';
+import { type InvestigationAction } from './02_03_core_investigation_actions';
+import { type EventEntity } from './03_01_junction_event_entities';
+import { type ActionEvent } from './03_00_junction_action_events';
+import { type ActionEntity } from './03_02_junction_action_entities';
+import { type Entity } from './02_05_core_entities';
+
 // Lookup tables
 export * from './01_01_lookup_event_type';
 export * from './01_02_lookup_action_type';
@@ -18,3 +25,22 @@ export * from './03_00_junction_action_events';
 export * from './03_01_junction_event_entities';
 export * from './03_02_junction_action_entities';
 export * from './03_03_junction_annotation_references';
+
+// TypeScript types for enriched data (with relations)
+export type EnrichedTimelineEvent = TimelineEvent & {
+    eventEntities?: Array<EventEntity & {
+        entity: Entity;
+    }>;
+    actionEvents?: Array<ActionEvent & {
+        action: InvestigationAction;
+    }>;
+};
+
+export type EnrichedInvestigationAction = InvestigationAction & {
+    actionEvents?: Array<ActionEvent & {
+        event: TimelineEvent;
+    }>;
+    actionEntities?: Array<ActionEntity & {
+        entity: Entity;
+    }>;
+};
