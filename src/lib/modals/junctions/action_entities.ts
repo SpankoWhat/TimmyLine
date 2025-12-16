@@ -10,6 +10,7 @@ import {
 
 export const actionEntitiesHandler: EntityModalHandler = {
     fields: entityFieldConfigs.action_entities,
+    fields: entityFieldConfigs.action_entities,
 	
 	getEnrichedFields: () => {
         return entityFieldConfigs.action_entities.map(field => {

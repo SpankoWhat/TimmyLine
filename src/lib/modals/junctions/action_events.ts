@@ -10,8 +10,10 @@ import {
 
 export const actionEventsHandler: EntityModalHandler = {
     fields: entityFieldConfigs.action_events,
+    fields: entityFieldConfigs.action_events,
     
     getEnrichedFields: () => {
+        return entityFieldConfigs.action_events.map(field => {
         return entityFieldConfigs.action_events.map(field => {
             // Fetch relation types
             if (field.key === 'relation_type') {
@@ -31,14 +33,21 @@ export const actionEventsHandler: EntityModalHandler = {
                     options: get(currentCachedActions).map(a => ({
                         value: a.uuid,
                         label: `${a.action_type} - ${a.notes || 'No notes'}`
+                    options: get(currentCachedActions).map(a => ({
+                        value: a.uuid,
+                        label: `${a.action_type} - ${a.notes || 'No notes'}`
                     }))
                 };
             }
 
             // Fetch events based on the current incident
+            // Fetch events based on the current incident
             if (field.key === 'event_uuid') {
                 return {
                     ...field,
+                    options: get(currentCachedEvents).map(e => ({
+                        value: e.uuid,
+                        label: `${e.event_type} - ${e.event_data}`
                     options: get(currentCachedEvents).map(e => ({
                         value: e.uuid,
                         label: `${e.event_type} - ${e.event_data}`
