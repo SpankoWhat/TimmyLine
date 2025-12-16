@@ -350,6 +350,21 @@ export function upsertEntity(entityType: string, entity: any) {
 			});
 			break;
 
+		// Need to refactor this to efficiently update nested entities. 
+		// The return from the socket event is:
+		// { action_id: "1da0da81-1309-4d16-972f-e4339e32b529", entity_id: "677c8460-a818-46a8-8ec5-d5eec19baaeb", relation_type: "source" }
+		case 'action_entities':
+			updateIncidentCache(get(currentSelectedIncident)!);
+			break;
+
+		case 'action_events':
+			updateIncidentCache(get(currentSelectedIncident)!);
+			break;
+
+		case 'event_entities':
+			updateIncidentCache(get(currentSelectedIncident)!);
+			break;
+
 		default:
 			console.warn(`Unknown entity type for upsert: ${entityType}`);
 	}

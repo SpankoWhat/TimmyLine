@@ -2,18 +2,17 @@ import { get } from 'svelte/store';
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import { 
-    currentSelectedAnalyst, 
-    currentSelectedIncident, 
-    relationTypes,
-    currentCachedActions,
-    currentCachedEvents
+    currentCachedEntities,
+    currentCachedEvents,
+    currentSelectedIncident,
+    relationTypes
 } from '$lib/stores/cacheStore';
 
-export const actionEventsHandler: EntityModalHandler = {
-    fields: entityFieldConfigs.action_events,
+export const eventEntitiesHandler: EntityModalHandler = {
+    fields: entityFieldConfigs.event_entities,
     
     getEnrichedFields: () => {
-        return entityFieldConfigs.action_events.map(field => {
+        return entityFieldConfigs.event_entities.map(field => {
             // Fetch relation types
             if (field.key === 'relation_type') {
                 return {
@@ -21,17 +20,6 @@ export const actionEventsHandler: EntityModalHandler = {
                     options: get(relationTypes).map(rt =>({
                         value: rt.name,
                         label: rt.name.replace(/_/g, ' ')
-                    }))
-                };
-            }
-
-            // Fetch action based on the current incident
-            if (field.key === 'action_uuid') {
-                return {
-                    ...field,
-                    options: get(currentCachedActions).map(a => ({
-                        value: a.uuid,
-                        label: `${a.action_type} - ${a.notes || 'No notes'}`
                     }))
                 };
             }
@@ -47,6 +35,17 @@ export const actionEventsHandler: EntityModalHandler = {
                 };
             }
 
+            // Fetch entities based on the current incident
+            if (field.key === 'entity_uuid') {
+                return {
+                    ...field,
+                    options: get(currentCachedEntities).map(ent => ({
+                        value: ent.uuid,
+                        label: `${ent.entity_type} - ${ent.identifier}`
+                    }))
+                };
+            }
+
             return field;
         });
     },
@@ -57,9 +56,11 @@ export const actionEventsHandler: EntityModalHandler = {
     
     submit: async (data, mode) => {
         const endpoint = mode === 'create'
-            ? '/api/create/junction/action_events'
-            : '/api/update/junction/action_events';
+            ? '/api/create/junction/event_entities'
+            : '/api/update/junction/event_entities';
 
+        data.incident_id = get(currentSelectedIncident)?.uuid;
+        
         const response = await fetch(endpoint, {
             method: mode === 'create' ? 'POST' : 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -68,7 +69,7 @@ export const actionEventsHandler: EntityModalHandler = {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || `Failed to ${mode} action-event relationship`);
+            throw new Error(error.error || `Failed to ${mode} event-entity relationship`);
         }
 
         const result = await response.json();

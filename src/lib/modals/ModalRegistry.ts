@@ -15,9 +15,9 @@ import { annotationHandler } from './entities/annotation';
 import { analystHandler } from './entities/analyst';
 
 // Relation Modal Handlers
-import { actionEntitiesHandler } from './relations/action_entities';
-import { actionEventsHandler } from './relations/action_events';
-import { eventEntitiesHandler } from './relations/event_entities';
+import { actionEntitiesHandler } from './junctions/action_entities';
+import { actionEventsHandler } from './junctions/action_events';
+import { eventEntitiesHandler } from './junctions/event_entities';
 
 // Lookup Modal Handlers
 import { 

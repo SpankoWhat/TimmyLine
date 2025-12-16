@@ -4,6 +4,7 @@ import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
+import { socketLogger as logger } from '$lib/server/logging';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = await request.json();
@@ -26,9 +27,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		// Broadcast to all users in the incident room
 		const io = getSocketIO();
-		if (body.incident_id) {
-			io.to(`incident:${body.incident_id}`).emit('entity-created', 'action_entities', createdRelation);
+		if (!body.incident_id) {
+			logger.error('Missing incident_id in request body for broadcasting entity-created event');
+			throw error(400, 'Missing required field: incident_id');
 		}
+
+		io.to(`incident:${body.incident_id}`).emit('entity-created', 'action_entities', createdRelation);
 
 		return json(createdRelation);
 

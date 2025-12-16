@@ -2,7 +2,6 @@ import { get } from 'svelte/store';
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import { 
-    currentSelectedAnalyst, 
     currentSelectedIncident, 
     relationTypes,
     currentCachedActions,
@@ -61,6 +60,8 @@ export const actionEntitiesHandler: EntityModalHandler = {
             ? '/api/create/junction/action_entities'
             : '/api/update/junction/action_entities';
 
+        data.incident_id = get(currentSelectedIncident)?.uuid;
+        
         const response = await fetch(endpoint, {
             method: mode === 'create' ? 'POST' : 'PUT',
             headers: { 'Content-Type': 'application/json' },
