@@ -107,7 +107,7 @@
 
 	.section-content {
 		padding: var(--spacing-xs);
-		height: 100%;
+		height: fit-content;
 	}
 
 	.timeline-list {
