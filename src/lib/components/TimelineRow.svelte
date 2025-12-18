@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import { currentSelectedIncident } from '$lib/stores/cacheStore';
-    // import { getUsersOnRow, emitRowViewing, emitRowIdle } from '$lib/stores/presenceStore.txt';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import TimelineRow from './TimelineRow.svelte';
     
@@ -36,35 +35,22 @@
     );
 
     // Combined display field configuration for both events and actions
-    // Fields marked as 'tag: true' will be displayed as tags, others as free-form text
+    // Fields marked as 'pinned: true' will be displayed as pinneds, others as free-form text
     const displayFieldsConfig = {
         event: [
-            { key: "event_type", label: "", class: "event-time", tag: true },
-            { key: "source", label: "Source", class: "event-source", tag: true },
-            {
-                key: "source_reliability",
-                label: "Grade",
-                class: "event-type",
-                tag: true,
-            },
-            { key: "severity", label: "Sev", class: "event-description", tag: true },
+            { key: "event_type", label: "Event", pinned: true },
+            { key: "event_data", label:"Notes", pinned: true},
+            { key: "source", label: "Source", pinned: true },
+            { key: "source_reliability", label: "Grade", pinned: true },
+            { key: "severity", label: "Severity", pinned: true   },
         ],
         action: [
-            { key: "action_type", label: "", class: "action-type", tag: true },
-            { key: "result", label: "Result", class: "action-result", tag: true },
-            { key: "outcome", label: "Outcome", class: "action-outcome", tag: true },
-            {
-                key: "tool_used",
-                label: "Tool",
-                class: "action-toolUsed",
-                tag: true,
-            },
-            { key: "notes", label: "Notes", class: "action-notes", tag: false },
-            { key: "tags", label: "Tags", class: "action-tags", tag: false },
-        ],
-        annotation: [
-            { key: "annotation_type", label: "", class: "annotation-type", tag: true },
-            { key: "content", label: "Annotation", class: "annotation-content", tag: false },
+            { key: "action_type", label: "Action", pinned: true },
+            { key: "notes", label: "Notes",pinned: false },
+            { key: "result", label: "Result", pinned: true },
+            { key: "outcome", label: "Outcome", pinned: true },
+            { key: "tool_used", label: "Tool", pinned: true },
+            { key: "tags", label: "Tags", pinned: false },
         ]
     };
 
@@ -147,67 +133,35 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave} -->
 <div 
     class="timeline-item {item.type}"
     style="margin-left: {childLeftMarginOffset};" 
     onclick={toggleExpandedDetails}
 >
 
-    <!-- Timestamp -->
-    <div class="timestamp" title="Occurred or Performed At">
-        <span class="terminal-prompt">></span>
-        <span class="time-value">{formatTimestamp(item.timestamp)}</span>
-    </div>
 
-    <!-- Type Indicator Badge -->
-    <div class="type-indicator {item.type}">
-        <span class="type-icon">
-            {item.type === 'event' ? '🔸' : '🔹'}
-        </span>
-        <span class="type-label">{item.displayType}</span>
-    </div>
-
-    <!-- Data Fields Container -->
-    <div class="data-fields">
+    <!-- Data Row Fields -->
+    <div class="data-row">
+        <!-- Timestamp -->
+        <div class="timestamp data-section" title="Occurred or Performed At">
+            <span class="timestamp title">Time</span>
+            <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
+        </div>
+        <!-- Pinned Entity Fields -->
         {#each displayFieldsConfig[item.type] as field}
-            {#if field.tag}
-                <!-- Display as tag -->
-                <span class="datafield tag">
-                    {#if field.label}
-                        <span class="field-label">{field.label}</span>
-                    {/if}
-                    <span class="field-value">{(item.data as any)[field.key] || '—'}</span>
-                </span>
+            {#if field.pinned}
+                <div class="datafield data-section">
+                    <span class="datafield title">{field.label || '-'}</span>
+                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                </div>
             {/if} 
         {/each}
-
-        <!-- Related Entities Display -->
-        {#if relatedEntities.length > 0}
-            {#each relatedEntities as rel}
-                <span class="datafield tag entity-badge" title={rel.role || rel.relation_type || 'Related'}>
-                    <span class="field-label">{rel.entity.entity_type}</span>
-                    <span class="field-value">{rel.entity.identifier}</span>
-                </span>
-            {/each}
-        {/if}
-
-        <!-- Linked Events Display (for actions) -->
-        {#if linkedEvents.length > 0}
-            {#each linkedEvents as linkEvt}
-                <span class="datafield tag linked-event" title={linkEvt.relation_type || 'Related Event'}>
-                    <span class="field-label">→ {linkEvt.relation_type}</span>
-                    <span class="field-value">{linkEvt.event.event_type}</span>
-                </span>
-            {/each}
-        {/if}
     </div>
 
     <!-- Action Buttons -->
     <div class="actions" onclick={(e) => e.stopPropagation()}>
         <button
-            class="action-btn details"
+            class="action-btn"
             title="Delete"
             onclick={() => deleteEntity(item.uuid)}>
             <span class="btn-icon">❌</span>
@@ -235,6 +189,25 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 {#if showExpandedDetails}
     <div class="expanded-details" onclick={(e) => e.stopPropagation()}>
+        <!-- Related Entities Display -->
+        {#if relatedEntities.length > 0}
+            {#each relatedEntities as rel}
+                <span class="datafield pinned entity-badge" title={rel.role || rel.relation_type || 'Related'}>
+                    <span class="field-label">{rel.entity.entity_type}</span>
+                    <span class="field-value">{rel.entity.identifier}</span>
+                </span>
+            {/each}
+        {/if}
+
+        <!-- Linked Events Display (for actions) -->
+        {#if linkedEvents.length > 0}
+            {#each linkedEvents as linkEvt}
+                <span class="datafield pinned linked-event" title={linkEvt.relation_type || 'Related Event'}>
+                    <span class="field-label">→ {linkEvt.relation_type}</span>
+                    <span class="field-value">{linkEvt.event.event_type}</span>
+                </span>
+            {/each}
+        {/if}
         <div class="details-content">
             <h4 class="details-title">Full Details</h4>
             <div class="details-grid">
@@ -266,310 +239,32 @@
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border-left: 2px solid var(--color-border-strong);
-        background: var(--color-bg-secondary);
-        border-radius: var(--border-radius-sm);
-        /* margin-bottom: var(--spacing-xs); */
-        transition: all var(--transition-fast);
-        cursor: pointer;
     }
 
     .timeline-item:hover {
         background: var(--color-bg-hover);
-        border-left-width: 3px;
     }
 
-    /* Type Indicator */
-    .type-indicator {
+    .data-row {
         display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        padding: 2px var(--spacing-xs);
-        border-radius: var(--border-radius-sm);
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-semibold);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        flex-direction: row;
+    }
+
+    .data-section {
+        display: flex;
+        flex-direction: column;
+        padding-right: var(--spacing-xs);
         min-width: 80px;
-        border: 1px solid var(--color-border-medium);
-        background: var(--color-bg-tertiary);
     }
 
-    .type-indicator.event {
-        color: var(--color-accent-primary);
-        border-color: var(--color-accent-primary);
-    }
-
-    .type-indicator.action {
-        color: var(--color-accent-success);
-        border-color: var(--color-accent-success);
-    }
-
-    .type-icon {
-        font-size: var(--font-size-sm);
-    }
-
-    /* Timestamp */
-    .timestamp {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-        font-weight: var(--font-weight-medium);
-        color: var(--color-text-secondary);
-        /* min-width: 160px; */
+    .title {
         font-size: var(--font-size-xs);
-    }
-
-    .terminal-prompt {
-        color: var(--color-accent-success);
-        font-size: var(--font-size-sm);
-    }
-
-    .time-value {
-        color: var(--color-text-primary);
-    }
-
-    /* Data Fields */
-    .data-fields {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-xs);
-        flex: 1;
-        align-items: center;
-    }
-
-    /* Tag-style fields */
-    .datafield.tag {
-        display: inline-flex;
-        align-items: center;
-        padding: 2px var(--spacing-xs);
-        background: var(--color-bg-tertiary);
-        border-left: 2px solid var(--color-border-medium);
-        border-radius: var(--border-radius-sm);
-        font-size: var(--font-size-xs);
-        max-width: 200px;
-    }
-
-    .datafield.tag .field-label {
-        color: var(--color-text-tertiary);
-        margin-right: var(--spacing-xs);
-        font-size: 10px;
-    }
-
-    .datafield.tag .field-value {
-        color: var(--color-text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Entity badge styling */
-    .datafield.tag.entity-badge {
-        background: var(--color-bg-tertiary);
-        border-left: 2px solid var(--color-accent-warning);
-    }
-
-    .datafield.tag.entity-badge .field-label {
-        color: var(--color-accent-warning);
-        text-transform: uppercase;
-        font-weight: var(--font-weight-semibold);
-    }
-
-    /* Linked event styling */
-    .datafield.tag.linked-event {
-        background: var(--color-bg-tertiary);
-        border-left: 2px solid var(--color-accent-info);
-    }
-
-    .datafield.tag.linked-event .field-label {
-        color: var(--color-accent-info);
-    }
-
-    /* Inline text fields */
-    .datafield.inline {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-secondary);
-    }
-
-    .datafield.inline .field-label {
-        color: var(--color-text-tertiary);
-        font-weight: var(--font-weight-medium);
-    }
-
-    .field-value-inline {
-        color: var(--color-text-secondary);
-        font-style: italic;
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    /* Actions */
-    .actions {
-        display: flex;
-        gap: var(--spacing-xs);
-        margin-left: auto;
-        flex-shrink: 0;
-        display: none;
-    }
-    .timeline-item:hover .actions {
-        display: flex;
+        height: 10px;
     }
 
     .action-btn {
-        background: var(--color-bg-tertiary);
-        border: 1px solid var(--color-border-medium);
-        border-radius: var(--border-radius-sm);
-        padding: 2px var(--spacing-xs);
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        font-size: var(--font-size-sm);
+        justify-self: right;
     }
 
-    .action-btn:hover {
-        background: var(--color-bg-hover);
-        border-color: var(--color-accent-primary);
-        transform: scale(1.05);
-    }
-
-    .action-btn.details:hover {
-        border-color: var(--color-accent-secondary);
-    }
-
-    .btn-icon {
-        display: block;
-    }
-
-    /* Expanded Details View */
-    .expanded-details {
-        margin-top: var(--spacing-xs);
-        margin-bottom: var(--spacing-sm);
-        padding: var(--spacing-sm) var(--spacing-md);
-        background: var(--color-bg-tertiary);
-        border-left: 3px solid var(--color-accent-secondary);
-        border-radius: var(--border-radius-sm);
-        animation: slideDown 0.2s ease-out;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .details-content {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-    }
-
-    .details-title {
-        margin: 0;
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-accent-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-bottom: 1px solid var(--color-border-subtle);
-        padding-bottom: var(--spacing-xs);
-    }
-
-    .details-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: var(--spacing-sm);
-    }
-
-    .detail-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: var(--spacing-xs);
-        background: var(--color-bg-secondary);
-        border-radius: var(--border-radius-sm);
-    }
-
-    .detail-label {
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-text-tertiary);
-        text-transform: capitalize;
-    }
-
-    .detail-value {
-        font-size: var(--font-size-sm);
-        color: var(--color-text-primary);
-        word-wrap: break-word;
-        white-space: pre-wrap;
-    }
-
-    /* Related Entities */
-    .related-entities {
-        margin-top: var(--spacing-sm);
-        padding-left: var(--spacing-lg);
-        border-left: 2px dashed var(--color-border-subtle);
-    }
-
-    /* Presence Indicators */
-    .presence-indicators {
-        display: flex;
-        z-index: 10;
-    }
-
-    .user-avatar {
-        width: 5px;
-        height: 14px;
-        border: 2px solid;
-        cursor: help;
-    }
-
-    .user-avatar.editing {
-        animation: pulse 2s infinite;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.1);
-        }
-    }
-
-    .avatar-initial {
-        display: block;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    }
-
-    .editing-badge {
-        position: absolute;
-        bottom: -4px;
-        right: -4px;
-        width: 16px;
-        height: 16px;
-        background: var(--color-bg-primary);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        border: 1px solid var(--color-border-medium);
-    }
-
-    .timeline-item.has-presence {
-        border-left-width: 3px;
-    }
 </style>
 

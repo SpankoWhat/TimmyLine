@@ -23,11 +23,10 @@ import type {
  */
 export type TimelineItem = {
 	uuid: string;
-	type: 'event' | 'action' | 'annotation';
+	type: 'event' | 'action';
 	timestamp: number;
-	displayType: 'EVENT' | 'ACTION' | 'ANNOTATION';
-	// Reference to the full data object
-	data: TimelineEvent | InvestigationAction | Annotation;
+	displayType: 'EVENT' | 'ACTION';
+	data: TimelineEvent | InvestigationAction;
 };
 
 // ============================================================================
