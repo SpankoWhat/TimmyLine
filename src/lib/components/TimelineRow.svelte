@@ -39,14 +39,14 @@
     const displayFieldsConfig = {
         event: [
             { key: "event_type", label: "Event", pinned: true },
-            { key: "event_data", label:"Notes", pinned: true},
+            { key: "event_data", label:"Notes", pinned: true, showInNote: true },
             { key: "source", label: "Source", pinned: true },
             { key: "source_reliability", label: "Grade", pinned: true },
             { key: "severity", label: "Severity", pinned: true   },
         ],
         action: [
             { key: "action_type", label: "Action", pinned: true },
-            { key: "notes", label: "Notes",pinned: false },
+            { key: "notes", label: "Notes",pinned: false, showInNote: true },
             { key: "result", label: "Result", pinned: true },
             { key: "outcome", label: "Outcome", pinned: true },
             { key: "tool_used", label: "Tool", pinned: true },
@@ -133,56 +133,64 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div 
-    class="timeline-item {item.type}"
-    style="margin-left: {childLeftMarginOffset};" 
-    onclick={toggleExpandedDetails}
->
-
-
-    <!-- Data Row Fields -->
-    <div class="data-row">
-        <!-- Timestamp -->
-        <div class="timestamp data-section" title="Occurred or Performed At">
-            <span class="timestamp title">Time</span>
-            <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
+<div class="timeline-item" style="margin-left: {childLeftMarginOffset};" onclick={toggleExpandedDetails}>
+    <div class="main-row">
+        <!-- Data Row Fields -->
+        <div class="data-row">
+            <!-- Timestamp -->
+            <div class="timestamp data-section" title="Occurred or Performed At">
+                <span class="timestamp title">Time</span>
+                <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
+            </div>
+            <!-- Pinned Entity Fields -->
+            {#each displayFieldsConfig[item.type] as field}
+                {#if field.pinned && !field.showInNote}
+                    <div class="datafield data-section">
+                        <span class="datafield title">{field.label || '-'}</span>
+                        <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                    </div>
+                {/if}
+            {/each}
         </div>
-        <!-- Pinned Entity Fields -->
-        {#each displayFieldsConfig[item.type] as field}
-            {#if field.pinned}
-                <div class="datafield data-section">
-                    <span class="datafield title">{field.label || '-'}</span>
-                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
-                </div>
-            {/if} 
-        {/each}
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="actions" onclick={(e) => e.stopPropagation()}>
-        <button
+        
+        <!-- Action Buttons -->
+        <div class="actions" onclick={(e) => e.stopPropagation()}>
+            <button
             class="action-btn"
             title="Delete"
             onclick={() => deleteEntity(item.uuid)}>
             <span class="btn-icon">❌</span>
         </button>
-    </div>
-        
-    <!-- Presence Indicators -->
-    {#if usersOnThisRow.length > 0}
-        <div class="presence-indicators">
-            {#each usersOnThisRow as user}
-                <div 
-                    class="user-avatar"
-                    style:border-color={randomColorFromString(user.analystName)}
-                    style:background-color={randomColorFromString(user.analystName)}
-                    title={`${user.analystName} is ${user.isEditing ? 'editing' : 'viewing'} this item`}
-                >
-                </div>
-            {/each}
         </div>
-    {/if}
+    </div>
+    
+    
+    <div class="note-snippet">
+        {#each displayFieldsConfig[item.type] as field}
+            {#if field.showInNote}
+                <div class="datafield note-section">
+                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                </div>
+            {/if}
+        {/each}
+    </div>
 </div>
+
+<!-- Presence Indicators -->
+{#if usersOnThisRow.length > 0}
+    <div class="presence-indicators">
+        {#each usersOnThisRow as user}
+            <div 
+                class="user-avatar"
+                style:border-color={randomColorFromString(user.analystName)}
+                style:background-color={randomColorFromString(user.analystName)}
+                title={`${user.analystName} is ${user.isEditing ? 'editing' : 'viewing'} this item`}
+                        >
+            </div>
+        {/each}
+    </div>
+{/if}
+
 
 <!-- Expanded Details View -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -237,12 +245,19 @@
 <style>
     .timeline-item {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: center;
     }
 
     .timeline-item:hover {
         background: var(--color-bg-hover);
+    }
+
+    .main-row {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-between;
     }
 
     .data-row {
@@ -257,13 +272,27 @@
         min-width: 80px;
     }
 
-    .title {
+    .data-section .title {
         font-size: var(--font-size-xs);
+        color: var(--color-accent-primary);
         height: 10px;
+    }
+
+    .data-section .value {
+        font-size: var(--font-size-sm);
+        font-weight: bold;
     }
 
     .action-btn {
         justify-self: right;
+    }
+
+    .note-snippet {
+        font-style: italic;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
+        width: 100%;
+        line-height: normal;
     }
 
 </style>
