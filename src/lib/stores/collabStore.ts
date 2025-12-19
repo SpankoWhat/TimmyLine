@@ -179,17 +179,23 @@ export function joinIncident() {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
 
+    if (!incident || !localUserInfo) {
+        console.error('Cannot join incident: currentSelectedIncident is null or localUserInfo is null');
+        return;
+    }
+
     socket.emit('inform-join-incident', {
-        incidentUUID: incident!.uuid as IncidentUUID,
-        analystUUID: localUserInfo!.analystUUID,
-        analystName: localUserInfo!.analystName
+        incidentUUID: incident.uuid as IncidentUUID,
+        analystUUID: localUserInfo.analystUUID,
+        analystName: localUserInfo.analystName
     })
 
     incidentUsers.update((incident) => {
         incident.set(socket!.id as SocketId, localUserInfo!);
         return incident;
-    })
+    });
 
+    console.log(`Joined incident room...${incident!.uuid} - ${incident!.title}`);
     localLastIncidentUUID = incident!.uuid as IncidentUUID;
 }
 
@@ -209,6 +215,7 @@ export function leaveIncidentSocket() {
 export function emitViewRow(rowUUID: string) {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
+    console.debug('State of users before emitting: ', get(incidentUsers));
     console.debug('Emitting view row:', rowUUID);
 
     socket.emit('inform-focus-change', {

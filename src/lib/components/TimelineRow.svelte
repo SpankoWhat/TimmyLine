@@ -311,29 +311,6 @@
         height: 12px;
     }
 
-    .row-header {
-        justify-content: space-between;
-        border-bottom: 1px solid var(--color-border-subtle);
-    }
-
-    .row-footer {
-        border-top: 1px solid var(--color-border-subtle);
-        height: 10px;
-    }
-
-    .row-border {
-        color: var(--color-accent-primary);
-        white-space: nowrap;
-        overflow: hidden;
-    }
-
-    .row-type-indicator {
-        color: var(--color-accent-secondary);
-        font-weight: bold;
-        margin: 0 4px;
-        white-space: nowrap;
-    }
-
     .main-row {
         display: flex;
         flex-direction: row;

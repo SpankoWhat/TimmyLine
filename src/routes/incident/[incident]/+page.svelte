@@ -23,20 +23,21 @@
 			console.warn('No incident data found from server for incident uuid:', incidentObj);
 			return;
 		}
-		currentSelectedIncident.set(incidentObj);
 
+		//Setting the current selected incident in the cache store
+		currentSelectedIncident.set(incidentObj);
 		initializeAllCaches();
 		currentSelectedAnalyst.set(data.analyst || null);
 		
-		// Now analyst is guaranteed to be set
-		if (initializeSocket() && $currentSelectedIncident?.uuid && $currentSelectedAnalyst?.uuid) {
-			console.log('Socket initialized successfully. Joining incident room...');
-			joinIncident();
-		} else {
+		// Check and initialize socket connection
+		if (!initializeSocket() && !$currentSelectedIncident?.uuid && !$currentSelectedAnalyst?.uuid) {
 			console.warn('Socket initialization skipped');
 		}
-
+		
+		
 		document.title = `Incident - ${$currentSelectedIncident?.title}`;
+		joinIncident();
+		
 		register('stats', IncidentStats);
 		register('actions', IncidentPageActions);
 		register('userActivity', ActiveUsersIndicator);
