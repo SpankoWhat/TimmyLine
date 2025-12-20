@@ -47,8 +47,8 @@ function registerDisconnectEvent(socket: Socket) {
             // Skip if incident page does not have this socket (user)
             if (!incident.has(socket.id)) continue;
 
-            // Remove user from incident and notify others
-            socket.to(`incident:${incidentUUID}`).emit('user-left-incident', socket.id);
+            // Notify ALL clients before removing user from incident
+            globalForSocket.io!.to(`incident:${incidentUUID}`).emit('user-left-incident', socket.id);
             incident.delete(socket.id);
             logger.debug(`Removed socket ${socket.id} from incident ${incidentUUID}`);
 
@@ -81,8 +81,8 @@ function registerUserIncidentPresence(socket: Socket) {
             return;
         }
 
-        // Notify others in room about focus change after updating internal state
-        socket.to(roomName).emit('user-focused-row', socket.id, data.rowUUID);
+        // Notify ALL clients in room about focus change after updating internal state
+        globalForSocket.io!.to(roomName).emit('user-focused-row', socket.id, data.rowUUID);
         logger.debug(`Client ${socket.id} informed focus change in ${roomName} to row ${data.rowUUID}`);
     });
 }
@@ -111,9 +111,9 @@ function registerLeaveRoomEvent(socket: Socket) {
             return;
         }
 
+        // Notify ALL clients that user left (before leaving room)
+        globalForSocket.io!.to(roomName).emit('user-left-incident', socket.id);
         socket.leave(roomName);
-        // Notify others that user left
-        socket.to(roomName).emit('user-left-incident', socket.id);
         logger.debug(`Client ${socket.id} left ${roomName}`);
     });
 }
@@ -162,8 +162,8 @@ function registerJoinRoomEvent(socket: Socket) {
 
         let userInfo = allIncidents.get(data.incidentUUID)!.get(socket.id)!;
 
-        // Send new user details to others in the incident room
-        socket.to(roomName).emit('user-joined-incident', socket.id, userInfo);
+        // Send new user details to ALL clients in the incident room (including sender)
+        globalForSocket.io!.to(roomName).emit('user-joined-incident', socket.id, userInfo);
 
         // Send current incident state to the new user if others are present
         const incident = allIncidents.get(data.incidentUUID)!;

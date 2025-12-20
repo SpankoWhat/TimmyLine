@@ -87,17 +87,14 @@ function registerEventListeners(socket: Socket) {
         console.debug(`Socket event received: ${event}`, args);
     });
 
-    socket.on('user-joined-incident', (userSocketId:SocketId, userInfo: UserInfo) => {
-        console.debug('user-joined-incident event received:', userSocketId, userInfo);
-        
+    socket.on('user-joined-incident', (userSocketId: SocketId, userInfo: UserInfo) => {
         incidentUsers.update((incident) => {
             incident.set(userSocketId, userInfo);
             return incident;
         });
     });
 
-    socket.on('enrich-newUser-incidentState', (incidentDetails : Incident) => {
-        console.debug('enrich-newUser-incidentState event received:', incidentDetails);
+    socket.on('enrich-newUser-incidentState', (incidentDetails: Incident) => {
         const tmpIncidentDetails = new Map<SocketId, UserInfo>();
 
         for (const [socketId, userInfo] of Object.entries(incidentDetails)) {
@@ -107,18 +104,14 @@ function registerEventListeners(socket: Socket) {
         incidentUsers.set(tmpIncidentDetails);
     });
 
-    socket.on('user-left-incident', (userSocketId:SocketId) => {
-        console.debug('user-left-incident event received:', userSocketId);
-
+    socket.on('user-left-incident', (userSocketId: SocketId) => {
         incidentUsers.update((incident) => {
             incident.delete(userSocketId);
             return incident;
         });
     });
 
-    socket.on('user-focused-row', (userSocketId:SocketId, rowUUID: string) => {
-        console.debug('user-focused-row event received:', userSocketId, rowUUID);
-
+    socket.on('user-focused-row', (userSocketId: SocketId, rowUUID: string) => {
         incidentUsers.update((incident) => {
             const userInfo = incident.get(userSocketId);
             const setFocus = rowUUID ? true : false;
@@ -149,22 +142,18 @@ function registerEventListeners(socket: Socket) {
 
     // Data synchronization events
     socket.on('entity-created', (entityType: string, entity: any) => {
-        console.debug('entity-created event received:', entityType, entity);
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-updated', (entityType: string, entity: any) => {
-        console.debug('entity-updated event received:', entityType, entity);
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-deleted', (entityType: string, uuid: string) => {
-        console.debug('entity-deleted event received:', entityType, uuid);
         removeEntity(entityType, uuid);
     });
 
     socket.on('lookup-updated', (lookupType: string, data: any[]) => {
-        console.debug('lookup-updated event received:', lookupType, data);
         updateLookupTable(lookupType, data);
     });
 }
