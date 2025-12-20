@@ -5,7 +5,7 @@
 	
 	// Store Imports
 	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches } from "$lib/stores/cacheStore.js";
-	import { initializeSocket, joinIncident, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
+	import { initializeSocket, joinIncidentSocket, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
 	// Prop Imports
@@ -36,7 +36,7 @@
 		
 		
 		document.title = `Incident - ${$currentSelectedIncident?.title}`;
-		joinIncident();
+		joinIncidentSocket();
 		
 		register('stats', IncidentStats);
 		register('actions', IncidentPageActions);

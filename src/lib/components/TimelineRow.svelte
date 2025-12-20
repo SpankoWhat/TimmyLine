@@ -298,19 +298,6 @@
         box-shadow: 0 0 4px rgba(0, 255, 0, 0.1);
     }
 
-    /* Terminal-style borders */
-    .row-header,
-    .row-footer {
-        display: flex;
-        align-items: center;
-        font-size: 10px;
-        color: var(--color-accent-primary);
-        user-select: none;
-        padding: 0 4px;
-        line-height: 1;
-        height: 12px;
-    }
-
     .main-row {
         display: flex;
         flex-direction: row;

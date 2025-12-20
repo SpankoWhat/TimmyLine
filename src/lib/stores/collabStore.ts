@@ -13,7 +13,6 @@ export const incidentUsers = writable<Incident>(new Map<SocketId, UserInfo>());
 let localUserInfo: UserInfo | null = null;
 let localLastIncidentUUID: IncidentUUID | null = null;
 
-
 // ============================================================================
 // STORES
 // ============================================================================
@@ -42,7 +41,6 @@ export const getUsersOnRow = derived(
         };
     }
 );
-
 
 // ============================================================================
 // CORE SOCKET FUNCTIONS
@@ -85,6 +83,10 @@ export function disconnectSocket() {
 }
 
 function registerEventListeners(socket: Socket) {
+    socket.onAny((event, ...args) => {
+        console.debug(`Socket event received: ${event}`, args);
+    });
+
     socket.on('user-joined-incident', (userSocketId:SocketId, userInfo: UserInfo) => {
         console.debug('user-joined-incident event received:', userSocketId, userInfo);
         
@@ -102,11 +104,7 @@ function registerEventListeners(socket: Socket) {
             tmpIncidentDetails.set(socketId as SocketId, userInfo);
         }
 
-        // Is this safe lol?
-        incidentUsers.update(() => {
-            return tmpIncidentDetails;
-        });
-        
+        incidentUsers.set(tmpIncidentDetails);
     });
 
     socket.on('user-left-incident', (userSocketId:SocketId) => {
@@ -175,7 +173,7 @@ function registerEventListeners(socket: Socket) {
 // HELPER SOCKET FUNCTIONS
 // ============================================================================
 
-export function joinIncident() {
+export function joinIncidentSocket() {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
 
