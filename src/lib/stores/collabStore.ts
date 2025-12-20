@@ -190,11 +190,6 @@ export function joinIncident() {
         analystName: localUserInfo.analystName
     })
 
-    incidentUsers.update((incident) => {
-        incident.set(socket!.id as SocketId, localUserInfo!);
-        return incident;
-    });
-
     console.log(`Joined incident room...${incident!.uuid} - ${incident!.title}`);
     localLastIncidentUUID = incident!.uuid as IncidentUUID;
 }
@@ -215,7 +210,6 @@ export function leaveIncidentSocket() {
 export function emitViewRow(rowUUID: string) {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
-    console.debug('State of users before emitting: ', get(incidentUsers));
     console.debug('Emitting view row:', rowUUID);
 
     socket.emit('inform-focus-change', {
@@ -223,12 +217,9 @@ export function emitViewRow(rowUUID: string) {
         rowUUID: rowUUID
     })
 
-    incidentUsers.update((incident) => {
-        localUserInfo!.rowUUID = rowUUID;
-        localUserInfo!.isFocused = true;
-        incident.set(socket!.id as SocketId, localUserInfo!);
-        return incident;
-    });
+    // Update local user info for tracking purposes
+    localUserInfo!.rowUUID = rowUUID;
+    localUserInfo!.isFocused = true;
 }
 
 export function emitIdle() {
@@ -241,12 +232,9 @@ export function emitIdle() {
         rowUUID: null
     });
 
-    incidentUsers.update((incident) => {
-        localUserInfo!.rowUUID = null;
-        localUserInfo!.isFocused = false;
-        incident.set(socket!.id as SocketId, localUserInfo!);
-        return incident;
-    });
+    // Update local user info for tracking purposes
+    localUserInfo!.rowUUID = null;
+    localUserInfo!.isFocused = false;
 }
 
 // Still has not been implemented on server side
@@ -259,13 +247,10 @@ export function emitEditingRow(rowUUID: string) {
         rowUUID
     });
     
-    incidentUsers.update((incident) => {
-        localUserInfo!.rowUUID = rowUUID;
-        localUserInfo!.isFocused = true;
-        localUserInfo!.isEditing = true;
-        incident.set(socket!.id as SocketId, localUserInfo!);
-        return incident;
-    });
+    // Update local user info for tracking purposes
+    localUserInfo!.rowUUID = rowUUID;
+    localUserInfo!.isFocused = true;
+    localUserInfo!.isEditing = true;
 
     console.warn('emitEditingRow not yet implemented on server side');
 }
