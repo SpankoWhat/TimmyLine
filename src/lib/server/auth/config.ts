@@ -57,15 +57,11 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 				}
 			}
 		}),
-		// GitHub provider (optional, for developer convenience)
-		...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
-			? [
-					GitHub({
-						clientId: process.env.GITHUB_CLIENT_ID,
-						clientSecret: process.env.GITHUB_CLIENT_SECRET
-					})
-			  ]
-			: [])
+        // GitHub provider (optional, for developer convenience
+        GitHub({
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET
+        })
 	],
 	callbacks: {
 		/**
