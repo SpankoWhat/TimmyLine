@@ -11,6 +11,10 @@ export * from './01_02_lookup_action_type';
 export * from './01_03_lookup_relation_type';
 export * from './01_04_lookup_annotation_type';
 export * from './01_05_lookup_entity_type';
+export * from './01_06_auth_users';
+export * from './01_07_auth_accounts';
+export * from './01_08_auth_sessions';
+export * from './01_09_auth_verification_tokens';
 
 // Core tables
 export * from './02_00_core_analysts';

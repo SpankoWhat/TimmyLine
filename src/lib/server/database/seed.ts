@@ -130,4 +130,7 @@ export async function seedDatabase() {
 	console.log('🎉 Database seeding completed!');
 }
 
-seedDatabase();
+// Only auto-execute if run directly via tsx (not when imported by drizzle-kit)
+if (import.meta.url === `file://${process.argv[1]}`) {
+	seedDatabase();
+}

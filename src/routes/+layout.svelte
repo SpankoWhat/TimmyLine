@@ -12,9 +12,10 @@
 		currentSelectedIncident,
 	} from '$lib/stores/cacheStore';
 	import GenericModal from '$lib/components/GenericModal.svelte';
+	import type { Analyst } from '$lib/server/database';
 	
 	// Local Props and State
-	let { children } = $props();
+	let { children, data } = $props();
 	let unsubscribe: (() => void) | undefined;
 
 	// Dynamic HUD Info 
@@ -30,14 +31,28 @@
 		},
 	});
 
-
-	
 	onMount(async () => {
 		// Initialize all caches first
 		await updateLookupCache();
 		
 		// Then set up the reactive incident watcher
 		unsubscribe = setupIncidentWatcher();
+
+		// Set current analyst from authenticated session
+		if (data.session?.user?.analystUUID) {
+			const sessionAnalyst: Analyst = {
+				uuid: data.session.user.analystUUID,
+				user_id: null,
+				username: data.session.user.analystUsername || data.session.user.email?.split('@')[0] || 'Unknown',
+				email: data.session.user.email || null,
+				full_name: data.session.user.name || data.session.user.analystUsername || 'Unknown User',
+				role: data.session.user.analystRole as 'analyst' | 'on-point lead' | 'observer' || 'analyst',
+				active: true,
+				created_at: null,
+				updated_at: null
+			};
+			currentSelectedAnalyst.set(sessionAnalyst);
+		}
 	});
 	
 	onDestroy(() => {
