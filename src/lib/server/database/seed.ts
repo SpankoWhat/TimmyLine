@@ -1,17 +1,19 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './index';
+import { dbLogger as logger } from '../logging';
+import { DATABASE_URL } from '$env/static/private';
+
+const moduleFilePath = import.meta.url.replace('file://', '').replace(/%20/g, ' ');
+const executedFilePath = process.argv[1]
 
 // Seed data for initial database setup
-export async function seedDatabase() {
-	if (!process.env.DATABASE_URL) {
-		throw new Error('DATABASE_URL is not set');
-	}
-
-	const client = new Database(process.env.DATABASE_URL);
+async function seedDatabase() {
+	const client = new Database(DATABASE_URL);
 	const db = drizzle(client, { schema });
 
-	console.log('🌱 Seeding database...');
+	logger.info('--- Starting database seeding process ---');
+	logger.info('Seeding database with lookup data');
 
 	// Common event types for incident response
 	const eventTypes = [
@@ -33,7 +35,7 @@ export async function seedDatabase() {
 	];
 
 	await db.insert(schema.event_type).values(eventTypes).onConflictDoNothing();
-	console.log('✓ Event types seeded');
+	logger.info('Lookup table "event_type" seeded');
 
 	// Common action types for investigations
 	const actionTypes = [
@@ -55,7 +57,7 @@ export async function seedDatabase() {
 	];
 
 	await db.insert(schema.action_type).values(actionTypes).onConflictDoNothing();
-	console.log('✓ Action types seeded');
+	logger.info('lookup table "action_type" seeded');
 
 	// Relation types for linking entities
 	const relationTypes = [
@@ -74,7 +76,7 @@ export async function seedDatabase() {
 	];
 
 	await db.insert(schema.relation_type).values(relationTypes).onConflictDoNothing();
-	console.log('✓ Relation types seeded');
+	logger.info('Lookup table "relation_type" seeded');
 
 	// Annotation types for collaborative notes
 	const annotationTypes = [
@@ -90,7 +92,7 @@ export async function seedDatabase() {
 	];
 
 	await db.insert(schema.annotation_type).values(annotationTypes).onConflictDoNothing();
-	console.log('✓ Annotation types seeded');
+	logger.info('Lookup table "annotation_type" seeded');
 
 	// Common entity types for IOCs and assets
 	const entityTypes = [
@@ -112,7 +114,7 @@ export async function seedDatabase() {
 	];
 
 	await db.insert(schema.entity_type).values(entityTypes).onConflictDoNothing();
-	console.log('✓ Entity types seeded');
+	logger.info('Lookup table "entity_type" seeded');
 
 	// Inserting a default user for initial setup
 	await db
@@ -124,13 +126,25 @@ export async function seedDatabase() {
 			role: 'analyst'
 		})
 		.onConflictDoNothing();
-	console.log('✓ Default analyst seeded');
+	logger.info('Default local analyst "Wally" inserted');
 
 	client.close();
-	console.log('🎉 Database seeding completed!');
+	logger.info('--- Database seeding process completed ---');
+}
+
+if (!DATABASE_URL) {
+	logger.error('DATABASE_URL is not set. Cannot seed database.');
+	process.exit(1);
 }
 
 // Only auto-execute if run directly via tsx (not when imported by drizzle-kit)
-if (import.meta.url === `file://${process.argv[1]}`) {
-	seedDatabase();
+if (moduleFilePath !== executedFilePath) {
+	logger.debug(`Module file path: ${moduleFilePath}`);
+	logger.debug(`Executed file path: ${executedFilePath}`);
+	logger.warn('Skipping automatic database seeding (imported as module)');
+	logger.warn(`To execute seeding, run this script directly via tsx.`);
+	process.exit(1);
 }
+
+logger.info('Executing database seeding script directly');
+seedDatabase();

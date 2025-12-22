@@ -34,3 +34,6 @@ data/timmyD.sqlite
 /.github
 /.bruno
 /package-lock.json
+
+# Drizzle
+/drizzle

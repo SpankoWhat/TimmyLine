@@ -1,10 +1,12 @@
-import { Server } from 'socket.io';
-import type { Socket } from 'socket.io';
+import { Server, type Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
 import type { UserInfo, Incident, IncidentUUID, SocketId } from '../../config/socketType.ts';
 import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
+
+import 'dotenv/config';
+const ORIGIN = process.env.ORIGIN;
 
 // Use globalThis to persist across HMR reloads
 const globalForSocket = globalThis as unknown as {
@@ -118,9 +120,15 @@ export function initializeSocketIO(
 
     // Initialize new Socket.IO server
     logger.info('Creating new Socket.IO server instance');
+
+    if (!ORIGIN) {
+        logger.fatal('ORIGIN is not defined in environment variables.');
+        return null;
+    }
+
     globalForSocket.io = new Server(server, {
         cors: {
-            origin: process.env.ORIGIN || 'http://localhost:5173',
+            origin: ORIGIN,
             methods: ['GET', 'POST']
         }
     });

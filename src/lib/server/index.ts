@@ -3,11 +3,13 @@ import Database from 'better-sqlite3';
 import * as schema from './database/index';
 import { logger } from './logging/index';
 
+// Environment variable loading
+import 'dotenv/config';
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
     logger.error('DATABASE_URL is not defined in environment variables.');
-    throw new Error('DATABASE_URL is not defined in environment variables.');
+    process.exit(1);
 }
 
 const client = new Database(DATABASE_URL);

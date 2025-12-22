@@ -12,6 +12,17 @@ import {
 	analysts
 } from '$lib/server/database';
 import { eq } from 'drizzle-orm';
+import { authLogger as logger } from '$lib/server/logging';
+import {
+	AUTH_SECRET,
+	GITHUB_CLIENT_ID,
+	GITHUB_CLIENT_SECRET,
+	GOOGLE_CLIENT_ID,
+	GOOGLE_CLIENT_SECRET,
+	MICROSOFT_ENTRA_ID_CLIENT_ID,
+	MICROSOFT_ENTRA_ID_CLIENT_SECRET,
+	MICROSOFT_ENTRA_ID_TENANT_ID
+} from '$env/static/private';
 
 /**
  * Auth.js Configuration
@@ -37,8 +48,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	}),
 	providers: [
 		Google({
-			clientId: process.env.GOOGLE_CLIENT_ID!,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+			clientId: GOOGLE_CLIENT_ID,
+			clientSecret: GOOGLE_CLIENT_SECRET,
 			authorization: {
 				params: {
 					prompt: 'consent',
@@ -48,9 +59,9 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 			}
 		}),
 		MicrosoftEntraID({
-			clientId: process.env.MICROSOFT_ENTRA_ID_CLIENT_ID!,
-			clientSecret: process.env.MICROSOFT_ENTRA_ID_CLIENT_SECRET!,
-			issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_ENTRA_ID_TENANT_ID}/v2.0`,
+			clientId: MICROSOFT_ENTRA_ID_CLIENT_ID,
+			clientSecret: MICROSOFT_ENTRA_ID_CLIENT_SECRET,
+			issuer: `https://login.microsoftonline.com/${MICROSOFT_ENTRA_ID_TENANT_ID}/v2.0`,
 			authorization: {
 				params: {
 					scope: 'openid profile email User.Read'
@@ -59,70 +70,79 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 		}),
         // GitHub provider (optional, for developer convenience
         GitHub({
-            clientId: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET
+			clientId: GITHUB_CLIENT_ID,
+			clientSecret: GITHUB_CLIENT_SECRET
         })
 	],
 	callbacks: {
 		/**
 		 * Called when a user signs in.
-		 * Auto-create or link analyst record on first login.
+		 * Just validate the email exists - analyst creation happens in session callback.
 		 */
 		async signIn({ user, account, profile }) {
 			if (!user.email) return false;
-
-			try {
-				// Check if analyst exists with this email
-				const existingAnalyst = await db
-					.select()
-					.from(analysts)
-					.where(eq(analysts.email, user.email))
-					.limit(1);
-
-				if (existingAnalyst.length === 0) {
-					// Auto-create analyst on first login
-					await db.insert(analysts).values({
-						user_id: user.id,
-						username: user.email.split('@')[0], // Use email prefix as username
-						email: user.email,
-						full_name: user.name || user.email.split('@')[0],
-						role: 'analyst', // Default role
-						active: true
-					});
-				} else if (!existingAnalyst[0].user_id) {
-					// Link existing analyst to auth user
-					await db
-						.update(analysts)
-						.set({ user_id: user.id })
-						.where(eq(analysts.email, user.email));
-				}
-
-				return true;
-			} catch (error) {
-				console.error('Error linking analyst on sign-in:', error);
-				return false;
-			}
+			return true;
 		},
 
 		/**
-		 * Attach analyst info to session object
+		 * Attach analyst info to session object.
+		 * Auto-create or link analyst record on first session creation.
 		 */
 		async session({ session, user }) {
-			if (session?.user) {
-				// Fetch analyst info
-				const analyst = await db
-					.select()
-					.from(analysts)
-					.where(eq(analysts.user_id, user.id))
-					.limit(1);
+			if (session?.user && user.email) {
+				try {
+				// Check if analyst exists with this email
+					let analyst = await db
+						.select()
+						.from(analysts)
+						.where(eq(analysts.email, user.email))
+						.limit(1);
 
-				if (analyst.length > 0) {
-					session.user.analystUUID = analyst[0].uuid;
-					session.user.analystRole = analyst[0].role;
-					session.user.analystUsername = analyst[0].username;
+					if (analyst.length === 0) {
+						// Auto-create analyst on first session
+						const [newAnalyst] = await db.insert(analysts).values({
+							user_id: user.id,
+							username: user.email.split('@')[0], // Use email prefix as username
+							email: user.email,
+							full_name: user.name || user.email.split('@')[0],
+							role: 'analyst', // Default role
+							active: true
+						}).returning();
+						analyst = [newAnalyst];
+						logger.debug('Created new analyst record', { email: user.email, uuid: newAnalyst.uuid });
+					} else if (!analyst[0].user_id) {
+						// Link existing analyst to auth user
+						const [updatedAnalyst] = await db
+							.update(analysts)
+							.set({ user_id: user.id })
+							.where(eq(analysts.email, user.email))
+							.returning();
+						analyst = [updatedAnalyst];
+						logger.debug('Linked existing analyst to auth user', { email: user.email, uuid: updatedAnalyst.uuid });
+					}
+
+					// Attach analyst info to session
+					if (analyst.length > 0) {
+						session.user.analystUUID = analyst[0].uuid;
+						session.user.analystRole = analyst[0].role;
+						session.user.analystUsername = analyst[0].username;
+					}
+				} catch (error) {
+					logger.error('Error managing analyst in session callback', { error, email: user.email });
 				}
 			}
 			return session;
+		}
+	},
+	logger: {
+		error: (code, ...message) => {
+			logger.error(`${code}`, { details: message.join(' ') });
+		},
+		warn: (code, ...message) => {
+			logger.warn(`${code}`, { details: message.join(' ') });
+		},
+		debug: (code, ...message) => {
+			logger.debug(`${code}`, { details: message.join(' ') });
 		}
 	},
 	trustHost: true, // Required for production
@@ -133,5 +153,10 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	pages: {
 		signIn: '/login',
 		error: '/login'
-	}
+	},
+	secret: AUTH_SECRET
 });
+
+if (!AUTH_SECRET) {
+	logger.warn('WARNING: AUTH_SECRET is not set. This is insecure and should be fixed.');
+}
