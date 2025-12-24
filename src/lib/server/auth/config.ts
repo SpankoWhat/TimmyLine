@@ -127,8 +127,11 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 						session.user.analystRole = analyst[0].role;
 						session.user.analystUsername = analyst[0].username;
 					}
-				} catch (error) {
-					logger.error('Error managing analyst in session callback', { error, email: user.email });
+				} catch (er) {
+					logger.error(`Error managing analyst in session callback.`, {
+						err: er instanceof Error ? er.message : String(er),
+						email: user.email
+					});
 				}
 			}
 			return session;
@@ -136,13 +139,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	},
 	logger: {
 		error: (code, ...message) => {
-			logger.error(`${code}`, { details: message.join(' ') });
+			logger.error(`${code}`, { details: JSON.stringify(message) });
 		},
 		warn: (code, ...message) => {
-			logger.warn(`${code}`, { details: message.join(' ') });
+			logger.warn(`${code}`, { details: JSON.stringify(message) });
 		},
 		debug: (code, ...message) => {
-			logger.debug(`${code}`, { details: message.join(' ') });
+			logger.debug(`${code}`, { details: JSON.stringify(message) });
 		}
 	},
 	trustHost: true, // Required for production

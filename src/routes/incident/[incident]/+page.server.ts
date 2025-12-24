@@ -11,12 +11,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		.where(eq(incidents.uuid, params.incident))
 		.limit(1);
 
-	const analystALl = await db
-		.select()
-		.from(analysts)
-
 	return {
-		incident: incident[0] || null,
-		analyst: analystALl[0] || null
+		incident: incident[0] || null
 	};
 };

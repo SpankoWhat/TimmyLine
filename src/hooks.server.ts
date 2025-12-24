@@ -3,6 +3,7 @@ import { handle as authHandle } from '$lib/server/auth/config';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { authLogger as logger } from '$lib/server/logging';
 
 /**
  * Authentication & Authorization Hook
@@ -19,12 +20,13 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
 
     // Redirect unauthenticated users to login
     if (!session?.user && !isPublicRoute) {
+        logger.debug('Unauthenticated access to protected route, redirecting to /login');
         throw redirect(303, '/login');
     }
 
     // Redirect authenticated users away from login page
     if (session?.user && event.url.pathname === '/login') {
-        throw redirect(303, '/');
+        throw redirect(303, '/home');
     }
 
     // Attach session to locals for downstream use

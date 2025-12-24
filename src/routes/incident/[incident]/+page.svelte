@@ -27,7 +27,6 @@
 		//Setting the current selected incident in the cache store
 		currentSelectedIncident.set(incidentObj);
 		initializeAllCaches();
-		currentSelectedAnalyst.set(data.analyst || null);
 		
 		// Check and initialize socket connection
 		if (!initializeSocket() && !$currentSelectedIncident?.uuid && !$currentSelectedAnalyst?.uuid) {
