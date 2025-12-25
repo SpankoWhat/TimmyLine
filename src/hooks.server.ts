@@ -14,9 +14,7 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
 
     // Public routes that don't require authentication
     const publicRoutes = ['/login', '/auth'];
-    const isPublicRoute =
-        publicRoutes.some((route) => event.url.pathname.startsWith(route)) ||
-        event.url.pathname === '/';
+    const isPublicRoute = publicRoutes.some((route) => event.url.pathname.startsWith(route));
 
     // Redirect unauthenticated users to login
     if (!session?.user && !isPublicRoute) {
@@ -24,8 +22,9 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
         throw redirect(303, '/login');
     }
 
+    const toRouteFrom = ['/login', '/'];
     // Redirect authenticated users away from login page
-    if (session?.user && event.url.pathname === '/login') {
+    if (session?.user && (toRouteFrom.some((route) => event.url.pathname === route))) {
         throw redirect(303, '/home');
     }
 
