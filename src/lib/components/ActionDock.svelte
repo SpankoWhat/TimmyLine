@@ -39,7 +39,7 @@
 		{#if leftSection}
 			{@render leftSection()}
 		{:else}
-			<button class="action-btn home" onclick={() => goto('/')} title="Home">Home</button>
+			<button class="action-btn home" onclick={() => goto('/home')} title="Home">Home</button>
 		{/if}
 	</div>
 
