@@ -2,6 +2,7 @@ node_modules
 
 # Vscode
 .vscode
+.vsocde/**/*
 
 # Output
 .output
@@ -37,3 +38,4 @@ data/timmyD.sqlite
 
 # Drizzle
 /drizzle
+/drizzle/**/*
