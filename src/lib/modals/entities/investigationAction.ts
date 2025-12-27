@@ -41,10 +41,10 @@ export const investigationActionHandler: EntityModalHandler = {
 	submit: async (data, mode) => {
 		const endpoint = mode === 'create'
 			? '/api/create/core/investigation_action'
-			: `/api/update/core/investigation_action/${data.uuid}`;
+			: '/api/update/core/investigation_action';
 		
 		const response = await fetch(endpoint, {
-			method: mode === 'create' ? 'POST' : 'PUT',
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});

@@ -2,6 +2,8 @@
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import { currentSelectedIncident } from '$lib/stores/cacheStore';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
+    import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
+    import type { EntityType } from '$lib/modals/types';
     import TimelineRow from './TimelineRow.svelte';
     
     let { 
@@ -129,6 +131,16 @@
             alert(`Failed to delete ${item.type}: ${(error as Error).message}`);
         }
     }
+    
+    function editEntity() {
+        // Determine the entity type based on item type
+        const entityType: EntityType = item.type === 'event' 
+            ? 'timeline_event' 
+            : 'investigation_action';
+        
+        // Open modal in edit mode with the item's data
+        modalStore.open(createModalConfig(entityType, 'edit', item.data));
+    }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -184,6 +196,12 @@
         {/if}
         
         <div class="actions" onclick={(e) => e.stopPropagation()}>
+            <button
+                class="action-btn"
+                title="Edit"
+                onclick={editEntity}>
+                <span class="btn-icon">✎</span>
+            </button>
             <button
                 class="action-btn"
                 title="Delete"

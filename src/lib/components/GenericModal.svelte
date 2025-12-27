@@ -26,6 +26,11 @@
 				}
 			});
 			
+			// Preserve uuid for edit mode (not in field configs but needed for API)
+			if (currentModal.mode === 'edit' && currentModal.data?.uuid) {
+				newFormData.uuid = currentModal.data.uuid;
+			}
+			
 			formData = newFormData;
 			
 			// Emit editing presence if we have a UUID

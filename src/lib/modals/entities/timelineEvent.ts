@@ -42,10 +42,10 @@ export const timelineEventHandler: EntityModalHandler = {
 	submit: async (data, mode) => {
 		const endpoint = mode === 'create'
 			? '/api/create/core/timeline_event'
-			: `/api/update/core/timeline_event/${data.uuid}`;
+			: '/api/update/core/timeline_event';
 		
 		const response = await fetch(endpoint, {
-			method: mode === 'create' ? 'POST' : 'PUT',
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});

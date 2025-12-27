@@ -1,6 +1,14 @@
 /**
  * Simple logging utility for server-side logging with different log levels and context support.
  */
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+// Import environment variables for log file path and write-to-path flag
+import 'dotenv/config';
+const LOG_FILEPATH: string = process.env.LOG_FILEPATH || '';
+const LOG_WRITETOPATH: boolean = process.env.LOG_WRITETOPATH === 'true';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 type supportedLogDetails = string | number | boolean | null | undefined;
 
@@ -21,6 +29,7 @@ interface LogDetails {
 class Logger {
     private loggingService?: string;
     private logContextDetails?: LogContextDetails;
+    private logFilePath?: string;
     private colors = {
       debug: '\x1b[36m',    // Cyan
       info: '\x1b[32m',     // Green
@@ -30,9 +39,18 @@ class Logger {
     };
     private reset = '\x1b[0m';
 
-    constructor(loggingService?: string, additionalDetails?: LogContextDetails) {
+    constructor(loggingService?: string, additionalDetails?: LogContextDetails, logFilePath: string = LOG_FILEPATH) {
         this.loggingService = loggingService;
         this.logContextDetails = additionalDetails;
+        this.logFilePath = logFilePath;
+
+        // Ensure log directory exists
+        if (this.logFilePath) {
+            const logDir = dirname(this.logFilePath);
+            if (!existsSync(logDir)) {
+                mkdirSync(logDir, { recursive: true });
+            }
+        }
     }
 
     /**
@@ -54,7 +72,13 @@ class Logger {
             ...details
         };
 
-        const logString = this.formatLogString(logEntry); 
+        const logString = this.formatLogString(logEntry);
+
+        if (LOG_WRITETOPATH) {
+            this.writeLogToFile(logEntry);
+            return;
+        }
+
         console.log(logString);
     };
 
@@ -73,6 +97,12 @@ class Logger {
         const detailsInfo = Object.keys(details).length ? JSON.stringify(details) : '';
 
         return (`${color}${timestampStr} ${level.toUpperCase()} ${serviceInfo}- ${message} ${detailsInfo}${this.reset}`);
+    }
+
+    private writeLogToFile(logEntry: LogDetails) {
+        if (!this.logFilePath) return;
+        const logLine = JSON.stringify(logEntry) + '\n';
+        appendFileSync(this.logFilePath, logLine);
     }
 
     /**
