@@ -37,7 +37,7 @@ export const getUsersOnRow = derived(
     ($incidentUsers) => {
         return (rowUUID: string): UserInfo[] => {
             return Array.from($incidentUsers.values())
-                .filter((user) => user.rowUUID === rowUUID);
+                .filter((user) => user.focusedRow === rowUUID || user.editingRow === rowUUID);
         };
     }
 );
@@ -67,9 +67,8 @@ export function initializeSocket() {
     localUserInfo = {
         analystUUID: analyst.uuid as string,
         analystName: analyst.full_name as string,
-        rowUUID: null,
-        isFocused: false,
-        isEditing: false
+        focusedRow: null,
+        editingRow: null
     }
 
     return true;
@@ -111,32 +110,21 @@ function registerEventListeners(socket: Socket) {
         });
     });
 
-    socket.on('user-focused-row', (userSocketId: SocketId, rowUUID: string) => {
+    socket.on('user-status-updated', (userSocketId: SocketId, updates: Partial<Pick<UserInfo, 'focusedRow' | 'editingRow'>>) => {
         incidentUsers.update((incident) => {
             const userInfo = incident.get(userSocketId);
-            const setFocus = rowUUID ? true : false;
             
             if (userInfo) {
-                userInfo.rowUUID = rowUUID;
-                userInfo.isFocused = setFocus;
+                // Apply partial updates
+                if ('focusedRow' in updates) {
+                    userInfo.focusedRow = updates.focusedRow ?? null;
+                }
+                if ('editingRow' in updates) {
+                    userInfo.editingRow = updates.editingRow ?? null;
+                }
                 incident.set(userSocketId, userInfo);
             }
             return incident;
-        });
-    });
-
-    socket.on('user-editing-row', (userSocketId:SocketId, rowUUID: string) => {
-        incidentUsers.update((incident) => {
-            const userInfo = incident.get(userSocketId);
-            const setFocus = rowUUID ? true : false;
-            
-            if (userInfo) {
-                userInfo.rowUUID = rowUUID;
-                userInfo.isFocused = setFocus;
-                userInfo.isEditing = true;
-                incident.set(userSocketId, userInfo);
-            }
-            return incident; // Return the SAME map after modifying it
         });
     });
 
@@ -199,14 +187,15 @@ export function emitViewRow(rowUUID: string) {
     const incident = get(currentSelectedIncident);
     console.debug('Emitting view row:', rowUUID);
 
-    socket.emit('inform-focus-change', {
+    socket.emit('update-user-status', {
         incidentUUID: incident!.uuid as IncidentUUID,
-        rowUUID: rowUUID
-    })
+        updates: { focusedRow: rowUUID }
+    });
 
     // Update local user info for tracking purposes
-    localUserInfo!.rowUUID = rowUUID;
-    localUserInfo!.isFocused = true;
+    if (localUserInfo) {
+        localUserInfo.focusedRow = rowUUID;
+    }
 }
 
 export function emitIdle() {
@@ -214,30 +203,29 @@ export function emitIdle() {
     const incident = get(currentSelectedIncident);
     console.debug('Emitting idle state');
 
-    socket.emit('inform-focus-change', {
+    socket.emit('update-user-status', {
         incidentUUID: incident!.uuid as IncidentUUID,
-        rowUUID: null
+        updates: { focusedRow: null, editingRow: null }
     });
 
     // Update local user info for tracking purposes
-    localUserInfo!.rowUUID = null;
-    localUserInfo!.isFocused = false;
+    if (localUserInfo) {
+        localUserInfo.focusedRow = null;
+        localUserInfo.editingRow = null;
+    }
 }
 
-// Still has not been implemented on server side
-export function emitEditingRow(rowUUID: string) {
+export function emitEditingRowStatus(rowUUID: string | null, isEditing: boolean) {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
 
-    socket.emit('inform-edit-row', {
+    socket.emit('update-user-status', {
         incidentUUID: incident!.uuid as IncidentUUID,
-        rowUUID
+        updates: { editingRow: isEditing ? rowUUID : null }
     });
-    
-    // Update local user info for tracking purposes
-    localUserInfo!.rowUUID = rowUUID;
-    localUserInfo!.isFocused = true;
-    localUserInfo!.isEditing = true;
 
-    console.warn('emitEditingRow not yet implemented on server side');
+    // Update local user info for tracking purposes
+    if (localUserInfo) {
+        localUserInfo.editingRow = isEditing ? rowUUID : null;
+    }
 }

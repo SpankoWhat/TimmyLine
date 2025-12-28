@@ -182,10 +182,10 @@ function registerDisconnectEvent(socket: Socket) {
 }
 
 function registerUserIncidentPresence(socket: Socket) {
-    socket.on('inform-focus-change', (data: { incidentUUID: string; rowUUID: string | null; }) => {
+    socket.on('update-user-status', (data: { incidentUUID: string; updates: Partial<Pick<UserInfo, 'focusedRow' | 'editingRow'>>; }) => {
         const roomName = `incident:${data.incidentUUID}`;
 
-        // Update internal tracking of user focus
+        // Update internal tracking of user status
         try {
             let incident = allIncidents.get(data.incidentUUID);
             if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
@@ -193,19 +193,24 @@ function registerUserIncidentPresence(socket: Socket) {
             let userInfo = incident.get(socket.id);
             if (!userInfo) throw new Error(`User ${socket.id} not found in incident ${data.incidentUUID}`);
 
-            userInfo.rowUUID = data.rowUUID;
-            userInfo.isFocused = data.rowUUID ? true : false;
-            incident.set(socket.id, userInfo);
+            // Apply partial updates
+            if ('focusedRow' in data.updates) {
+                userInfo.focusedRow = data.updates.focusedRow ?? null;
+            }
+            if ('editingRow' in data.updates) {
+                userInfo.editingRow = data.updates.editingRow ?? null;
+            }
 
+            incident.set(socket.id, userInfo);
             allIncidents.set(data.incidentUUID, incident);
         } catch (error) {
-            logger.error(`Error occurred while informing focus change: ${error}`);
+            logger.error(`Error occurred while updating user status: ${error}`);
             return;
         }
 
-        // Notify ALL clients in room about focus change after updating internal state
-        globalForSocket.io!.to(roomName).emit('user-focused-row', socket.id, data.rowUUID);
-        logger.debug(`Client ${socket.id} informed focus change in ${roomName} to row ${data.rowUUID}`);
+        // Notify ALL clients in room about status change
+        globalForSocket.io!.to(roomName).emit('user-status-updated', socket.id, data.updates);
+        logger.debug(`Client ${socket.id} updated status in ${roomName}:`, data.updates);
     });
 }
 
@@ -275,9 +280,8 @@ function registerJoinRoomEvent(socket: Socket) {
                 userInfo = {
                     analystUUID: validatedAnalystUUID,
                     analystName: validatedAnalystName,
-                    rowUUID: null,
-                    isFocused: false,
-                    isEditing: false
+                    focusedRow: null,
+                    editingRow: null
                 };
 
                 // Add user to incident and then add to global store

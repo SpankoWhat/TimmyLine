@@ -20,6 +20,11 @@
     
     // Reactive derived value - updates when incidentUsers changes
     let usersOnThisRow = $derived($getUsersOnRow(item.uuid));
+    
+    // Check if any user is currently editing this row
+    let isBeingEditedByOther = $derived(
+        usersOnThisRow.some((user) => user.editingRow === item.uuid)
+    );
 
     // Extract related entities and events from enriched data
     let relatedEntities = $derived(
@@ -139,6 +144,7 @@
             : 'investigation_action';
         
         // Open modal in edit mode with the item's data
+        // The modal will emit editing state via GenericModal's $effect
         modalStore.open(createModalConfig(entityType, 'edit', item.data));
     }
 </script>
@@ -188,7 +194,7 @@
                     <div 
                         class="user-avatar"
                         style:background-color={randomColorFromString(user.analystName)}
-                        title={`${user.analystName} is ${user.isEditing ? 'editing' : 'viewing'} this item`}
+                        title={`${user.analystName} is ${user.editingRow === item.uuid ? 'editing' : 'viewing'} this item`}
                                 >
                     </div>
                 {/each}
@@ -198,7 +204,9 @@
         <div class="actions" onclick={(e) => e.stopPropagation()}>
             <button
                 class="action-btn"
-                title="Edit"
+                class:disabled={isBeingEditedByOther}
+                disabled={isBeingEditedByOther}
+                title={isBeingEditedByOther ? 'Another user is editing this item' : 'Edit'}
                 onclick={editEntity}>
                 <span class="btn-icon">✎</span>
             </button>
@@ -396,6 +404,21 @@
         border-color: var(--color-accent-warning);
         color: var(--color-accent-warning);
         background: rgba(255, 0, 0, 0.1);
+    }
+
+    .action-btn.disabled,
+    .action-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        border-color: var(--color-border-medium);
+        color: var(--color-text-tertiary);
+    }
+
+    .action-btn.disabled:hover,
+    .action-btn:disabled:hover {
+        border-color: var(--color-border-medium);
+        color: var(--color-text-tertiary);
+        background: transparent;
     }
 
     .btn-icon {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { modalStore, getHandler, validateFormData, submitFormData } from '$lib/modals/ModalRegistry';
 	import type { FieldConfig } from '$lib/config/modalFields';
-	import { emitEditingRow, emitIdle } from '$lib/stores/collabStore';
+	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
 	
 	let formData = $state<Record<string, any>>({});
 	let errors = $state<Record<string, string>>({});
@@ -37,12 +37,11 @@
 			if (currentModal.mode === 'edit' && currentModal.data?.uuid) {
 				editingRowUuid = currentModal.data.uuid;
 				if (editingRowUuid) {
-					emitEditingRow(editingRowUuid);
+					emitEditingRowStatus(editingRowUuid, true);
 				}
 			}
 		} else if (editingRowUuid) {
-			// Modal closed, emit idle
-			emitIdle();
+			emitEditingRowStatus(editingRowUuid, false);
 			editingRowUuid = null;
 		}
 	});
@@ -83,6 +82,12 @@
 				currentModal.mode,
 				formData
 			);
+			
+			// Emit idle before closing (successful submission)
+			if (editingRowUuid) {
+				emitIdle();
+				editingRowUuid = null;
+			}
 			
 			modalStore.close();
 		} catch (error) {
