@@ -17,7 +17,8 @@ export const analysts = sqliteTable('analysts', {
 	role: text('role', { enum: ['analyst', 'on-point lead', 'observer'] }),
 	active: integer('active', { mode: 'boolean' }).default(sql`1`),
 	created_at: integer('created_at').default(sql`(strftime('%s', 'now'))`),
-	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`)
+	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`),
+	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 });
 
 // Export types for use throughout the app

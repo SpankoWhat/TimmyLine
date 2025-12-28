@@ -27,7 +27,8 @@ export const investigation_actions = sqliteTable('investigation_actions', {
 	tool_used: text('tool_used', { length: 100 }),
 	notes: text('notes'),
 	next_steps: text('next_steps'),
-	tags: text('tags')
+	tags: text('tags'),
+	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 });
 
 // Define relations for query API

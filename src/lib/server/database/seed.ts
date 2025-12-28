@@ -2,9 +2,11 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './index';
 import { dbLogger as logger } from '../logging';
-import { DATABASE_URL } from '$env/static/private';
+import 'dotenv/config';
 
-const moduleFilePath = import.meta.url.replace('file://', '').replace(/%20/g, ' ');
+
+const moduleFilePath = import.meta.url.replace('file:///', '').replace(/%20/g, ' ').replace(/\//g, '\\');
+const DATABASE_URL = process.env.DATABASE_URL;
 const executedFilePath = process.argv[1]
 
 // Seed data for initial database setup
@@ -143,8 +145,7 @@ if (moduleFilePath !== executedFilePath) {
 	logger.debug(`Executed file path: ${executedFilePath}`);
 	logger.warn('Skipping automatic database seeding (imported as module)');
 	logger.warn(`To execute seeding, run this script directly via tsx.`);
-	process.exit(1);
+} else {
+	logger.info('Executing database seeding script directly');
+	seedDatabase();
 }
-
-logger.info('Executing database seeding script directly');
-seedDatabase();

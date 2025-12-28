@@ -14,7 +14,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	try {
 		await db
-			.delete(timeline_events)
+			.update(timeline_events)
+			.set({
+				deleted_at: Math.floor(Date.now() / 1000),
+				updated_at: Math.floor(Date.now() / 1000)
+			})
 			.where(eq(timeline_events.uuid, body.uuid))
 			.returning();
 

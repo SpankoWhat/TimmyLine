@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { timeline_events } from '$lib/server/database';
-import { eq, and, type SQL } from 'drizzle-orm';
+import { eq, and, isNull, type SQL } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const conditions: SQL[] = [];
@@ -22,6 +22,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const source_reliability = url.searchParams.get('source_reliability');
 	const source = url.searchParams.get('source');
 	const tags = url.searchParams.get('tags');
+	const include_deleted = url.searchParams.get('include_deleted');
 
 	// Add conditions only if parameters are provided and not empty
 	if (uuid) conditions.push(eq(timeline_events.uuid, uuid));
@@ -38,6 +39,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (source_reliability) conditions.push(eq(timeline_events.source_reliability, source_reliability as 'A' | 'B' | 'C' | 'D' | 'E' | 'F'));
 	if (source) conditions.push(eq(timeline_events.source, source));
 	if (tags) conditions.push(eq(timeline_events.tags, tags));
+
+	// Filter out soft-deleted items unless explicitly requested
+	if (include_deleted !== 'true') {
+		conditions.push(isNull(timeline_events.deleted_at));
+	}
 
 	// Execute query with combined conditions
 	const results =

@@ -30,7 +30,8 @@ export const entities = sqliteTable(
 		attributes: text('attributes'), // JSON for flexible attributes
 		status: text('status', { enum: ['active', 'inactive', 'unknown'] }),
 		criticality: text('criticality', { enum: ['critical', 'high', 'medium', 'low', 'unknown'] }),
-		tags: text('tags') // JSON array of tags
+		tags: text('tags'), // JSON array of tags
+		deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 	},
 	(table) => [
 		uniqueIndex('unique_incident_identifier').on(table.incident_id, table.identifier)

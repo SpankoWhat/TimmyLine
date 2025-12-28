@@ -2,10 +2,23 @@
 	import ActionDock from './ActionDock.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import type { EntityType, ModalMode } from '$lib/modals/types';
+	import { showDeletedItems, updateIncidentCache, updateLookupCache, currentSelectedIncident } from '$lib/stores/cacheStore';
+	import { get } from 'svelte/store';
 
 	// Simplified modal opening function
 	function openModal(entityType: string, mode: ModalMode = 'create') {
 		modalStore.open(createModalConfig(entityType as EntityType, mode));
+	}
+
+	// Toggle show deleted items
+	function toggleShowDeleted() {
+		showDeletedItems.update(val => !val);
+		// Refresh cache to show/hide deleted items
+		updateLookupCache();
+		const incident = get(currentSelectedIncident);
+		if (incident) {
+			updateIncidentCache(incident);
+		}
 	}
 
 	const buttons = [
@@ -40,6 +53,17 @@
 				{ label: 'Event Type', action: () => openModal('event_type') },
 				{ label: 'Annotation Type', action: () => openModal('annotation_type') },
 				{ label: 'Analyst', action: () => openModal('analyst') }
+			]
+		},
+		{
+			id: 'view',
+			label: 'View',
+			variant: 'other' as const,
+			items: [
+				{ 
+					label: $showDeletedItems ? '✓ Show Deleted' : 'Show Deleted', 
+					action: toggleShowDeleted 
+				}
 			]
 		}
 	];

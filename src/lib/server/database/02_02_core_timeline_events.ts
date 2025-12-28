@@ -28,7 +28,8 @@ export const timeline_events = sqliteTable('timeline_events', {
 	confidence: text('confidence', { enum: ['high', 'medium', 'low', 'guess'] }),
 	source_reliability: text('source_reliability', { enum: ['A', 'B', 'C', 'D', 'E', 'F'] }),
 	source: text('source', { length: 200 }),
-	tags: text('tags') // JSON array of tags
+	tags: text('tags'), // JSON array of tags
+	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 });
 
 // Define relations for query API

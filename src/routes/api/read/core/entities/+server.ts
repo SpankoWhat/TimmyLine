@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { entities } from '$lib/server/database';
-import { eq, and, type SQL } from 'drizzle-orm';
+import { eq, and, isNull, type SQL } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const conditions: SQL[] = [];
@@ -22,6 +22,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const status = url.searchParams.get('status');
 	const criticality = url.searchParams.get('criticality');
 	const tags = url.searchParams.get('tags');
+	const include_deleted = url.searchParams.get('include_deleted');
 
 	// Add conditions only if parameters are provided and not empty
 	if (uuid) conditions.push(eq(entities.uuid, uuid));
@@ -38,6 +39,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (status) conditions.push(eq(entities.status, status as 'active' | 'inactive' | 'unknown'));
 	if (criticality) conditions.push(eq(entities.criticality, criticality as 'critical' | 'high' | 'medium' | 'low' | 'unknown'));
 	if (tags) conditions.push(eq(entities.tags, tags));
+
+	// Filter out soft-deleted items unless explicitly requested
+	if (include_deleted !== 'true') {
+		conditions.push(isNull(entities.deleted_at));
+	}
 
 	// Execute query with combined conditions
 	const results =

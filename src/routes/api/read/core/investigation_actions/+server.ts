@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { investigation_actions } from '$lib/server/database';
-import { eq, and, type SQL } from 'drizzle-orm';
+import { eq, and, isNull, type SQL } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const conditions: SQL[] = [];
@@ -18,6 +18,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const tool_used = url.searchParams.get('tool_used');
 	const notes = url.searchParams.get('notes');
 	const next_steps = url.searchParams.get('next_steps');
+	const include_deleted = url.searchParams.get('include_deleted');
 
 
 	// Add conditions only if parameters are provided and not empty
@@ -32,6 +33,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (tool_used) conditions.push(eq(investigation_actions.tool_used, tool_used));
 	if (notes) conditions.push(eq(investigation_actions.notes, notes));
 	if (next_steps) conditions.push(eq(investigation_actions.next_steps, next_steps));
+
+	// Filter out soft-deleted items unless explicitly requested
+	if (include_deleted !== 'true') {
+		conditions.push(isNull(investigation_actions.deleted_at));
+	}
 
 	// Execute query with combined conditions
 	const results =

@@ -37,6 +37,16 @@ export const currentSelectedIncident: Writable<Incident | null> = writable(null)
 export const currentSelectedAnalyst: Writable<Analyst | null> = writable(null);
 
 // ============================================================================
+// UI PREFERENCE STORES
+// ============================================================================
+
+/**
+ * Toggle to show/hide soft-deleted items in the UI
+ * When true, API calls will include include_deleted=true parameter
+ */
+export const showDeletedItems: Writable<boolean> = writable(false);
+
+// ============================================================================
 // CORE CACHE STORES - Collections
 // ============================================================================
 
@@ -148,9 +158,12 @@ export const combinedTimeline = derived(
  */
 export async function updateIncidentCache(incident: Incident): Promise<void> {
 	try {
+		const includeDeleted = get(showDeletedItems);
+		const deletedParam = includeDeleted ? '&include_deleted=true' : '';
+
 		const [timelineRes, annotationsRes] = await Promise.all([
-			fetch(`/api/read/core/timeline_enriched?incident_id=${incident.uuid}`),
-			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}`)
+			fetch(`/api/read/core/timeline_enriched?incident_id=${incident.uuid}${deletedParam}`),
+			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}${deletedParam}`)
 		]);
 
 		const [timelineData, annotations] = await Promise.all([
@@ -196,6 +209,9 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
  */
 export async function updateLookupCache(): Promise<void> {
 	try {
+		const includeDeleted = get(showDeletedItems);
+		const deletedParam = includeDeleted ? '?include_deleted=true' : '';
+
 		const [
 			eventTypesRes,
 			actionTypesRes,
@@ -210,8 +226,8 @@ export async function updateLookupCache(): Promise<void> {
 			fetch('/api/read/lookup?table=entity_type'),
 			fetch('/api/read/lookup?table=annotation_type'),
 			fetch('/api/read/lookup?table=relation_type'),
-			fetch('/api/read/core/analysts'),
-			fetch('/api/read/core/incidents'),
+			fetch(`/api/read/core/analysts${deletedParam}`),
+			fetch(`/api/read/core/incidents${deletedParam}`),
 		]);
 
 		const [

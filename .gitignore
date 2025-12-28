@@ -40,3 +40,4 @@ vite.config.ts.timestamp-*
 /data
 /data/**/*
 **/*.sqlite
+src/lib/server/data/timmyLine.log

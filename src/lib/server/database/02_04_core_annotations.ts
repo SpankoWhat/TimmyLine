@@ -23,7 +23,8 @@ export const annotations = sqliteTable('annotations', {
 	confidence: text('confidence', { enum: ['high', 'medium', 'low', 'guess'] }),
 	refers_to: text('refers_to'),
 	is_hypothesis: integer('is_hypothesis', { mode: 'boolean' }).default(sql`0`),
-	tags: text('tags')
+	tags: text('tags'),
+	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 });
 
 // Export types for use throughout the app

@@ -10,7 +10,8 @@ export const incidents = sqliteTable('incidents', {
 	status: text('status', { enum: ['In Progress', 'Post-Mortem', 'Closed'] }).notNull(),
 	priority: text('priority', { enum: ['critical', 'high', 'medium', 'low'] }).notNull(),
 	created_at: integer('created_at').default(sql`(strftime('%s', 'now'))`),
-	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`)
+	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`),
+	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
 });
 
 // Export types for use throughout the app

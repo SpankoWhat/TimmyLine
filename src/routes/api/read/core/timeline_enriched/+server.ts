@@ -8,6 +8,7 @@ import { db } from '$lib/server';
  */
 export async function GET({ url }: RequestEvent) {
 	const incident_id = url.searchParams.get('incident_id');
+	const include_deleted = url.searchParams.get('include_deleted');
 
 	if (!incident_id) {
 		return json({ error: 'incident_id parameter is required' }, { status: 400 });
@@ -18,7 +19,10 @@ export async function GET({ url }: RequestEvent) {
 		const [events, actions] = await Promise.all([
 			// Fetch events with their related entities
 			db.query.timeline_events.findMany({
-				where: (events, { eq }) => eq(events.incident_id, incident_id),
+				where: (events, { eq, and, isNull }) =>
+					include_deleted === 'true'
+						? eq(events.incident_id, incident_id)
+						: and(eq(events.incident_id, incident_id), isNull(events.deleted_at)),
 				with: {
 					eventEntities: {
 						with: {
@@ -30,7 +34,10 @@ export async function GET({ url }: RequestEvent) {
 
 			// Fetch actions with their related events and entities
 			db.query.investigation_actions.findMany({
-				where: (actions, { eq }) => eq(actions.incident_id, incident_id),
+				where: (actions, { eq, and, isNull }) =>
+					include_deleted === 'true'
+						? eq(actions.incident_id, incident_id)
+						: and(eq(actions.incident_id, incident_id), isNull(actions.deleted_at)),
 				with: {
 					actionEvents: {
 						with: {

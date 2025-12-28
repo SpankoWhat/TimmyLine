@@ -14,7 +14,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	try {
 		await db
-			.delete(entities)
+			.update(entities)
+			.set({
+				deleted_at: Math.floor(Date.now() / 1000),
+				updated_at: Math.floor(Date.now() / 1000)
+			})
 			.where(eq(entities.uuid, body.uuid))
 			.returning();
 
