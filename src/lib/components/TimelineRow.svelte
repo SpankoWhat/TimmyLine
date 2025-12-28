@@ -444,7 +444,6 @@
     /* Expanded Details Styles */
     .expanded-details {
         width: 100%;
-        margin-top: var(--spacing-xs);
         background: var(--color-bg-tertiary);
         border: 1px solid var(--color-border-medium);
         border-radius: var(--border-radius-sm);
@@ -593,7 +592,7 @@
     .presence-indicators {
         display: flex;
         gap: 4px;
-        padding: var(--spacing-xs);
+        padding-right: var(--spacing-xs);
         padding-left: calc(var(--spacing-xs) * 2);
     }
 
