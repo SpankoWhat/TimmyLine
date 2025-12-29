@@ -5,7 +5,7 @@ import { dbLogger as logger } from '../logging';
 import 'dotenv/config';
 
 
-const moduleFilePath = import.meta.url.replace('file://', '').replace(/%20/g, ' ').replace(/\//g, '\/');
+const moduleFilePath = import.meta.url.replace('file:///', '').replace(/%20/g, ' ').replace(/\//g, '\\');
 const DATABASE_URL = process.env.DATABASE_URL;
 const executedFilePath = process.argv[1]
 
@@ -158,7 +158,7 @@ async function seedDatabase() {
 	const breachIncident = {
 		uuid: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d',
 		soar_ticket_id: 'INC-2024-001',
-		title: 'Critical Security Breach: Firewall Compromise Leading to Domain Controller Takeover and C2 Communication',
+		title: 'Firewall Compromise',
 		status: 'In Progress' as const,
 		priority: 'critical' as const
 	};
