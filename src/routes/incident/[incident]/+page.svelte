@@ -105,7 +105,7 @@
 		background: var(--color-bg-secondary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
-		height: calc(100vh - var(--header-height) - 40px);
+		padding-bottom: var(--spacing-2xl);
 	}
 
 	.section-header {

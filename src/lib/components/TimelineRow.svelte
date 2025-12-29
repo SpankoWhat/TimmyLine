@@ -17,6 +17,8 @@
     let relations = $state<TimelineItem[]>([]);
     let showDetails = $state(false);
     let showExpandedDetails = $state(false);
+    let columnRatio = $state(0.30); // Default ratio for graph-column (30%)
+    let isDraggingDivider = $state(false);
     
     // Reactive derived value - updates when incidentUsers changes
     let usersOnThisRow = $derived($getUsersOnRow(item.uuid));
@@ -90,6 +92,42 @@
         showExpandedDetails = true;
         emitViewRow(item.uuid);
     }
+
+    function onDividerMouseDown() {
+        isDraggingDivider = true;
+    }
+
+    function onMouseMove(e: MouseEvent) {
+        if (!isDraggingDivider) return;
+
+        const container = document.querySelector('.details-container') as HTMLElement;
+        if (!container) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left;
+        const containerWidth = containerRect.width;
+        const newRatio = Math.max(0.2, Math.min(0.8, mouseX / containerWidth));
+        columnRatio = newRatio;
+    }
+
+    function onMouseUp() {
+        isDraggingDivider = false;
+    }
+
+    $effect(() => {
+        if (isDraggingDivider) {
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        } else {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+    });
 
     // Function to generate a consistent color from a string (e.g., username)
     function randomColorFromString(str: string): string {
@@ -226,7 +264,7 @@
 {#if showExpandedDetails}
     <div class="expanded-details" onclick={(e) => e.stopPropagation()}>
         <!-- Two-column layout: Details + Relationship Graph -->
-        <div class="details-container">
+        <div class="details-container" style="grid-template-columns: {1 - columnRatio}fr auto {columnRatio}fr;">
             <!-- Left Column: Full Details -->
             <div class="details-column">
                 <div class="column-header">┌─ FULL DETAILS ─────────────────────────────</div>
@@ -242,6 +280,9 @@
                 </div>
                 <div class="column-footer">└────────────────────────────────────────────</div>
             </div>
+
+            <!-- Resize Divider -->
+            <div class="resize-divider" onmousedown={onDividerMouseDown} class:dragging={isDraggingDivider}></div>
 
             <!-- Right Column: Relationship Graph -->
             <div class="graph-column">
@@ -451,9 +492,23 @@
 
     .details-container {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: .8fr 0.60fr;
         gap: var(--spacing-sm);
         padding: var(--spacing-sm);
+    }
+
+    .resize-divider {
+        width: 4px;
+        background: var(--color-border-medium);
+        cursor: col-resize;
+        transition: background 0.15s ease;
+        user-select: none;
+        margin: 0 calc(var(--spacing-sm) / 2);
+    }
+
+    .resize-divider:hover,
+    .resize-divider.dragging {
+        background: var(--color-accent-primary);
     }
 
     .details-container * {

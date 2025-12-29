@@ -39,5 +39,5 @@ vite.config.ts.timestamp-*
 /drizzle/**/*
 /data
 /data/**/*
-**/*.sqlite
+**/*.db
 src/lib/server/data/timmyLine.log
