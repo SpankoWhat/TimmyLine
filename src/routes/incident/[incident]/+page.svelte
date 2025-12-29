@@ -4,7 +4,7 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches } from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches, showDeletedItems} from "$lib/stores/cacheStore.js";
 	import { initializeSocket, joinIncidentSocket, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
@@ -50,12 +50,25 @@
 		leaveIncidentSocket();
 		disconnectSocket();
 	});
+
+	function toggleShowDeleted() {
+		showDeletedItems.update(val => !val);
+	}
 </script>
 
 <div class="incident-page">
 	<!-- Timeline Events -->
 	<div class="timeline-section">
-		<div class="section-header">Timeline Events</div>
+		<div class="section-header">
+			Timeline Events
+			<button class="toggle-deleted-btn" on:click={toggleShowDeleted}>
+				{#if $showDeletedItems}
+					Hide Deleted Items
+				{:else}
+					Show Deleted Items
+				{/if}
+			</button>
+		</div>
 		<div class="section-content">
 			{#if !$currentSelectedIncident?.uuid}
 				<div class="empty-state warning">
@@ -96,13 +109,25 @@
 	}
 
 	.section-header {
-		padding: var(--spacing-xs) var(--spacing-lg);
+		padding: var(--spacing-xs) var(--spacing-xs);
 		border-bottom: 1px solid var(--color-border-subtle);
 		font-size: var(--font-size-sm);
 		font-weight: var(--font-weight-semibold);
 		color: var(--color-text-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+	}
+
+	.toggle-deleted-btn {
+		float: right;
+		background: none;
+		border: none;
+		color: var(--color-accent-primary);
+		cursor: pointer;
+		font-size: var(--font-size-xs);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		border-radius: var(--border-radius-sm);
+		transition: background 0.2s;
 	}
 
 	.section-content {

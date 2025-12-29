@@ -147,6 +147,18 @@ export const combinedTimeline = derived(
 	}
 );
 
+/**
+ * Handles calling cache update functions when showDeletedItems changes
+ * Ensures that caches reflect the current preference for showing deleted items
+ */
+showDeletedItems.subscribe(async (includeDeleted) => {
+	await updateLookupCache();
+	const incident = get(currentSelectedIncident);
+	if (incident) {
+		await updateIncidentCache(incident);
+	}
+});
+
 // ============================================================================
 // CACHE UPDATE FUNCTIONS
 // ============================================================================

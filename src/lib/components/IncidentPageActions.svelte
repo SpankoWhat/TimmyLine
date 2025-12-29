@@ -10,17 +10,6 @@
 		modalStore.open(createModalConfig(entityType as EntityType, mode));
 	}
 
-	// Toggle show deleted items
-	function toggleShowDeleted() {
-		showDeletedItems.update(val => !val);
-		// Refresh cache to show/hide deleted items
-		updateLookupCache();
-		const incident = get(currentSelectedIncident);
-		if (incident) {
-			updateIncidentCache(incident);
-		}
-	}
-
 	const buttons = [
 		{
 			id: 'create',
@@ -53,17 +42,6 @@
 				{ label: 'Event Type', action: () => openModal('event_type') },
 				{ label: 'Annotation Type', action: () => openModal('annotation_type') },
 				{ label: 'Analyst', action: () => openModal('analyst') }
-			]
-		},
-		{
-			id: 'view',
-			label: 'View',
-			variant: 'other' as const,
-			items: [
-				{ 
-					label: $showDeletedItems ? '✓ Show Deleted' : 'Show Deleted', 
-					action: toggleShowDeleted 
-				}
 			]
 		}
 	];
