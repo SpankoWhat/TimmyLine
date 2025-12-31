@@ -3,19 +3,16 @@
     import { currentSelectedIncident } from '$lib/stores/cacheStore';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
-    import type { EntityType } from '$lib/modals/types';
-    import TimelineRow from './TimelineRow.svelte';
+    import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
     
     let { 
-        item, 
-        childLeftMarginOffset = "0rem"
+        item,
+        displayFieldsConfig
     }: { 
-        item: TimelineItem; 
-        childLeftMarginOffset?: string;
+        item: TimelineItem,
+        displayFieldsConfig: DisplayFieldsConfig;
     } = $props();
 
-    let relations = $state<TimelineItem[]>([]);
-    let showDetails = $state(false);
     let showExpandedDetails = $state(false);
     let columnRatio = $state(0.30); // Default ratio for graph-column (30%)
     let isDraggingDivider = $state(false);
@@ -43,25 +40,6 @@
             : []
     );
 
-    // Combined display field configuration for both events and actions
-    // Fields marked as 'pinned: true' will be displayed as pinneds, others as free-form text
-    const displayFieldsConfig = {
-        event: [
-            { key: "event_type", label: "Event", pinned: true },
-            { key: "event_data", label:"Notes", pinned: true, showInNote: true },
-            { key: "source", label: "Source", pinned: true },
-            { key: "source_reliability", label: "Grade", pinned: true },
-            { key: "severity", label: "Severity", pinned: true   },
-        ],
-        action: [
-            { key: "action_type", label: "Action", pinned: true },
-            { key: "notes", label: "Notes",pinned: false, showInNote: true },
-            { key: "result", label: "Result", pinned: true },
-            { key: "outcome", label: "Outcome", pinned: true },
-            { key: "tool_used", label: "Tool", pinned: true },
-            { key: "tags", label: "Tags", pinned: false },
-        ]
-    };
 
     // Function to format epoch timestamp to human-readable time
     function formatTimestamp(epochTime: number): string {
@@ -189,7 +167,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="timeline-item" style="margin-left: {childLeftMarginOffset};" onclick={toggleExpandedDetails}>
+<div class="timeline-item" onclick={toggleExpandedDetails}>
 
     <div class="main-row">
         <!-- Data Row Fields -->
@@ -332,16 +310,6 @@
                 <div class="column-footer">└────────────────────────────────────────────</div>
             </div>
         </div>
-    </div>
-{/if}
-
-<!-- Related Entities (Child Items) -->
-{#if showDetails}
-    <div class="related-entities">
-        {#each relations as child, childIndex}
-            <!-- Recursive render using self-import -->
-            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"}/>
-        {/each}
     </div>
 {/if}
 
