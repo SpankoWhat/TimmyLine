@@ -128,13 +128,11 @@
 								<div class="field-section-title">Action Fields</div>
 								<div class="field-list">
 									{#each displayFieldsConfig.action as field}
-										{@const isVisible = fieldStates.action.some(f => f.key === field.key)}
-										{@const visibleField = fieldStates.action.find(f => f.key === field.key)}
 										<div class="field-row">
 											<label class="field-checkbox-label">
 												<input 
 													type="checkbox" 
-													checked={visibleField}
+													checked={field.pinned}
 													onchange={() => toggleFieldPinned('action', field.key)}
 												/>
 												<span>{field.label}</span>
