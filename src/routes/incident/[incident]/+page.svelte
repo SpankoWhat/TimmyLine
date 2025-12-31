@@ -32,23 +32,6 @@
 		action: fieldStates.action
 	});
 
-	function toggleFieldVisibility(type: 'event' | 'action', fieldKey: string) {
-		const field = fieldStates[type].find(f => f.key === fieldKey);
-		if (field) {
-			// Toggle visibility by filtering - hide means remove from the array
-			fieldStates[type] = fieldStates[type].filter(f => f.key !== fieldKey);
-		} else {
-			// Re-add the field if it was hidden
-			const originalField = displayFieldsConfig[type].find(f => f.key === fieldKey);
-			if (originalField) {
-				fieldStates[type] = [...fieldStates[type], { ...originalField }].sort(
-					(a, b) => displayFieldsConfig[type].findIndex(f => f.key === a.key) - 
-					          displayFieldsConfig[type].findIndex(f => f.key === b.key)
-				);
-			}
-		}
-	}
-
 	function toggleFieldPinned(type: 'event' | 'action', fieldKey: string) {
 		const field = fieldStates[type].find(f => f.key === fieldKey);
 		if (field) {
@@ -126,27 +109,15 @@
 								<div class="field-section-title">Event Fields</div>
 								<div class="field-list">
 									{#each displayFieldsConfig.event as field}
-										{@const isVisible = fieldStates.event.some(f => f.key === field.key)}
-										{@const visibleField = fieldStates.event.find(f => f.key === field.key)}
 										<div class="field-row">
 											<label class="field-checkbox-label">
 												<input 
 													type="checkbox" 
-													checked={isVisible}
-													onchange={() => toggleFieldVisibility('event', field.key)}
+													checked={field.pinned}
+													onchange={() => toggleFieldPinned('event', field.key)}
 												/>
 												<span>{field.label}</span>
 											</label>
-											{#if isVisible && visibleField}
-												<button 
-													class="pin-toggle-btn"
-													class:pinned={visibleField.pinned}
-													title={visibleField.pinned ? 'Unpin field' : 'Pin field'}
-													onclick={() => toggleFieldPinned('event', field.key)}
-												>
-													{visibleField.pinned ? '📌' : '○'}
-												</button>
-											{/if}
 										</div>
 									{/each}
 								</div>
@@ -163,21 +134,11 @@
 											<label class="field-checkbox-label">
 												<input 
 													type="checkbox" 
-													checked={isVisible}
-													onchange={() => toggleFieldVisibility('action', field.key)}
+													checked={visibleField}
+													onchange={() => toggleFieldPinned('action', field.key)}
 												/>
 												<span>{field.label}</span>
 											</label>
-											{#if isVisible && visibleField}
-												<button 
-													class="pin-toggle-btn"
-													class:pinned={visibleField.pinned}
-													title={visibleField.pinned ? 'Unpin field' : 'Pin field'}
-													onclick={() => toggleFieldPinned('action', field.key)}
-												>
-													{visibleField.pinned ? '📌' : '○'}
-												</button>
-											{/if}
 										</div>
 									{/each}
 								</div>
