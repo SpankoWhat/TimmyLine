@@ -179,9 +179,9 @@
                 <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
             </div>
             <!-- Pinned Entity Fields -->
-            {#each displayFieldsConfig[item.type] as field}
+            {#each displayFieldsConfig[item.type] as field, idx (field.key)}
                 {#if field.pinned && !field.showInNote}
-                    <div class="datafield data-section">
+                    <div class="datafield data-section" style="--stagger-delay: {Math.random() * 300}ms;">
                         <span class="field-prefix">│</span>
                         <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
                         <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
@@ -193,9 +193,9 @@
 
     <div class="secondary-row">
         <div class="note-snippet">
-            {#each displayFieldsConfig[item.type] as field}
+            {#each displayFieldsConfig[item.type] as field, idx (field.key)}
                 {#if field.showInNote}
-                    <div class="datafield note-section">
+                    <div class="datafield note-section" style="--stagger-delay: {Math.random() * 300}ms;">
                         <span class="field-prefix">  └─</span>
                         <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
                     </div>
@@ -366,6 +366,20 @@
         gap: 4px;
         min-width: fit-content;
         white-space: nowrap;
+        animation: slideInFade 0.4s ease-out forwards;
+        animation-delay: var(--stagger-delay, 0ms);
+        opacity: 0;
+    }
+
+    @keyframes slideInFade {
+        from {
+            opacity: 0;
+            transform: translateX(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 
     .field-prefix {
@@ -448,6 +462,9 @@
     .note-section {
         display: flex;
         gap: 2px;
+        animation: slideInFade 0.4s ease-out forwards;
+        animation-delay: var(--stagger-delay, 0ms);
+        opacity: 0;
     }
 
     /* Expanded Details Styles */
