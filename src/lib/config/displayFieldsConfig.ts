@@ -7,6 +7,7 @@ export interface DisplayField {
 	label: string;
 	pinned: boolean; // Default pinned state - users can change this
 	showInNote: boolean; // Developer-controlled: appears in secondary-row notes
+    hideFromUser?: boolean; // If true, user cannot toggle visibility for this field
 }
 
 export interface DisplayFieldsConfiguration {
@@ -16,14 +17,14 @@ export interface DisplayFieldsConfiguration {
 
 export const displayFieldsConfig: DisplayFieldsConfiguration = {
 	event: [
-		// Primary display fields (pinned)
+        // Primary display fields (pinned by default)
 		{ key: 'event_type', label: 'Event Type', pinned: true, showInNote: false },
 		{ key: 'severity', label: 'Severity', pinned: true, showInNote: false },
 		{ key: 'source', label: 'Source', pinned: true, showInNote: false },
 		{ key: 'source_reliability', label: 'Reliability', pinned: true, showInNote: false },
 
-		// Secondary fields (notes)
-		{ key: 'event_data', label: 'Notes', pinned: false, showInNote: true },
+        // Secondary fields (hidden from user, shown in notes)
+        { key: 'event_data', label: 'Notes', pinned: false, showInNote: true, hideFromUser: true },
 
 		// Additional fields (unpinned)
 		{ key: 'confidence', label: 'Confidence', pinned: false, showInNote: false },
@@ -37,8 +38,8 @@ export const displayFieldsConfig: DisplayFieldsConfiguration = {
 		{ key: 'result', label: 'Result', pinned: true, showInNote: false },
 		{ key: 'tool_used', label: 'Tool', pinned: true, showInNote: false },
 
-		// Secondary fields (notes)
-		{ key: 'notes', label: 'Notes', pinned: false, showInNote: true },
+        // Secondary fields (hidden from user, shown in notes)
+        { key: 'notes', label: 'Notes', pinned: false, showInNote: true, hideFromUser: true },
 
 		// Additional fields (unpinned)
 		{ key: 'outcome', label: 'Outcome', pinned: false, showInNote: false },

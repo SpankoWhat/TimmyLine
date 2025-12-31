@@ -4,6 +4,7 @@
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
+    import { fade } from 'svelte/transition';
     
     let { 
         item,
@@ -179,9 +180,13 @@
                 <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
             </div>
             <!-- Pinned Entity Fields -->
-            {#each displayFieldsConfig[item.type] as field, idx (field.key)}
+            {#each displayFieldsConfig[item.type] as field (field.key)}
                 {#if field.pinned && !field.showInNote}
-                    <div class="datafield data-section" style="--stagger-delay: {Math.random() * 300}ms;">
+                    <div 
+                        class="datafield data-section" 
+                        style="--stagger-delay: {Math.random() * 300}ms;"
+                        transition:fade={{ duration: 180 }}
+                    >
                         <span class="field-prefix">│</span>
                         <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
                         <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
@@ -195,7 +200,11 @@
         <div class="note-snippet">
             {#each displayFieldsConfig[item.type] as field, idx (field.key)}
                 {#if field.showInNote}
-                    <div class="datafield note-section" style="--stagger-delay: {Math.random() * 300}ms;">
+                    <div 
+                        class="datafield note-section" 
+                        style="--stagger-delay: {Math.random() * 300}ms;"
+                        transition:fade={{ duration: 180 }}
+                    >
                         <span class="field-prefix">  └─</span>
                         <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
                     </div>

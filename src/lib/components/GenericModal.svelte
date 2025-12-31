@@ -251,11 +251,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: var(--spacing-lg);
 	}
 
 	.modal-container {
-		background: var(--color-bg-secondary);
+		/* background: var(--color-bg-secondary); */
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-lg);
 		box-shadow: var(--shadow-md);
@@ -268,9 +267,9 @@
 	}
 
 	.modal-header {
-		background: var(--color-bg-tertiary);
+		background: #2c2e3373;
 		border-bottom: 1px solid var(--color-border-subtle);
-		padding: var(--spacing-lg);
+		padding: 0 var(--spacing-md);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -301,17 +300,16 @@
 		font-size: var(--font-size-lg);
 		cursor: pointer;
 		transition: all var(--transition-fast);
-		padding: var(--spacing-xs);
 		line-height: 1;
 	}
 
 	.close-btn:hover {
-		transform: scale(1.1);
+		transform: scale(1.4);
 		color: var(--color-text-primary);
 	}
 
 	.modal-body {
-		padding: var(--spacing-lg);
+		padding: 0 var(--spacing-lg);
 		overflow-y: auto;
 		max-height: calc(90vh - 180px);
 	}
@@ -319,7 +317,7 @@
 	.modal-form {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-lg);
+		gap: var(--spacing-xs);
 	}
 
 	.field-group {
@@ -347,10 +345,10 @@
 	.field-textarea,
 	.field-select {
 		width: 100%;
-		background: var(--color-bg-tertiary);
+		background: #2c2e3373;
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-sm);
-		padding: var(--spacing-sm) var(--spacing-md);
+		padding: var(--spacing-xs) var(--spacing-sm);
 		color: var(--color-text-primary);
 		font-size: var(--font-size-sm);
 		transition: all var(--transition-fast);
@@ -365,7 +363,7 @@
 	.field-textarea:focus,
 	.field-select:focus {
 		outline: none;
-		border-color: var(--color-accent-primary);
+		border-color: #f08d3173;
 	}
 
 	.field-textarea {
@@ -391,16 +389,14 @@
 	}
 
 	.modal-footer {
-		background: var(--color-bg-tertiary);
-		border-top: 1px solid var(--color-border-subtle);
 		padding: var(--spacing-lg);
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
 		gap: var(--spacing-md);
 	}
 
 	.btn {
-		padding: var(--spacing-sm) var(--spacing-lg);
+		padding: var(--spacing-xs) var(--spacing-sm);
 		border-radius: var(--border-radius-sm);
 		font-size: var(--font-size-xs);
 		font-weight: var(--font-weight-medium);
@@ -423,11 +419,6 @@
 
 	.btn-submit {
 		background: var(--color-accent-primary);
-		color: var(--color-bg-primary);
-		border-color: var(--color-accent-primary);
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-sm);
 	}
 
 	.btn-submit:hover:not(:disabled) {

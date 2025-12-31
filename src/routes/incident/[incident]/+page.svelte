@@ -109,16 +109,18 @@
 								<div class="field-section-title">Event Fields</div>
 								<div class="field-list">
 									{#each displayFieldsConfig.event as field}
-										<div class="field-row">
-											<label class="field-checkbox-label">
-												<input 
-													type="checkbox" 
-													checked={field.pinned}
-													onchange={() => toggleFieldPinned('event', field.key)}
-												/>
-												<span>{field.label}</span>
-											</label>
-										</div>
+										{#if !field.hideFromUser}
+											<div class="field-row">
+												<label class="field-checkbox-label">
+													<input 
+														type="checkbox" 
+														checked={field.pinned}
+														onchange={() => toggleFieldPinned('event', field.key)}
+													/>
+													<span>{field.label}</span>
+												</label>
+											</div>
+										{/if}
 									{/each}
 								</div>
 							</div>
@@ -128,16 +130,18 @@
 								<div class="field-section-title">Action Fields</div>
 								<div class="field-list">
 									{#each displayFieldsConfig.action as field}
-										<div class="field-row">
-											<label class="field-checkbox-label">
-												<input 
-													type="checkbox" 
-													checked={field.pinned}
-													onchange={() => toggleFieldPinned('action', field.key)}
-												/>
-												<span>{field.label}</span>
-											</label>
-										</div>
+										{#if !field.hideFromUser}
+											<div class="field-row">
+												<label class="field-checkbox-label">
+													<input 
+														type="checkbox" 
+														checked={field.pinned}
+														onchange={() => toggleFieldPinned('action', field.key)}
+													/>
+													<span>{field.label}</span>
+												</label>
+											</div>
+										{/if}
 									{/each}
 								</div>
 							</div>
