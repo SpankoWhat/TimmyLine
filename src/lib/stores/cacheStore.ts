@@ -87,26 +87,16 @@ export const incidentStats = derived(currentCachedIncidents, ($incidents) => ({
 }));
 
 /**
- * Timeline event statistics for the current incident
+ * Current entity statistics for the current incident
  */
-export const timelineStats = derived(currentCachedEvents, ($events) => ({
-	total: $events.length,
-	critical: $events.filter((e) => e.severity === 'critical').length,
-	high: $events.filter((e) => e.severity === 'high').length,
-	medium: $events.filter((e) => e.severity === 'medium').length,
-	low: $events.filter((e) => e.severity === 'low').length
+export const entityStats = derived(currentCachedEntities, ($entities) => ({
+	total: $entities.length,
+	typeCounts: $entities.reduce((acc, entity) => {
+		acc[entity.entity_type] = (acc[entity.entity_type] || 0) + 1;
+		return acc;
+	}, {} as Record<string, number>)
 }));
 
-/**
- * Investigation action statistics for the current incident
- */
-export const actionStats = derived(currentCachedActions, ($actions) => ({
-	total: $actions.length,
-	success: $actions.filter((a) => a.result === 'success').length,
-	failed: $actions.filter((a) => a.result === 'failed').length,
-	partial: $actions.filter((a) => a.result === 'partial').length,
-	pending: $actions.filter((a) => a.result === 'pending').length
-}));
 
 /**
  * Combined timeline of events and actions, sorted by timestamp
@@ -146,6 +136,17 @@ export const combinedTimeline = derived(
 		return timeline;
 	}
 );
+
+/**
+ * Various timeline statistics, currently provides:
+ * - Count of actions 
+ * - Count of events
+ */
+export const investigationStats = derived(combinedTimeline, ($items) => ({
+	total: $items.length,
+	events: $items.filter((item) => item.type === 'event').length,
+	actions: $items.filter((item) => item.type === 'action').length
+}));
 
 /**
  * Handles calling cache update functions when showDeletedItems changes

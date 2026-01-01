@@ -48,7 +48,8 @@
 				role: data.session.user.analystRole as 'analyst' | 'on-point lead' | 'observer' || 'analyst',
 				active: true,
 				created_at: null,
-				updated_at: null
+				updated_at: null,
+				deleted_at: null,
 			};
 			currentSelectedAnalyst.set(sessionAnalyst);
 		}
