@@ -53,6 +53,6 @@ export interface ModalConfig {
 }
 
 export type DisplayFieldsConfig = {
-	event: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean }>;
-	action: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean }>;
+	event: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
+	action: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
 };

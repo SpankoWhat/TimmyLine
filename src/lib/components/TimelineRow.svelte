@@ -179,19 +179,17 @@
                 <span class="timestamp title">TIME</span>
                 <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
             </div>
-            <!-- Pinned Entity Fields -->
-            {#each displayFieldsConfig[item.type] as field (field.key)}
-                {#if field.pinned && !field.showInNote}
-                    <div 
-                        class="datafield data-section" 
-                        style="--stagger-delay: {Math.random() * 300}ms;"
-                        transition:fade={{ duration: 180 }}
-                    >
-                        <span class="field-prefix">│</span>
-                        <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
-                        <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
-                    </div>
-                {/if}
+            <!-- Pinned Entity Fields (sorted by order) -->
+            {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && !f.showInNote).sort((a, b) => a.order - b.order) as field (field.key)}
+                <div 
+                    class="datafield data-section" 
+                    style="--stagger-delay: {Math.random() * 300}ms;"
+                    transition:fade={{ duration: 180 }}
+                >
+                    <span class="field-prefix">│</span>
+                    <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
+                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                </div>
             {/each}
         </div>
     </div>

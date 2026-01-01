@@ -56,7 +56,6 @@
 	});
 	
 	onDestroy(() => {
-		// Clean up subscription when layout unmounts
 		unsubscribe?.();
 	});
 	
@@ -126,6 +125,7 @@
 		padding: var(--spacing-xs) var(--spacing-sm);
 		display: flex;
 		justify-content: left;
+		overflow-y: hidden;
 	}
 
 	.header-info {

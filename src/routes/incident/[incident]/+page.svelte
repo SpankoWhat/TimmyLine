@@ -26,16 +26,49 @@
 
 	let showFieldSelector = $state(false);
 
-	// Compute filtered field configs based on selected fields (visible fields only)
+	// Drag and drop state
+	let draggedField: { type: 'event' | 'action'; key: string } | null = $state(null);
+	let dragOverField: { type: 'event' | 'action'; key: string } | null = $state(null);
+
+	// Compute filtered field configs based on selected fields, sorted by order
 	const filteredDisplayFieldsConfig = $derived({
-		event: fieldStates.event,
+		event: [...fieldStates.event].sort((a, b) => a.order - b.order),
+		action: [...fieldStates.action].sort((a, b) => a.order - b.order)
+	});
+
+	// Get pinned fields sorted by order for display in dropdown
+	const sortedPinnedFields = $derived({
+		event: fieldStates.event
+			.filter(f => f.pinned && !f.hideFromUser)
+			.sort((a, b) => a.order - b.order),
 		action: fieldStates.action
+			.filter(f => f.pinned && !f.hideFromUser)
+			.sort((a, b) => a.order - b.order)
+	});
+
+	// Get unpinned fields for display in dropdown
+	const unpinnedFields = $derived({
+		event: fieldStates.event.filter(f => !f.pinned && !f.hideFromUser),
+		action: fieldStates.action.filter(f => !f.pinned && !f.hideFromUser)
 	});
 
 	function toggleFieldPinned(type: 'event' | 'action', fieldKey: string) {
 		const field = fieldStates[type].find(f => f.key === fieldKey);
 		if (field) {
-			field.pinned = !field.pinned;
+			if (field.pinned) {
+				// Unpinning: set order to high value
+				const maxOrder = Math.max(...fieldStates[type].map(f => f.order));
+				field.order = maxOrder + 1;
+				field.pinned = false;
+			} else {
+				// Pinning: append to end of pinned fields
+				const pinnedFields = fieldStates[type].filter(f => f.pinned);
+				const maxPinnedOrder = pinnedFields.length > 0 
+					? Math.max(...pinnedFields.map(f => f.order)) 
+					: 0;
+				field.order = maxPinnedOrder + 1;
+				field.pinned = true;
+			}
 		}
 	}
 
@@ -44,6 +77,65 @@
 			event: displayFieldsConfig.event.map(f => ({ ...f })),
 			action: displayFieldsConfig.action.map(f => ({ ...f }))
 		};
+	}
+
+	// Drag and drop handlers
+	function handleDragStart(type: 'event' | 'action', fieldKey: string) {
+		draggedField = { type, key: fieldKey };
+	}
+
+	function handleDragOver(e: DragEvent, type: 'event' | 'action', fieldKey: string) {
+		e.preventDefault();
+		if (draggedField && draggedField.type === type && draggedField.key !== fieldKey) {
+			dragOverField = { type, key: fieldKey };
+		}
+	}
+
+	function handleDragLeave() {
+		dragOverField = null;
+	}
+
+	function handleDrop(type: 'event' | 'action', targetFieldKey: string) {
+		if (!draggedField || draggedField.type !== type) {
+			draggedField = null;
+			dragOverField = null;
+			return;
+		}
+
+		const draggedFieldObj = fieldStates[type].find(f => f.key === draggedField!.key);
+		const targetFieldObj = fieldStates[type].find(f => f.key === targetFieldKey);
+
+		if (draggedFieldObj && targetFieldObj && draggedFieldObj.pinned && targetFieldObj.pinned) {
+			// Swap orders between dragged and target
+			const pinnedFields = fieldStates[type]
+				.filter(f => f.pinned && !f.hideFromUser)
+				.sort((a, b) => a.order - b.order);
+			
+			const draggedIndex = pinnedFields.findIndex(f => f.key === draggedField!.key);
+			const targetIndex = pinnedFields.findIndex(f => f.key === targetFieldKey);
+
+			if (draggedIndex !== -1 && targetIndex !== -1) {
+				// Reorder: move dragged to target position
+				const [removed] = pinnedFields.splice(draggedIndex, 1);
+				pinnedFields.splice(targetIndex, 0, removed);
+
+				// Reassign orders based on new positions
+				pinnedFields.forEach((field, index) => {
+					const stateField = fieldStates[type].find(f => f.key === field.key);
+					if (stateField) {
+						stateField.order = index + 1;
+					}
+				});
+			}
+		}
+
+		draggedField = null;
+		dragOverField = null;
+	}
+
+	function handleDragEnd() {
+		draggedField = null;
+		dragOverField = null;
 	}
 	
 	onMount(() => {
@@ -107,9 +199,41 @@
 							<!-- Events Fields -->
 							<div class="field-section">
 								<div class="field-section-title">Event Fields</div>
-								<div class="field-list">
-									{#each displayFieldsConfig.event as field}
-										{#if !field.hideFromUser}
+								
+								<!-- Pinned fields (draggable) -->
+								{#if sortedPinnedFields.event.length > 0}
+									<div class="field-subsection-title">Pinned (drag to reorder)</div>
+									<div class="field-list pinned-list">
+										{#each sortedPinnedFields.event as field (field.key)}
+											<div 
+												class="field-row draggable"
+												class:drag-over={dragOverField?.type === 'event' && dragOverField?.key === field.key}
+												draggable="true"
+												ondragstart={() => handleDragStart('event', field.key)}
+												ondragover={(e) => handleDragOver(e, 'event', field.key)}
+												ondragleave={handleDragLeave}
+												ondrop={() => handleDrop('event', field.key)}
+												ondragend={handleDragEnd}
+											>
+												<span class="drag-handle">⋮⋮</span>
+												<label class="field-checkbox-label">
+													<input 
+														type="checkbox" 
+														checked={field.pinned}
+														onchange={() => toggleFieldPinned('event', field.key)}
+													/>
+													<span>{field.label}</span>
+												</label>
+											</div>
+										{/each}
+									</div>
+								{/if}
+								
+								<!-- Unpinned fields -->
+								{#if unpinnedFields.event.length > 0}
+									<div class="field-subsection-title">Available</div>
+									<div class="field-list">
+										{#each unpinnedFields.event as field (field.key)}
 											<div class="field-row">
 												<label class="field-checkbox-label">
 													<input 
@@ -120,17 +244,49 @@
 													<span>{field.label}</span>
 												</label>
 											</div>
-										{/if}
-									{/each}
-								</div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 
 							<!-- Actions Fields -->
 							<div class="field-section">
 								<div class="field-section-title">Action Fields</div>
-								<div class="field-list">
-									{#each displayFieldsConfig.action as field}
-										{#if !field.hideFromUser}
+								
+								<!-- Pinned fields (draggable) -->
+								{#if sortedPinnedFields.action.length > 0}
+									<div class="field-subsection-title">Pinned (drag to reorder)</div>
+									<div class="field-list pinned-list">
+										{#each sortedPinnedFields.action as field (field.key)}
+											<div 
+												class="field-row draggable"
+												class:drag-over={dragOverField?.type === 'action' && dragOverField?.key === field.key}
+												draggable="true"
+												ondragstart={() => handleDragStart('action', field.key)}
+												ondragover={(e) => handleDragOver(e, 'action', field.key)}
+												ondragleave={handleDragLeave}
+												ondrop={() => handleDrop('action', field.key)}
+												ondragend={handleDragEnd}
+											>
+												<span class="drag-handle">⋮⋮</span>
+												<label class="field-checkbox-label">
+													<input 
+														type="checkbox" 
+														checked={field.pinned}
+														onchange={() => toggleFieldPinned('action', field.key)}
+													/>
+													<span>{field.label}</span>
+												</label>
+											</div>
+										{/each}
+									</div>
+								{/if}
+								
+								<!-- Unpinned fields -->
+								{#if unpinnedFields.action.length > 0}
+									<div class="field-subsection-title">Available</div>
+									<div class="field-list">
+										{#each unpinnedFields.action as field (field.key)}
 											<div class="field-row">
 												<label class="field-checkbox-label">
 													<input 
@@ -141,9 +297,9 @@
 													<span>{field.label}</span>
 												</label>
 											</div>
-										{/if}
-									{/each}
-								</div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 
 							<button class="reset-btn" onclick={resetFieldSelection}>Reset to Default</button>
@@ -261,8 +417,8 @@
 		border-radius: var(--border-radius-md);
 		padding: var(--spacing-sm);
 		margin-top: var(--spacing-xs);
-		z-index: 100;
-		min-width: 250px;
+		z-index: 50;
+		/* min-width: 250px; */
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
@@ -291,11 +447,61 @@
 		gap: var(--spacing-xs);
 	}
 
+	.field-list.pinned-list {
+		background: var(--color-bg-tertiary);
+		border-radius: var(--border-radius-sm);
+		padding: var(--spacing-xs);
+	}
+
+	.field-subsection-title {
+		font-size: 9px;
+		color: var(--color-text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-top: var(--spacing-xs);
+		margin-bottom: calc(var(--spacing-xs) / 2);
+	}
+
 	.field-row {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-xs);
-		justify-content: space-between;
+		justify-content: flex-start;
+	}
+
+	.field-row.draggable {
+		cursor: grab;
+		border: 1px solid transparent;
+		border-radius: var(--border-radius-sm);
+		padding: 2px;
+		margin: -2px;
+		transition: all 0.15s ease;
+	}
+
+	.field-row.draggable:hover {
+		background: var(--color-bg-hover);
+		border-color: var(--color-border-medium);
+	}
+
+	.field-row.draggable:active {
+		cursor: grabbing;
+	}
+
+	.field-row.drag-over {
+		border-color: var(--color-accent-primary);
+		background: rgba(0, 255, 0, 0.1);
+	}
+
+	.drag-handle {
+		color: var(--color-text-tertiary);
+		font-size: 10px;
+		user-select: none;
+		cursor: grab;
+		padding: 0 2px;
+	}
+
+	.field-row.draggable:hover .drag-handle {
+		color: var(--color-accent-primary);
 	}
 
 	.field-checkbox-label {
