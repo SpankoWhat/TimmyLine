@@ -3,19 +3,17 @@
     import { currentSelectedIncident } from '$lib/stores/cacheStore';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
-    import type { EntityType } from '$lib/modals/types';
-    import TimelineRow from './TimelineRow.svelte';
+    import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
+    import { fade } from 'svelte/transition';
     
     let { 
-        item, 
-        childLeftMarginOffset = "0rem"
+        item,
+        displayFieldsConfig
     }: { 
-        item: TimelineItem; 
-        childLeftMarginOffset?: string;
+        item: TimelineItem,
+        displayFieldsConfig: DisplayFieldsConfig;
     } = $props();
 
-    let relations = $state<TimelineItem[]>([]);
-    let showDetails = $state(false);
     let showExpandedDetails = $state(false);
     let columnRatio = $state(0.30); // Default ratio for graph-column (30%)
     let isDraggingDivider = $state(false);
@@ -43,25 +41,6 @@
             : []
     );
 
-    // Combined display field configuration for both events and actions
-    // Fields marked as 'pinned: true' will be displayed as pinneds, others as free-form text
-    const displayFieldsConfig = {
-        event: [
-            { key: "event_type", label: "Event", pinned: true },
-            { key: "event_data", label:"Notes", pinned: true, showInNote: true },
-            { key: "source", label: "Source", pinned: true },
-            { key: "source_reliability", label: "Grade", pinned: true },
-            { key: "severity", label: "Severity", pinned: true   },
-        ],
-        action: [
-            { key: "action_type", label: "Action", pinned: true },
-            { key: "notes", label: "Notes",pinned: false, showInNote: true },
-            { key: "result", label: "Result", pinned: true },
-            { key: "outcome", label: "Outcome", pinned: true },
-            { key: "tool_used", label: "Tool", pinned: true },
-            { key: "tags", label: "Tags", pinned: false },
-        ]
-    };
 
     // Function to format epoch timestamp to human-readable time
     function formatTimestamp(epochTime: number): string {
@@ -189,7 +168,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="timeline-item" style="margin-left: {childLeftMarginOffset};" onclick={toggleExpandedDetails}>
+<div class="timeline-item" onclick={toggleExpandedDetails}>
 
     <div class="main-row">
         <!-- Data Row Fields -->
@@ -200,24 +179,30 @@
                 <span class="timestamp title">TIME</span>
                 <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
             </div>
-            <!-- Pinned Entity Fields -->
-            {#each displayFieldsConfig[item.type] as field}
-                {#if field.pinned && !field.showInNote}
-                    <div class="datafield data-section">
-                        <span class="field-prefix">│</span>
-                        <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
-                        <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
-                    </div>
-                {/if}
+            <!-- Pinned Entity Fields (sorted by order) -->
+            {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && !f.showInNote).sort((a, b) => a.order - b.order) as field (field.key)}
+                <div 
+                    class="datafield data-section" 
+                    style="--stagger-delay: {Math.random() * 300}ms;"
+                    transition:fade={{ duration: 180 }}
+                >
+                    <span class="field-prefix">│</span>
+                    <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
+                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                </div>
             {/each}
         </div>
     </div>
 
     <div class="secondary-row">
         <div class="note-snippet">
-            {#each displayFieldsConfig[item.type] as field}
+            {#each displayFieldsConfig[item.type] as field, idx (field.key)}
                 {#if field.showInNote}
-                    <div class="datafield note-section">
+                    <div 
+                        class="datafield note-section" 
+                        style="--stagger-delay: {Math.random() * 300}ms;"
+                        transition:fade={{ duration: 180 }}
+                    >
                         <span class="field-prefix">  └─</span>
                         <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
                     </div>
@@ -335,16 +320,6 @@
     </div>
 {/if}
 
-<!-- Related Entities (Child Items) -->
-{#if showDetails}
-    <div class="related-entities">
-        {#each relations as child, childIndex}
-            <!-- Recursive render using self-import -->
-            <TimelineRow item={child} childLeftMarginOffset={"1.5rem"}/>
-        {/each}
-    </div>
-{/if}
-
 <style>
     .timeline-item {
         display: flex;
@@ -398,6 +373,20 @@
         gap: 4px;
         min-width: fit-content;
         white-space: nowrap;
+        animation: slideInFade 0.4s ease-out forwards;
+        animation-delay: var(--stagger-delay, 0ms);
+        opacity: 0;
+    }
+
+    @keyframes slideInFade {
+        from {
+            opacity: 0;
+            transform: translateX(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 
     .field-prefix {
@@ -480,6 +469,9 @@
     .note-section {
         display: flex;
         gap: 2px;
+        animation: slideInFade 0.4s ease-out forwards;
+        animation-delay: var(--stagger-delay, 0ms);
+        opacity: 0;
     }
 
     /* Expanded Details Styles */

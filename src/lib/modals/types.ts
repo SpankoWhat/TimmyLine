@@ -51,3 +51,8 @@ export interface ModalConfig {
 	data?: any;
 	onCancel?: () => void;
 }
+
+export type DisplayFieldsConfig = {
+	event: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
+	action: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
+};

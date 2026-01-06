@@ -1,8 +1,7 @@
 <script lang="ts">
     import { 
-        combinedTimeline,
-        currentCachedEvents,
-        currentCachedActions
+        investigationStats,
+		entityStats,
     } from '$lib/stores/cacheStore';
 </script>
 
@@ -10,16 +9,21 @@
 
 <div class="stat-card success">
 	<span class="stat-label">Total</span>
-	<span class="stat-value">{$combinedTimeline.length || 0}</span>
+	<span class="stat-value">{$investigationStats.total || 0}</span>
 </div>
 <div class="divider"> | </div>
 <div class="stat-card info">
 	<span class="stat-label">Events</span>
-	<span class="stat-value">{$currentCachedEvents.length || 0}</span>
+	<span class="stat-value">{$investigationStats.events || 0}</span>
 </div>
 <div class="stat-card info">
 	<span class="stat-label">Actions</span>
-	<span class="stat-value">{$currentCachedActions.length || 0}</span>
+	<span class="stat-value">{$investigationStats.actions || 0}</span>
+</div>
+<div class="divider"> | </div>
+<div class="stat-card info">
+	<span class="stat-label">Entities</span>
+	<span class="stat-value">{$entityStats.total || 0}</span>
 </div>
 
 <style>

@@ -48,14 +48,14 @@
 				role: data.session.user.analystRole as 'analyst' | 'on-point lead' | 'observer' || 'analyst',
 				active: true,
 				created_at: null,
-				updated_at: null
+				updated_at: null,
+				deleted_at: null,
 			};
 			currentSelectedAnalyst.set(sessionAnalyst);
 		}
 	});
 	
 	onDestroy(() => {
-		// Clean up subscription when layout unmounts
 		unsubscribe?.();
 	});
 	
@@ -125,6 +125,7 @@
 		padding: var(--spacing-xs) var(--spacing-sm);
 		display: flex;
 		justify-content: left;
+		overflow-y: hidden;
 	}
 
 	.header-info {

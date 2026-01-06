@@ -2,8 +2,6 @@
 	import ActionDock from './ActionDock.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import type { EntityType, ModalMode } from '$lib/modals/types';
-	import { showDeletedItems, updateIncidentCache, updateLookupCache, currentSelectedIncident } from '$lib/stores/cacheStore';
-	import { get } from 'svelte/store';
 
 	// Simplified modal opening function
 	function openModal(entityType: string, mode: ModalMode = 'create') {
