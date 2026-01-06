@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { currentCachedIncidents, actionTypes } from '$lib/stores/cacheStore';
+	import { currentCachedIncidents } from '$lib/stores/cacheStore';
 	import type { Incident } from '$lib/server/database';
 	import { goto } from '$app/navigation';
 	import { getContext, onMount, onDestroy } from 'svelte';
@@ -70,21 +70,6 @@
 						<span class="info-value" style="color: var(--color-accent-error)">{data.health.error}</span>
 					</div>
 				{/if}
-			</div>
-		</div>
-
-		<!-- Action Types -->
-		<div class="section">
-			<div class="section-header">Action Types</div>
-			<div class="section-content">
-				<div class="action-list">
-					{#each $actionTypes as action_type}
-						<div class="action-item">
-							<div class="action-name">{action_type.name}</div>
-							<div class="action-description">{action_type.description}</div>
-						</div>
-					{/each}
-				</div>
 			</div>
 		</div>
 	</div>
@@ -218,38 +203,5 @@
 
 	.info-value.success {
 		color: var(--color-accent-success);
-	}
-
-	.action-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xs);
-		max-height: 300px;
-		overflow-y: auto;
-	}
-
-	.action-item {
-		padding: var(--spacing-sm) var(--spacing-md);
-		background: var(--color-bg-tertiary);
-		border: 1px solid var(--color-border-subtle);
-		border-radius: var(--border-radius-sm);
-		transition: border-color var(--transition-fast);
-	}
-
-	.action-item:hover {
-		border-color: var(--color-border-medium);
-	}
-
-	.action-name {
-		font-size: var(--font-size-sm);
-		font-weight: var(--font-weight-medium);
-		color: var(--color-text-primary);
-		margin-bottom: var(--spacing-xs);
-	}
-
-	.action-description {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-tertiary);
-		line-height: 1.4;
 	}
 </style>

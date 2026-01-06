@@ -550,7 +550,6 @@
         display: grid;
         grid-template-columns: 200px 1fr;
         gap: var(--spacing-sm);
-        padding: 2px 0;
     }
 
     .detail-label {
@@ -567,7 +566,6 @@
     .relationship-tree {
         font-family: 'Courier New', monospace;
         font-size: var(--font-size-xs);
-        line-height: 1.6;
         color: var(--color-text-primary);
     }
 

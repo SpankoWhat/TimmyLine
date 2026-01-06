@@ -897,40 +897,41 @@ async function seedDatabase() {
 	];
 
 	await db.insert(schema.investigation_actions).values(investigationActions).onConflictDoNothing();
+	logger.info('Investigation actions inserted');
 
 	// Link actions to events
 	const actionEventLinks = [
-		{ action_id: 'act-initial-detect-01', event_id: 'evt-fw-scan-01' },
-		{ action_id: 'act-initial-detect-01', event_id: 'evt-fw-exploit-01' },
-		{ action_id: 'act-fw-isolate-01', event_id: 'evt-fw-shell-01' },
-		{ action_id: 'act-fw-forensics-01', event_id: 'evt-fw-exploit-01' },
-		{ action_id: 'act-malware-analysis-01', event_id: 'evt-lm-mimikatz-01' },
-		{ action_id: 'act-dc-isolate-01', event_id: 'evt-dc-takeover-01' },
-		{ action_id: 'act-cred-reset-01', event_id: 'evt-lm-cred-dump-01' },
-		{ action_id: 'act-cred-reset-01', event_id: 'evt-dc-persist-01' },
-		{ action_id: 'act-ioc-hunt-01', event_id: 'evt-c2-beacon-01' },
-		{ action_id: 'act-network-block-01', event_id: 'evt-c2-beacon-01' },
-		{ action_id: 'act-network-block-01', event_id: 'evt-exfiltration-01' },
-		{ action_id: 'act-patch-deploy-01', event_id: 'evt-fw-exploit-01' }
+		{ action_id: 'act-initial-detect-01', event_id: 'evt-fw-scan-01', relation_type: 'target' },
+		{ action_id: 'act-initial-detect-01', event_id: 'evt-fw-exploit-01', relation_type: 'target' },
+		{ action_id: 'act-fw-isolate-01', event_id: 'evt-fw-shell-01', relation_type: 'target' },
+		{ action_id: 'act-fw-forensics-01', event_id: 'evt-fw-exploit-01', relation_type: 'target' },
+		{ action_id: 'act-malware-analysis-01', event_id: 'evt-lm-mimikatz-01', relation_type: 'target' },
+		{ action_id: 'act-dc-isolate-01', event_id: 'evt-dc-takeover-01', relation_type: 'target' },
+		{ action_id: 'act-cred-reset-01', event_id: 'evt-lm-cred-dump-01', relation_type: 'target' },
+		{ action_id: 'act-cred-reset-01', event_id: 'evt-dc-persist-01', relation_type: 'target' },
+		{ action_id: 'act-ioc-hunt-01', event_id: 'evt-c2-beacon-01', relation_type: 'target' },
+		{ action_id: 'act-network-block-01', event_id: 'evt-c2-beacon-01', relation_type: 'target' },
+		{ action_id: 'act-network-block-01', event_id: 'evt-exfiltration-01', relation_type: 'target' },
+		{ action_id: 'act-patch-deploy-01', event_id: 'evt-fw-exploit-01', relation_type: 'target' }
 	];
 
 	await db.insert(schema.action_events).values(actionEventLinks).onConflictDoNothing();
 
 	// Link actions to entities
 	const actionEntityLinks = [
-		{ action_id: 'act-fw-isolate-01', entity_id: 'ent-fw-01', role: 'target' },
-		{ action_id: 'act-fw-forensics-01', entity_id: 'ent-fw-01', role: 'target' },
-		{ action_id: 'act-malware-analysis-01', entity_id: 'ent-tool-mimikatz', role: 'target' },
-		{ action_id: 'act-malware-analysis-01', entity_id: 'ent-hash-mimikatz', role: 'target' },
-		{ action_id: 'act-dc-isolate-01', entity_id: 'ent-dc-01', role: 'target' },
-		{ action_id: 'act-cred-reset-01', entity_id: 'ent-user-admin-01', role: 'target' },
-		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-ip-attacker-01', role: 'target' },
-		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-c2-ip-01', role: 'target' },
-		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-c2-domain-01', role: 'target' },
-		{ action_id: 'act-network-block-01', entity_id: 'ent-c2-ip-01', role: 'target' },
-		{ action_id: 'act-network-block-01', entity_id: 'ent-c2-domain-01', role: 'target' },
-		{ action_id: 'act-patch-deploy-01', entity_id: 'ent-cve-01', role: 'target' },
-		{ action_id: 'act-patch-deploy-01', entity_id: 'ent-fw-01', role: 'target' }
+		{ action_id: 'act-fw-isolate-01', entity_id: 'ent-fw-01', relation_type: 'target' },
+		{ action_id: 'act-fw-forensics-01', entity_id: 'ent-fw-01', relation_type: 'target' },
+		{ action_id: 'act-malware-analysis-01', entity_id: 'ent-tool-mimikatz', relation_type: 'target' },
+		{ action_id: 'act-malware-analysis-01', entity_id: 'ent-hash-mimikatz', relation_type: 'target' },
+		{ action_id: 'act-dc-isolate-01', entity_id: 'ent-dc-01', relation_type: 'target' },
+		{ action_id: 'act-cred-reset-01', entity_id: 'ent-user-admin-01', relation_type: 'target' },
+		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-ip-attacker-01', relation_type: 'target' },
+		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-c2-ip-01', relation_type: 'target' },
+		{ action_id: 'act-ioc-hunt-01', entity_id: 'ent-c2-domain-01', relation_type: 'target' },
+		{ action_id: 'act-network-block-01', entity_id: 'ent-c2-ip-01', relation_type: 'target' },
+		{ action_id: 'act-network-block-01', entity_id: 'ent-c2-domain-01', relation_type: 'target' },
+		{ action_id: 'act-patch-deploy-01', entity_id: 'ent-cve-01', relation_type: 'target' },
+		{ action_id: 'act-patch-deploy-01', entity_id: 'ent-fw-01', relation_type: 'target' }
 	];
 
 	await db.insert(schema.action_entities).values(actionEntityLinks).onConflictDoNothing();

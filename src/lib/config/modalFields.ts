@@ -430,20 +430,20 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 	// Relation Tables
 	action_entities: [
 		{
-			key: 'relation_type',
-			label: 'Relation Type',
-			type: 'select',
-			required: true,
-			options: [],
-			helpText: 'Type of relation',
-		},
-		{
 			key: 'action_uuid',
 			label: 'Action',
 			type: 'select',
 			required: true,
 			options: [],
 			helpText: 'Action to correlate an Entity with',
+		},
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
 		},
 		{
 			key: 'entity_uuid',
@@ -457,20 +457,20 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 
 	action_events: [
 		{
-			key: 'relation_type',
-			label: 'Relation Type',
-			type: 'select',
-			required: true,
-			options: [],
-			helpText: 'Type of relation',
-		},
-		{
 			key: 'action_uuid',
 			label: 'Action',
 			type: 'select',
 			required: true,
 			options: [],
 			helpText: 'Action to correlate an Event with',
+		},
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
 		},
 		{
 			key: 'event_uuid',
@@ -484,20 +484,20 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 
 	event_entities: [
 		{
-			key: 'relation_type',
-			label: 'Relation Type',
-			type: 'select',
-			required: true,
-			options: [],
-			helpText: 'Type of relation',
-		},
-		{
 			key: 'event_uuid',
 			label: 'Event',
 			type: 'select',
 			required: true,
 			options: [],
 			helpText: 'Event to correlate with an Entity',
+		},
+		{
+			key: 'relation_type',
+			label: 'Relation Type',
+			type: 'select',
+			required: true,
+			options: [],
+			helpText: 'Type of relation',
 		},
 		{
 			key: 'entity_uuid',
