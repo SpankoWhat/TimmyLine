@@ -1,21 +1,17 @@
 <script lang="ts">
 	// Core stuff
 	import "$lib/../app.css";
-	import { onMount, onDestroy, setContext } from 'svelte';
+	import { setContext } from 'svelte';
 	
 	// Stores
 	import { 
-		updateLookupCache,
-		setupIncidentWatcher,
 		currentSelectedAnalyst,
 		currentSelectedIncident,
 	} from '$lib/stores/cacheStore';
 	import GenericModal from '$lib/components/GenericModal.svelte';
-	import type { Analyst } from '$lib/server/database';
 	
 	// Local Props and State
-	let { children, data } = $props();
-	let unsubscribe: (() => void) | undefined;
+	let { children } = $props();
 
 	// Dynamic HUD Info 
 	let dynamicComponents = $state<Record<string, any>>({});
@@ -29,36 +25,6 @@
 			dynamicComponents[section] = null;
 		},
 	});
-
-	onMount(async () => {
-		// Initialize all caches first
-		await updateLookupCache();
-		
-		// Then set up the reactive incident watcher
-		unsubscribe = setupIncidentWatcher();
-
-		// Set current analyst from authenticated session
-		if (data.session?.user?.analystUUID) {
-			const sessionAnalyst: Analyst = {
-				uuid: data.session.user.analystUUID,
-				user_id: null,
-				username: data.session.user.analystUsername || data.session.user.email?.split('@')[0] || 'Unknown',
-				email: data.session.user.email || null,
-				full_name: data.session.user.name || data.session.user.analystUsername || 'Unknown User',
-				role: data.session.user.analystRole as 'analyst' | 'on-point lead' | 'observer' || 'analyst',
-				active: true,
-				created_at: null,
-				updated_at: null
-			};
-			currentSelectedAnalyst.set(sessionAnalyst);
-		}
-	});
-	
-	onDestroy(() => {
-		// Clean up subscription when layout unmounts
-		unsubscribe?.();
-	});
-	
 </script>
 
 <!-- Generic Modal -->
