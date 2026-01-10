@@ -7,9 +7,11 @@
 	import DashboardStats from '$lib/components/DashboardStats.svelte';
 	import HomePageActions from '$lib/components/HomePageActions.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
+	import { joinLobbySocket, leaveLobbySocket } from '$lib/stores/collabStore';
 
 	let { data }: PageProps = $props();
 	const { register, unregister } : any = getContext('dynamicLayoutSlots');
+	const socketState = getContext<() => { connected: boolean; lobbyUserCounts: Map<string, number> }>('socketState');
 
 	function userSelectedIncident(incident: Incident) {
 		goto(`/incident/${incident.uuid}`);
@@ -51,11 +53,13 @@
 		document.title = `Dashboard - TimmyLine`;
 		register('stats', DashboardStats);
 		register('actions', HomePageActions);
+		joinLobbySocket();
 	});
 
 	onDestroy(() => {
 		unregister('stats');
 		unregister('actions');
+		leaveLobbySocket();
 	});
 
 </script>
@@ -81,8 +85,15 @@
 							<div class="incident-meta">
 								<span class="status-badge">{incident.status}</span>
 								<span>•</span>
-								<span>{incident.created_at}</span>
-							</div>
+								<span>{incident.created_at}</span>							{#if socketState}
+								{@const userCount = socketState().lobbyUserCounts.get(incident.uuid) ?? 0}
+								{#if userCount > 0}
+									<span>•</span>
+									<span class="user-count-badge" title="{userCount} active user{userCount !== 1 ? 's' : ''}">
+										👤 {userCount}
+									</span>
+								{/if}
+							{/if}							</div>
 						</div>
 						<div class="actions">
 							<button
@@ -287,5 +298,16 @@
 
 	.btn-icon {
 		font-size: 12px;
+	}
+
+	.user-count-badge {
+		padding: 2px var(--spacing-sm);
+		border-radius: var(--border-radius-sm);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+		background: var(--color-bg-primary);
+		border: 1px solid var(--color-accent-info);
+		color: var(--color-accent-info);
+		font-variant-numeric: tabular-nums;
 	}
 </style>

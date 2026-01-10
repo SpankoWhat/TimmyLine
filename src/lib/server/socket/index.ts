@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
-import type { UserInfo, Incident, IncidentUUID, SocketId } from '../../config/socketType.ts';
+import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '../../config/socketType.ts';
 import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
@@ -13,8 +13,8 @@ const globalForSocket = globalThis as unknown as {
     io: Server | undefined;
 };
 
-// New - Store for tracking users in rooms (for presence)
-const allIncidents = new Map<IncidentUUID, Incident>();
+// Store for tracking users in incident rooms (single source of truth for presence)
+const allActiveIncidentUsers = new Map<IncidentUUID, Incident>();
 
 /**
  * Validate session token from Socket.IO handshake
@@ -154,6 +154,7 @@ export function initializeSocketIO(
             `Socket ${socket.id} - Connected as ${socket.data.analystName} (${socket.data.analystUUID})`
         );
 
+        registerLobbyEvents(socket);
         registerJoinRoomEvent(socket);
         registerLeaveRoomEvent(socket);
         registerUserIncidentPresence(socket);
@@ -163,11 +164,63 @@ export function initializeSocketIO(
     return globalForSocket.io;
 }
 
+function registerLobbyEvents(socket: Socket) {
+    socket.on('inform-join-lobby', () => {
+        socket.join('lobby');
+
+        // Derive all online users from existing incident tracking
+        const onlineUsers = new Map<SocketId, { analystUUID: string; analystName: string }>();
+
+        for (const [_, incident] of allActiveIncidentUsers) {
+            for (const [socketId, userState] of incident) {
+                // Deduplicate users across multiple incidents
+                if (!onlineUsers.has(socketId)) {
+                    onlineUsers.set(socketId, {
+                        analystUUID: userState.analystUUID,
+                        analystName: userState.analystName
+                    });
+                }
+            }
+        }
+
+        // Derive incident user counts
+        const incidentCounts: Record<IncidentUUID, number> = {};
+        for (const [incidentUUID, incident] of allActiveIncidentUsers) {
+            incidentCounts[incidentUUID] = incident.size;
+        }
+
+        // Send current lobby state to new joiner
+        socket.emit('lobby-users-list', Object.fromEntries(onlineUsers));
+        socket.emit('incident-user-counts', incidentCounts);
+
+        // Notify all lobby users about the new joiner
+        globalForSocket.io!.to('lobby').emit('user-joined-lobby', socket.id, {
+            analystUUID: socket.data.analystUUID,
+            analystName: socket.data.analystName
+        });
+
+        logger.debug(`Client ${socket.id} joined lobby - ${onlineUsers.size} users online, ${Object.keys(incidentCounts).length} active incidents`);
+    });
+
+    socket.on('inform-leave-lobby', () => {
+        socket.leave('lobby');
+
+        // Notify all lobby users about the departure
+        globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.id);
+
+        logger.debug(`Client ${socket.id} left lobby`);
+    });
+}
+
 function registerDisconnectEvent(socket: Socket) {
     socket.on('disconnect', () => {
-        for (const [incidentUUID, incident] of allIncidents.entries()) {
+        let wasInAnyIncident = false;
+
+        for (const [incidentUUID, incident] of allActiveIncidentUsers.entries()) {
             // Skip if incident page does not have this socket (user)
             if (!incident.has(socket.id)) continue;
+
+            wasInAnyIncident = true;
 
             // Notify ALL clients before removing user from incident
             globalForSocket.io!.to(`incident:${incidentUUID}`).emit('user-left-incident', socket.id);
@@ -176,18 +229,34 @@ function registerDisconnectEvent(socket: Socket) {
 
             // Skip cleaning allIncidents if Incident is not empty after deletion
             if (incident.size > 0) continue;
-            allIncidents.delete(incidentUUID);
+            allActiveIncidentUsers.delete(incidentUUID);
         }
+
+        // Notify lobby users if this user was in any incidents
+        if (wasInAnyIncident) {
+            globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.id);
+
+            // Broadcast updated incident counts to lobby
+            const incidentCounts: Record<IncidentUUID, number> = {};
+            for (const [incidentUUID, incident] of allActiveIncidentUsers) {
+                incidentCounts[incidentUUID] = incident.size;
+            }
+            globalForSocket.io!.to('lobby').emit('incident-user-counts', incidentCounts);
+        }
+
+        logger.debug(`Socket ${socket.id} disconnected`);
     });
 }
 
 function registerUserIncidentPresence(socket: Socket) {
-    socket.on('update-user-status', (data: { incidentUUID: string; updates: Partial<Pick<UserInfo, 'focusedRow' | 'editingRow'>>; }) => {
+    socket.on(
+        'update-user-status',
+        (data: { incidentUUID: string; updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>; }) => {
         const roomName = `incident:${data.incidentUUID}`;
 
         // Update internal tracking of user status
         try {
-            let incident = allIncidents.get(data.incidentUUID);
+            let incident = allActiveIncidentUsers.get(data.incidentUUID);
             if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
 
             let userInfo = incident.get(socket.id);
@@ -202,7 +271,7 @@ function registerUserIncidentPresence(socket: Socket) {
             }
 
             incident.set(socket.id, userInfo);
-            allIncidents.set(data.incidentUUID, incident);
+            allActiveIncidentUsers.set(data.incidentUUID, incident);
         } catch (error) {
             logger.error(`Error occurred while updating user status: ${error}`);
             return;
@@ -220,7 +289,7 @@ function registerLeaveRoomEvent(socket: Socket) {
 
         // Update internal tracking of user focus
         try {
-            let incident = allIncidents.get(data.incidentUUID);
+            let incident = allActiveIncidentUsers.get(data.incidentUUID);
             if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
 
             let userInfo = incident.get(socket.id);
@@ -229,9 +298,9 @@ function registerLeaveRoomEvent(socket: Socket) {
             // Remove user from incident, if last user, remove incident entry
             incident.delete(socket.id);
             if (incident.size === 0) {
-                allIncidents.delete(data.incidentUUID);
+                allActiveIncidentUsers.delete(data.incidentUUID);
             } else {
-                allIncidents.set(data.incidentUUID, incident);
+                allActiveIncidentUsers.set(data.incidentUUID, incident);
             }
         } catch (error) {
             logger.error(`Error occurred while removing user from incident: ${error}`);
@@ -241,6 +310,14 @@ function registerLeaveRoomEvent(socket: Socket) {
         // Notify ALL clients that user left (before leaving room)
         globalForSocket.io!.to(roomName).emit('user-left-incident', socket.id);
         socket.leave(roomName);
+
+        // Broadcast updated incident counts to lobby
+        const incidentCounts: Record<IncidentUUID, number> = {};
+        for (const [incidentUUID, incident] of allActiveIncidentUsers) {
+            incidentCounts[incidentUUID] = incident.size;
+        }
+        globalForSocket.io!.to('lobby').emit('incident-user-counts', incidentCounts);
+
         logger.debug(`Client ${socket.id} left ${roomName}`);
     });
 }
@@ -255,16 +332,22 @@ function registerJoinRoomEvent(socket: Socket) {
             const validatedAnalystUUID = socket.data.analystUUID;
             const validatedAnalystName = socket.data.analystName;
 
+            // Leave lobby room when entering an incident
+            if (socket.rooms.has('lobby')) {
+                socket.leave('lobby');
+                logger.debug(`Client ${socket.id} left lobby to join incident`);
+            }
+
             socket.join(roomName);
 
             // Update internal tracking of user focus
             try {
-                let incident = allIncidents.get(data.incidentUUID);
+                let incident = allActiveIncidentUsers.get(data.incidentUUID);
 
                 // Create new incident entry if it doesn't exist - first user joining
                 if (!incident) {
-                    incident = new Map<SocketId, UserInfo>();
-                    allIncidents.set(data.incidentUUID, incident);
+                    incident = new Map<SocketId, UserIncidentState>();
+                    allActiveIncidentUsers.set(data.incidentUUID, incident);
                     logger.debug(`Created new incident entry for ${data.incidentUUID}`);
                 }
 
@@ -286,23 +369,30 @@ function registerJoinRoomEvent(socket: Socket) {
 
                 // Add user to incident and then add to global store
                 incident.set(socket.id, userInfo);
-                allIncidents.set(data.incidentUUID, incident);
+                allActiveIncidentUsers.set(data.incidentUUID, incident);
                 logger.debug(`Added socket ${socket.id} to incident ${data.incidentUUID}`);
             } catch (error) {
                 logger.error(`Error occurred while adding user to incident: ${error}`);
                 return;
             }
 
-            let userInfo = allIncidents.get(data.incidentUUID)!.get(socket.id)!;
+            let userInfo = allActiveIncidentUsers.get(data.incidentUUID)!.get(socket.id)!;
 
             // Send new user details to ALL clients in the incident room (including sender)
             globalForSocket.io!.to(roomName).emit('user-joined-incident', socket.id, userInfo);
 
             // Send current incident state to the new user if others are present
-            const incident = allIncidents.get(data.incidentUUID)!;
+            const incident = allActiveIncidentUsers.get(data.incidentUUID)!;
             if (incident.size > 1) {
                 socket.emit('enrich-newUser-incidentState', Object.fromEntries(incident));
             }
+
+            // Broadcast updated incident counts to lobby
+            const incidentCounts: Record<IncidentUUID, number> = {};
+            for (const [incidentUUID, incident] of allActiveIncidentUsers) {
+                incidentCounts[incidentUUID] = incident.size;
+            }
+            globalForSocket.io!.to('lobby').emit('incident-user-counts', incidentCounts);
         }
     );
 }

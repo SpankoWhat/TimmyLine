@@ -1,16 +1,22 @@
-// Currently handles one incident at a time ...
+// Socket.IO client store for real-time collaboration
+// Handles both lobby presence (user counts per incident) and incident-specific presence (user activity tracking)
 
 import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
 import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
-import type { UserInfo, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
+import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
 
-// New - Local store for tracking users in rooms (for presence)
-export const incidentUsers = writable<Incident>(new Map<SocketId, UserInfo>());
-let localUserInfo: UserInfo | null = null;
+// Incident-specific presence tracking
+export const incidentUsers = writable<Incident>(new Map<SocketId, UserIncidentState>());
+
+// Lobby presence tracking
+export const lobbyUsers = writable<Map<SocketId, { analystUUID: string; analystName: string }>>(new Map());
+export const incidentUserCounts = writable<Map<IncidentUUID, number>>(new Map());
+
+let localUserInfo: UserIncidentState | null = null;
 let localLastIncidentUUID: IncidentUUID | null = null;
 
 // ============================================================================
@@ -35,7 +41,7 @@ export const currentIncidentUserCount = derived(incidentUsers, ($incidentUsers) 
 export const getUsersOnRow = derived(
     incidentUsers,
     ($incidentUsers) => {
-        return (rowUUID: string): UserInfo[] => {
+        return (rowUUID: string): UserIncidentState[] => {
             return Array.from($incidentUsers.values())
                 .filter((user) => user.focusedRow === rowUUID || user.editingRow === rowUUID);
         };
@@ -50,10 +56,9 @@ export function initializeSocket() {
     if (!browser || socket) return socket;
 
     const analyst = get(currentSelectedAnalyst);
-    const incident = get(currentSelectedIncident);
     
-    if (!analyst || !incident) {
-        console.error('Cannot initialize socket: currentSelectedIncident or currentSelectedAnalyst is null');
+    if (!analyst) {
+        console.error('Cannot initialize socket: currentSelectedAnalyst is null');
         return null;
     }
     
@@ -71,6 +76,7 @@ export function initializeSocket() {
         editingRow: null
     }
 
+    console.log(`Socket initialized for analyst: ${analyst.full_name} (${analyst.uuid})`);
     return true;
 }
 
@@ -86,7 +92,43 @@ function registerEventListeners(socket: Socket) {
         console.debug(`Socket event received: ${event}`, args);
     });
 
-    socket.on('user-joined-incident', (userSocketId: SocketId, userInfo: UserInfo) => {
+    // Lobby presence events
+    socket.on('lobby-users-list', (users: Record<SocketId, { analystUUID: string; analystName: string }>) => {
+        const usersMap = new Map<SocketId, { analystUUID: string; analystName: string }>();
+        for (const [socketId, userInfo] of Object.entries(users)) {
+            usersMap.set(socketId as SocketId, userInfo);
+        }
+        lobbyUsers.set(usersMap);
+        console.log(`Lobby users loaded: ${usersMap.size} users online`);
+    });
+
+    socket.on('user-joined-lobby', (userSocketId: SocketId, userInfo: { analystUUID: string; analystName: string }) => {
+        lobbyUsers.update((users) => {
+            users.set(userSocketId, userInfo);
+            return users;
+        });
+        console.log(`User joined lobby: ${userInfo.analystName}`);
+    });
+
+    socket.on('user-left-lobby', (userSocketId: SocketId) => {
+        lobbyUsers.update((users) => {
+            users.delete(userSocketId);
+            return users;
+        });
+        console.log(`User left lobby: ${userSocketId}`);
+    });
+
+    socket.on('incident-user-counts', (counts: Record<IncidentUUID, number>) => {
+        const countsMap = new Map<IncidentUUID, number>();
+        for (const [incidentUUID, count] of Object.entries(counts)) {
+            countsMap.set(incidentUUID as IncidentUUID, count);
+        }
+        incidentUserCounts.set(countsMap);
+        console.debug(`Incident user counts updated:`, counts);
+    });
+
+    // Incident-specific presence events
+    socket.on('user-joined-incident', (userSocketId: SocketId, userInfo: UserIncidentState) => {
         incidentUsers.update((incident) => {
             incident.set(userSocketId, userInfo);
             return incident;
@@ -94,7 +136,7 @@ function registerEventListeners(socket: Socket) {
     });
 
     socket.on('enrich-newUser-incidentState', (incidentDetails: Incident) => {
-        const tmpIncidentDetails = new Map<SocketId, UserInfo>();
+        const tmpIncidentDetails = new Map<SocketId, UserIncidentState>();
 
         for (const [socketId, userInfo] of Object.entries(incidentDetails)) {
             tmpIncidentDetails.set(socketId as SocketId, userInfo);
@@ -110,7 +152,7 @@ function registerEventListeners(socket: Socket) {
         });
     });
 
-    socket.on('user-status-updated', (userSocketId: SocketId, updates: Partial<Pick<UserInfo, 'focusedRow' | 'editingRow'>>) => {
+    socket.on('user-status-updated', (userSocketId: SocketId, updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>) => {
         incidentUsers.update((incident) => {
             const userInfo = incident.get(userSocketId);
             
@@ -150,6 +192,33 @@ function registerEventListeners(socket: Socket) {
 // HELPER SOCKET FUNCTIONS
 // ============================================================================
 
+export function joinLobbySocket() {
+    if (!browser || !socket) {
+        console.error('Cannot join lobby: socket not initialized');
+        return;
+    }
+
+    if (!localUserInfo) {
+        console.error('Cannot join lobby: localUserInfo is null');
+        return;
+    }
+
+    socket.emit('inform-join-lobby');
+    console.log('Joined lobby room');
+}
+
+export function leaveLobbySocket() {
+    if (!browser || !socket) return;
+
+    socket.emit('inform-leave-lobby');
+
+    // Clear lobby stores
+    lobbyUsers.set(new Map());
+    incidentUserCounts.set(new Map());
+
+    console.log('Left lobby room');
+}
+
 export function joinIncidentSocket() {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
@@ -176,9 +245,8 @@ export function leaveIncidentSocket() {
 
     // Clear local incident users store
     incidentUsers.update(() => {
-        return new Map<SocketId, UserInfo>();
+        return new Map<SocketId, UserIncidentState>();
     });
-    localUserInfo = null;
     localLastIncidentUUID = null;
 }
 
