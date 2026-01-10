@@ -8,6 +8,8 @@ import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEn
 import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
+let socketReadyPromise: Promise<boolean> | null = null;
+let socketReadyResolve: ((value: boolean) => void) | null = null;
 
 // Incident-specific presence tracking
 export const usersInCurrentIncident = writable<Incident>(new Map<SocketId, UserIncidentState>());
@@ -52,15 +54,62 @@ export const getUsersOnRow = derived(
 // CORE SOCKET FUNCTIONS
 // ============================================================================
 
-export function initializeSocket() {
-    if (!browser || socket) return socket;
+/**
+ * Returns a promise that resolves when the socket is ready.
+ * If socket is already initialized, resolves immediately.
+ * If analyst isn't loaded yet, waits for it then initializes.
+ */
+export function ensureSocketReady(): Promise<boolean> {
+    if (!browser) return Promise.resolve(false);
 
-    const analyst = get(currentSelectedAnalyst);
-    
-    if (!analyst) {
-        console.error('Cannot initialize socket: currentSelectedAnalyst is null');
-        return null;
-    }
+    // Socket already initialized and connected
+    if (socket?.connected) return Promise.resolve(true);
+
+    // Already waiting for socket to be ready
+    if (socketReadyPromise) return socketReadyPromise;
+
+    // Create a new promise that will resolve when socket is ready
+    socketReadyPromise = new Promise((resolve) => {
+        socketReadyResolve = resolve;
+
+        const analyst = get(currentSelectedAnalyst);
+
+        if (analyst) {
+            // Analyst is ready, initialize immediately
+            const success = initializeSocketInternal(analyst);
+            resolve(success);
+            socketReadyPromise = null;
+            socketReadyResolve = null;
+        } else {
+            // Wait for analyst to be set
+            console.log('Socket: Waiting for analyst data...');
+            const unsubscribe = currentSelectedAnalyst.subscribe((a) => {
+                if (a && !socket) {
+                    const success = initializeSocketInternal(a);
+                    resolve(success);
+                    socketReadyPromise = null;
+                    socketReadyResolve = null;
+                    unsubscribe();
+                }
+            });
+        }
+    });
+
+    return socketReadyPromise;
+}
+
+/**
+ * Initialize socket - can be called early, will wait for analyst if needed
+ */
+export function initializeSocket(): Promise<boolean> {
+    return ensureSocketReady();
+}
+
+/**
+ * Internal function that actually creates the socket connection
+ */
+function initializeSocketInternal(analyst: { uuid: string; full_name: string | null; username?: string }): boolean {
+    if (!browser || socket) return !!socket;
     
     socket = io({
         path: '/socket.io/',
@@ -71,12 +120,12 @@ export function initializeSocket() {
 
     localUserInfo = {
         analystUUID: analyst.uuid as string,
-        analystName: analyst.full_name as string,
+        analystName: (analyst.full_name || analyst.username || 'Unknown') as string,
         focusedRow: null,
         editingRow: null
-    }
+    };
 
-    console.log(`Socket initialized for analyst: ${analyst.full_name} (${analyst.uuid})`);
+    console.log(`Socket initialized for analyst: ${localUserInfo.analystName} (${analyst.uuid})`);
     return true;
 }
 
@@ -84,6 +133,9 @@ export function disconnectSocket() {
     if (!browser || !socket) return;
     socket.disconnect();
     socket = null;
+    socketReadyPromise = null;
+    socketReadyResolve = null;
+    localUserInfo = null;
     return true;
 }
 
@@ -99,7 +151,6 @@ function registerEventListeners(socket: Socket) {
             usersMap.set(socketId as SocketId, userInfo);
         }
         usersInLobby.set(usersMap);
-        console.log(`Lobby users loaded: ${usersMap.size} users online`);
     });
 
     socket.on('user-joined-lobby', (userSocketId: SocketId, userInfo: { analystUUID: string; analystName: string }) => {
@@ -107,7 +158,6 @@ function registerEventListeners(socket: Socket) {
             users.set(userSocketId, userInfo);
             return users;
         });
-        console.log(`User joined lobby: ${userInfo.analystName}`);
     });
 
     socket.on('user-left-lobby', (userSocketId: SocketId) => {
@@ -115,7 +165,6 @@ function registerEventListeners(socket: Socket) {
             users.delete(userSocketId);
             return users;
         });
-        console.log(`User left lobby: ${userSocketId}`);
     });
 
     socket.on('incident-user-counts', (counts: Record<IncidentUUID, number>) => {
@@ -124,7 +173,6 @@ function registerEventListeners(socket: Socket) {
             countsMap.set(incidentUUID as IncidentUUID, count);
         }
         usersInEachIncident.set(countsMap);
-        console.debug(`Incident user counts updated:`, counts);
     });
 
     // Incident-specific presence events
@@ -192,9 +240,13 @@ function registerEventListeners(socket: Socket) {
 // HELPER SOCKET FUNCTIONS
 // ============================================================================
 
-export function joinLobbySocket() {
-    if (!browser || !socket) {
-        console.error('Cannot join lobby: socket not initialized');
+export async function joinLobbySocket() {
+    if (!browser) return;
+
+    // Wait for socket to be ready (handles analyst not loaded yet)
+    const ready = await ensureSocketReady();
+    if (!ready || !socket) {
+        console.error('Cannot join lobby: socket failed to initialize');
         return;
     }
 
@@ -204,7 +256,6 @@ export function joinLobbySocket() {
     }
 
     socket.emit('inform-join-lobby');
-    console.log('Joined lobby room');
 }
 
 export function leaveLobbySocket() {
@@ -215,12 +266,18 @@ export function leaveLobbySocket() {
     // Clear lobby stores
     usersInLobby.set(new Map());
     usersInEachIncident.set(new Map());
-
-    console.log('Left lobby room');
 }
 
-export function joinIncidentSocket() {
-    if (!browser || !socket) return;
+export async function joinIncidentSocket() {
+    if (!browser) return;
+
+    // Wait for socket to be ready (handles analyst not loaded yet)
+    const ready = await ensureSocketReady();
+    if (!ready || !socket) {
+        console.error('Cannot join incident: socket failed to initialize');
+        return;
+    }
+
     const incident = get(currentSelectedIncident);
 
     if (!incident || !localUserInfo) {
