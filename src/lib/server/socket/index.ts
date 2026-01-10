@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
-import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '../../config/socketType.ts';
+import type { UserIncidentState, Incident, IncidentUUID, SocketId, AnalystUUID } from '../../config/socketType.ts';
 import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
@@ -15,6 +15,9 @@ const globalForSocket = globalThis as unknown as {
 
 // Store for tracking users in incident rooms (single source of truth for presence)
 const allActiveIncidentUsers = new Map<IncidentUUID, Incident>(); 
+
+// Reverse lookup: socket.id -> analyst UUID for quick lookups in event handlers
+const socketToAnalystMap = new Map<SocketId, AnalystUUID>(); 
 
 /**
  * Validate session token from Socket.IO handshake
@@ -181,14 +184,11 @@ function registerLobbyEvents(socket: Socket) {
         socket.join('lobby');
 
         // Derive all online users from existing incident tracking
-        const onlineUsers = new Map<SocketId, { analystUUID: string; analystName: string }>();
+        const onlineUsers = new Map<AnalystUUID, { analystUUID: string; analystName: string }>();
 
         for (const [_, incident] of allActiveIncidentUsers) {
-            for (const [socketId, userState] of incident) {
-
-                if (onlineUsers.has(socketId)) { continue }
-
-                onlineUsers.set(socketId, {
+            for (const [analystUUID, userState] of incident) {
+                onlineUsers.set(analystUUID, {
                     analystUUID: userState.analystUUID,
                     analystName: userState.analystName
                 });
@@ -200,7 +200,7 @@ function registerLobbyEvents(socket: Socket) {
         socket.emit('incident-user-counts', getIncidentCounts());
 
         // Notify all lobby users about the new joiner
-        globalForSocket.io!.to('lobby').emit('user-joined-lobby', socket.id, {
+        globalForSocket.io!.to('lobby').emit('user-joined-lobby', socket.data.analystUUID, {
             analystUUID: socket.data.analystUUID,
             analystName: socket.data.analystName
         });
@@ -212,7 +212,7 @@ function registerLobbyEvents(socket: Socket) {
         socket.leave('lobby');
 
         // Notify all lobby users about the departure
-        globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.id);
+        globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.data.analystUUID);
 
         logger.debug(`Client ${socket.id} left lobby`);
     });
@@ -236,46 +236,48 @@ function registerJoinRoomEvent(socket: Socket) {
 
             socket.join(roomName);
 
+            // Add this socket to the reverse lookup map
+            socketToAnalystMap.set(socket.id, validatedAnalystUUID);
+
             // Update internal tracking of user focus
             try {
                 let incident = allActiveIncidentUsers.get(data.incidentUUID);
 
                 // Create new incident entry if it doesn't exist - first user joining
                 if (!incident) {
-                    incident = new Map<SocketId, UserIncidentState>();
+                    incident = new Map<AnalystUUID, UserIncidentState>();
                     allActiveIncidentUsers.set(data.incidentUUID, incident);
                     logger.debug(`Created new incident entry for ${data.incidentUUID}`);
                 }
 
-                let userInfo = incident.get(socket.id);
+                let userInfo = incident.get(validatedAnalystUUID);
 
-                // Making sure user is not already in incident
+                // If analyst already exists, add this socket to their socketIds set
                 if (userInfo) {
-                    logger.debug(`User ${socket.id} is already in incident ${data.incidentUUID}`);
-                    return;
+                    userInfo.socketIds.add(socket.id);
+                    logger.debug(`Added socket ${socket.id} to existing analyst ${validatedAnalystUUID} in incident ${data.incidentUUID}`);
+                } else {
+                    // Initialize user info with server-validated identity
+                    userInfo = {
+                        analystUUID: validatedAnalystUUID,
+                        analystName: validatedAnalystName,
+                        focusedRow: null,
+                        editingRow: null,
+                        socketIds: new Set([socket.id])
+                    };
+
+                    // Add analyst to incident
+                    incident.set(validatedAnalystUUID, userInfo);
+                    allActiveIncidentUsers.set(data.incidentUUID, incident);
+                    logger.debug(`Added new analyst ${validatedAnalystUUID} to incident ${data.incidentUUID}`);
+
+                    // Only emit user-joined-incident for NEW analysts, not new sockets
+                    globalForSocket.io!.to(roomName).emit('user-joined-incident', validatedAnalystUUID, userInfo);
                 }
-
-                // Initialize user info with server-validated identity
-                userInfo = {
-                    analystUUID: validatedAnalystUUID,
-                    analystName: validatedAnalystName,
-                    focusedRow: null,
-                    editingRow: null
-                };
-
-                // Add user to incident and then add to global store
-                incident.set(socket.id, userInfo);
-                allActiveIncidentUsers.set(data.incidentUUID, incident);
-                logger.debug(`Added socket ${socket.id} to incident ${data.incidentUUID}`);
             } catch (error) {
                 logger.error(`Error occurred while adding user to incident: ${error}`);
                 return;
             }
-
-            let userInfo = allActiveIncidentUsers.get(data.incidentUUID)!.get(socket.id)!;
-
-            // Send new user details to ALL clients in the incident room (including sender)
-            globalForSocket.io!.to(roomName).emit('user-joined-incident', socket.id, userInfo);
 
             // Send current incident state to the new user if others are present
             const incident = allActiveIncidentUsers.get(data.incidentUUID)!;
@@ -292,26 +294,52 @@ function registerJoinRoomEvent(socket: Socket) {
 function registerDisconnectEvent(socket: Socket) {
     socket.on('disconnect', () => {
         let wasInAnyIncident = false;
+        const analystUUID = socketToAnalystMap.get(socket.id);
+
+        if (!analystUUID) {
+            logger.debug(`Socket ${socket.id} disconnected but was not tracked`);
+            return;
+        }
 
         for (const [incidentUUID, incident] of allActiveIncidentUsers.entries()) {
-            // Skip if incident page does not have this socket (user)
-            if (!incident.has(socket.id)) continue;
+            // Skip if incident doesn't have this analyst
+            const userInfo = incident.get(analystUUID);
+            if (!userInfo) continue;
 
             wasInAnyIncident = true;
 
-            // Notify ALL clients before removing user from incident
-            globalForSocket.io!.to(`incident:${incidentUUID}`).emit('user-left-incident', socket.id);
-            incident.delete(socket.id);
-            logger.debug(`Removed socket ${socket.id} from incident ${incidentUUID}`);
+            // Remove this socket from the analyst's socket set
+            userInfo.socketIds.delete(socket.id);
+            logger.debug(`Removed socket ${socket.id} from analyst ${analystUUID} in incident ${incidentUUID}`);
 
-            // Skip cleaning allIncidents if Incident is not empty after deletion
-            if (incident.size > 0) continue;
-            allActiveIncidentUsers.delete(incidentUUID);
+            // If analyst has no more sockets, remove them from the incident
+            if (userInfo.socketIds.size === 0) {
+                incident.delete(analystUUID);
+
+                // Notify ALL clients that this analyst left
+                globalForSocket.io!.to(`incident:${incidentUUID}`).emit('user-left-incident', analystUUID);
+                logger.debug(`Removed analyst ${analystUUID} from incident ${incidentUUID} (no more sockets)`);
+
+                // Remove the incident if empty
+                if (incident.size === 0) {
+                    allActiveIncidentUsers.delete(incidentUUID);
+                }
+            }
         }
+
+        // Remove from reverse lookup
+        socketToAnalystMap.delete(socket.id);
 
         // Notify lobby users if this user was in any incidents
         if (wasInAnyIncident) {
-            globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.id);
+            // Check if analyst still has other sockets connected anywhere
+            const analystStillConnected = Array.from(allActiveIncidentUsers.values()).some(incident =>
+                incident.has(analystUUID)
+            );
+
+            if (!analystStillConnected) {
+                globalForSocket.io!.to('lobby').emit('user-left-lobby', analystUUID);
+            }
 
             // Broadcast updated incident counts to lobby
             globalForSocket.io!.to('lobby').emit('incident-user-counts', getIncidentCounts());
@@ -326,16 +354,22 @@ function registerUserIncidentPresence(socket: Socket) {
         'update-user-status',
         (data: { incidentUUID: string; updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>; }) => {
         const roomName = `incident:${data.incidentUUID}`;
+            const analystUUID = socketToAnalystMap.get(socket.id);
+
+            if (!analystUUID) {
+                logger.error(`Socket ${socket.id} not found in analyst mapping for status update`);
+                return;
+            }
 
         // Update internal tracking of user status
         try {
             let incident = allActiveIncidentUsers.get(data.incidentUUID);
             if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
 
-            let userInfo = incident.get(socket.id);
-            if (!userInfo) throw new Error(`User ${socket.id} not found in incident ${data.incidentUUID}`);
+            let userInfo = incident.get(analystUUID);
+            if (!userInfo) throw new Error(`Analyst ${analystUUID} not found in incident ${data.incidentUUID}`);
 
-            // Apply partial updates
+            // Apply partial updates (consolidated for all tabs of this analyst)
             if ('focusedRow' in data.updates) {
                 userInfo.focusedRow = data.updates.focusedRow ?? null;
             }
@@ -343,51 +377,68 @@ function registerUserIncidentPresence(socket: Socket) {
                 userInfo.editingRow = data.updates.editingRow ?? null;
             }
 
-            incident.set(socket.id, userInfo);
+            incident.set(analystUUID, userInfo);
             allActiveIncidentUsers.set(data.incidentUUID, incident);
         } catch (error) {
             logger.error(`Error occurred while updating user status: ${error}`);
             return;
         }
 
-        // Notify ALL clients in room about status change
-        globalForSocket.io!.to(roomName).emit('user-status-updated', socket.id, data.updates);
-        logger.debug(`Client ${socket.id} updated status in ${roomName}:`, data.updates);
+            // Notify ALL clients in room about status change (using analyst UUID)
+            globalForSocket.io!.to(roomName).emit('user-status-updated', analystUUID, data.updates);
+            logger.debug(`Analyst ${analystUUID} updated status in ${roomName}:`, data.updates);
     });
 }
 
 function registerLeaveRoomEvent(socket: Socket) {
     socket.on('inform-leave-incident', (data: { incidentUUID: string; }) => {
         const roomName = `incident:${data.incidentUUID}`;
+        const analystUUID = socketToAnalystMap.get(socket.id);
+
+        if (!analystUUID) {
+            logger.error(`Socket ${socket.id} not found in analyst mapping for leave incident`);
+            return;
+        }
 
         // Update internal tracking of user focus
         try {
             let incident = allActiveIncidentUsers.get(data.incidentUUID);
             if (!incident) throw new Error(`Incident ${data.incidentUUID} not found`);
 
-            let userInfo = incident.get(socket.id);
-            if (!userInfo) throw new Error(`User ${socket.id} not found in incident ${data.incidentUUID}`);
+            let userInfo = incident.get(analystUUID);
+            if (!userInfo) throw new Error(`Analyst ${analystUUID} not found in incident ${data.incidentUUID}`);
 
-            // Remove user from incident, if last user, remove incident entry
-            incident.delete(socket.id);
-            if (incident.size === 0) {
-                allActiveIncidentUsers.delete(data.incidentUUID);
-            } else {
-                allActiveIncidentUsers.set(data.incidentUUID, incident);
+            // Remove this socket from the analyst's socket set
+            userInfo.socketIds.delete(socket.id);
+
+            // If analyst has no more sockets, remove them from the incident
+            if (userInfo.socketIds.size === 0) {
+                incident.delete(analystUUID);
+
+                // Notify ALL clients that this analyst left
+                globalForSocket.io!.to(roomName).emit('user-left-incident', analystUUID);
+
+                // Remove the incident if empty
+                if (incident.size === 0) {
+                    allActiveIncidentUsers.delete(data.incidentUUID);
+                } else {
+                    allActiveIncidentUsers.set(data.incidentUUID, incident);
+                }
             }
         } catch (error) {
             logger.error(`Error occurred while removing user from incident: ${error}`);
             return;
         }
 
-        // Notify ALL clients that user left (before leaving room)
-        globalForSocket.io!.to(roomName).emit('user-left-incident', socket.id);
         socket.leave(roomName);
+
+        // Remove from reverse lookup
+        socketToAnalystMap.delete(socket.id);
 
         // Broadcast updated incident counts to lobby
         globalForSocket.io!.to('lobby').emit('incident-user-counts', getIncidentCounts());
 
-        logger.debug(`Client ${socket.id} left ${roomName}`);
+        logger.debug(`Socket ${socket.id} for analyst ${analystUUID} left ${roomName}`);
     });
 }
 

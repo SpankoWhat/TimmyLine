@@ -5,17 +5,17 @@ import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
 import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
-import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '$lib/config/socketType.ts';
+import type { UserIncidentState, Incident, IncidentUUID, SocketId, AnalystUUID } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
 let socketReadyPromise: Promise<boolean> | null = null;
 let socketReadyResolve: ((value: boolean) => void) | null = null;
 
-// Incident-specific presence tracking
-export const usersInCurrentIncident = writable<Incident>(new Map<SocketId, UserIncidentState>());
+// Incident-specific presence tracking (now keyed by AnalystUUID)
+export const usersInCurrentIncident = writable<Incident>(new Map<AnalystUUID, UserIncidentState>());
 
-// Lobby presence tracking
-export const usersInLobby = writable<Map<SocketId, { analystUUID: string; analystName: string }>>(new Map());
+// Lobby presence tracking (now keyed by AnalystUUID)
+export const usersInLobby = writable<Map<AnalystUUID, { analystUUID: string; analystName: string }>>(new Map());
 export const usersInEachIncident = writable<Map<IncidentUUID, number>>(new Map());
 
 let localUserInfo: UserIncidentState | null = null;
@@ -122,7 +122,8 @@ function initializeSocketInternal(analyst: { uuid: string; full_name: string | n
         analystUUID: analyst.uuid as string,
         analystName: (analyst.full_name || analyst.username || 'Unknown') as string,
         focusedRow: null,
-        editingRow: null
+        editingRow: null,
+        socketIds: new Set() // Empty on client side, managed by server
     };
 
     console.log(`Socket initialized for analyst: ${localUserInfo.analystName} (${analyst.uuid})`);
@@ -145,24 +146,24 @@ function registerEventListeners(socket: Socket) {
     });
 
     // Lobby presence events
-    socket.on('lobby-users-list', (users: Record<SocketId, { analystUUID: string; analystName: string }>) => {
-        const usersMap = new Map<SocketId, { analystUUID: string; analystName: string }>();
-        for (const [socketId, userInfo] of Object.entries(users)) {
-            usersMap.set(socketId as SocketId, userInfo);
+    socket.on('lobby-users-list', (users: Record<AnalystUUID, { analystUUID: string; analystName: string }>) => {
+        const usersMap = new Map<AnalystUUID, { analystUUID: string; analystName: string }>();
+        for (const [analystUUID, userInfo] of Object.entries(users)) {
+            usersMap.set(analystUUID as AnalystUUID, userInfo);
         }
         usersInLobby.set(usersMap);
     });
 
-    socket.on('user-joined-lobby', (userSocketId: SocketId, userInfo: { analystUUID: string; analystName: string }) => {
+    socket.on('user-joined-lobby', (analystUUID: AnalystUUID, userInfo: { analystUUID: string; analystName: string }) => {
         usersInLobby.update((users) => {
-            users.set(userSocketId, userInfo);
+            users.set(analystUUID, userInfo);
             return users;
         });
     });
 
-    socket.on('user-left-lobby', (userSocketId: SocketId) => {
+    socket.on('user-left-lobby', (analystUUID: AnalystUUID) => {
         usersInLobby.update((users) => {
-            users.delete(userSocketId);
+            users.delete(analystUUID);
             return users;
         });
     });
@@ -176,43 +177,43 @@ function registerEventListeners(socket: Socket) {
     });
 
     // Incident-specific presence events
-    socket.on('user-joined-incident', (userSocketId: SocketId, userInfo: UserIncidentState) => {
+    socket.on('user-joined-incident', (analystUUID: AnalystUUID, userInfo: UserIncidentState) => {
         usersInCurrentIncident.update((incident) => {
-            incident.set(userSocketId, userInfo);
+            incident.set(analystUUID, userInfo);
             return incident;
         });
     });
 
     socket.on('enrich-newUser-incidentState', (incidentDetails: Incident) => {
-        const tmpIncidentDetails = new Map<SocketId, UserIncidentState>();
+        const tmpIncidentDetails = new Map<AnalystUUID, UserIncidentState>();
 
-        for (const [socketId, userInfo] of Object.entries(incidentDetails)) {
-            tmpIncidentDetails.set(socketId as SocketId, userInfo);
+        for (const [analystUUID, userInfo] of Object.entries(incidentDetails)) {
+            tmpIncidentDetails.set(analystUUID as AnalystUUID, userInfo);
         }
 
         usersInCurrentIncident.set(tmpIncidentDetails);
     });
 
-    socket.on('user-left-incident', (userSocketId: SocketId) => {
+    socket.on('user-left-incident', (analystUUID: AnalystUUID) => {
         usersInCurrentIncident.update((incident) => {
-            incident.delete(userSocketId);
+            incident.delete(analystUUID);
             return incident;
         });
     });
 
-    socket.on('user-status-updated', (userSocketId: SocketId, updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>) => {
+    socket.on('user-status-updated', (analystUUID: AnalystUUID, updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>) => {
         usersInCurrentIncident.update((incident) => {
-            const userInfo = incident.get(userSocketId);
+            const userInfo = incident.get(analystUUID);
             
             if (userInfo) {
-                // Apply partial updates
+                // Apply partial updates (consolidated across all tabs for this analyst)
                 if ('focusedRow' in updates) {
                     userInfo.focusedRow = updates.focusedRow ?? null;
                 }
                 if ('editingRow' in updates) {
                     userInfo.editingRow = updates.editingRow ?? null;
                 }
-                incident.set(userSocketId, userInfo);
+                incident.set(analystUUID, userInfo);
             }
             return incident;
         });
