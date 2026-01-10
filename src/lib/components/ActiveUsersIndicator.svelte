@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { currentIncidentUserNames } from '$lib/stores/collabStore';
+	import { userNamesInCurrentIncident } from '$lib/stores/collabStore';
 	import { currentSelectedIncident } from '$lib/stores/cacheStore';
 </script>
 
-{#if $currentSelectedIncident && $currentIncidentUserNames.length > 0}
+{#if $currentSelectedIncident && $userNamesInCurrentIncident.length > 0}
 	<div class="active-users-indicator">
 		<span class="header-label">Users Viewing: </span>
-		<span class="header-value">{$currentIncidentUserNames.length}</span>
+		<span class="header-value">{$userNamesInCurrentIncident.length}</span>
 		<div class="users-tooltip">
-			{#each $currentIncidentUserNames as userName}
+			{#each $userNamesInCurrentIncident as userName}
 				<div class="tooltip-user">
 					<div class="divider">| </div>
 					 <span class="user-name">{userName} </span>

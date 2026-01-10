@@ -9,7 +9,7 @@
     import { 
         initializeSocket, 
         disconnectSocket,
-        incidentUserCounts
+        usersInEachIncident
     } from '$lib/stores/collabStore';
     import type { Analyst } from '$lib/server/database';
 
@@ -22,7 +22,7 @@
     
     // Subscribe to incident user counts from socket
     $effect(() => {
-        const unsubscribeCounts = incidentUserCounts.subscribe((counts) => {
+        const unsubscribeCounts = usersInEachIncident.subscribe((counts) => {
             lobbyUserCounts = counts;
         });
         

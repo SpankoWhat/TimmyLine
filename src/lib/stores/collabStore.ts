@@ -10,11 +10,11 @@ import type { UserIncidentState, Incident, IncidentUUID, SocketId } from '$lib/c
 let socket: Socket | null = null;
 
 // Incident-specific presence tracking
-export const incidentUsers = writable<Incident>(new Map<SocketId, UserIncidentState>());
+export const usersInCurrentIncident = writable<Incident>(new Map<SocketId, UserIncidentState>());
 
 // Lobby presence tracking
-export const lobbyUsers = writable<Map<SocketId, { analystUUID: string; analystName: string }>>(new Map());
-export const incidentUserCounts = writable<Map<IncidentUUID, number>>(new Map());
+export const usersInLobby = writable<Map<SocketId, { analystUUID: string; analystName: string }>>(new Map());
+export const usersInEachIncident = writable<Map<IncidentUUID, number>>(new Map());
 
 let localUserInfo: UserIncidentState | null = null;
 let localLastIncidentUUID: IncidentUUID | null = null;
@@ -23,7 +23,7 @@ let localLastIncidentUUID: IncidentUUID | null = null;
 // STORES
 // ============================================================================
 
-export const currentIncidentUserNames = derived(incidentUsers, ($incidentUsers) => {
+export const userNamesInCurrentIncident = derived(usersInCurrentIncident, ($incidentUsers) => {
     const names: string[] = [];
     $incidentUsers.forEach((userInfo) => {
         if (userInfo && userInfo.analystName) {
@@ -33,13 +33,13 @@ export const currentIncidentUserNames = derived(incidentUsers, ($incidentUsers) 
     return names;
 });
 
-export const currentIncidentUserCount = derived(incidentUsers, ($incidentUsers) => {
+export const currentIncidentUserCount = derived(usersInCurrentIncident, ($incidentUsers) => {
     return $incidentUsers.size;
 });
 
 // Derived store factory: Get users on a specific row
 export const getUsersOnRow = derived(
-    incidentUsers,
+    usersInCurrentIncident,
     ($incidentUsers) => {
         return (rowUUID: string): UserIncidentState[] => {
             return Array.from($incidentUsers.values())
@@ -98,12 +98,12 @@ function registerEventListeners(socket: Socket) {
         for (const [socketId, userInfo] of Object.entries(users)) {
             usersMap.set(socketId as SocketId, userInfo);
         }
-        lobbyUsers.set(usersMap);
+        usersInLobby.set(usersMap);
         console.log(`Lobby users loaded: ${usersMap.size} users online`);
     });
 
     socket.on('user-joined-lobby', (userSocketId: SocketId, userInfo: { analystUUID: string; analystName: string }) => {
-        lobbyUsers.update((users) => {
+        usersInLobby.update((users) => {
             users.set(userSocketId, userInfo);
             return users;
         });
@@ -111,7 +111,7 @@ function registerEventListeners(socket: Socket) {
     });
 
     socket.on('user-left-lobby', (userSocketId: SocketId) => {
-        lobbyUsers.update((users) => {
+        usersInLobby.update((users) => {
             users.delete(userSocketId);
             return users;
         });
@@ -123,13 +123,13 @@ function registerEventListeners(socket: Socket) {
         for (const [incidentUUID, count] of Object.entries(counts)) {
             countsMap.set(incidentUUID as IncidentUUID, count);
         }
-        incidentUserCounts.set(countsMap);
+        usersInEachIncident.set(countsMap);
         console.debug(`Incident user counts updated:`, counts);
     });
 
     // Incident-specific presence events
     socket.on('user-joined-incident', (userSocketId: SocketId, userInfo: UserIncidentState) => {
-        incidentUsers.update((incident) => {
+        usersInCurrentIncident.update((incident) => {
             incident.set(userSocketId, userInfo);
             return incident;
         });
@@ -142,18 +142,18 @@ function registerEventListeners(socket: Socket) {
             tmpIncidentDetails.set(socketId as SocketId, userInfo);
         }
 
-        incidentUsers.set(tmpIncidentDetails);
+        usersInCurrentIncident.set(tmpIncidentDetails);
     });
 
     socket.on('user-left-incident', (userSocketId: SocketId) => {
-        incidentUsers.update((incident) => {
+        usersInCurrentIncident.update((incident) => {
             incident.delete(userSocketId);
             return incident;
         });
     });
 
     socket.on('user-status-updated', (userSocketId: SocketId, updates: Partial<Pick<UserIncidentState, 'focusedRow' | 'editingRow'>>) => {
-        incidentUsers.update((incident) => {
+        usersInCurrentIncident.update((incident) => {
             const userInfo = incident.get(userSocketId);
             
             if (userInfo) {
@@ -213,8 +213,8 @@ export function leaveLobbySocket() {
     socket.emit('inform-leave-lobby');
 
     // Clear lobby stores
-    lobbyUsers.set(new Map());
-    incidentUserCounts.set(new Map());
+    usersInLobby.set(new Map());
+    usersInEachIncident.set(new Map());
 
     console.log('Left lobby room');
 }
@@ -244,7 +244,7 @@ export function leaveIncidentSocket() {
     socket.emit('inform-leave-incident', {incidentUUID:localLastIncidentUUID})
 
     // Clear local incident users store
-    incidentUsers.update(() => {
+    usersInCurrentIncident.update(() => {
         return new Map<SocketId, UserIncidentState>();
     });
     localLastIncidentUUID = null;

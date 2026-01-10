@@ -85,7 +85,8 @@
 							<div class="incident-meta">
 								<span class="status-badge">{incident.status}</span>
 								<span>•</span>
-								<span>{incident.created_at}</span>							{#if socketState}
+								<span>{incident.created_at}</span>							
+								{#if socketState}
 								{@const userCount = socketState().lobbyUserCounts.get(incident.uuid) ?? 0}
 								{#if userCount > 0}
 									<span>•</span>
@@ -93,7 +94,8 @@
 										👤 {userCount}
 									</span>
 								{/if}
-							{/if}							</div>
+							{/if}							
+							</div>
 						</div>
 						<div class="actions">
 							<button
