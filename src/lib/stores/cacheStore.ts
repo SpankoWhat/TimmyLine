@@ -57,6 +57,30 @@ export const currentCachedAnnotations: Writable<Annotation[]> = writable([]);
 export const currentCachedEntities: Writable<Entity[]> = writable([]);
 
 // ============================================================================
+// UI HIGHLIGHT STORES
+// ============================================================================
+
+/**
+ * Set of timeline item UUIDs that should be highlighted
+ * Used for click-to-highlight feature in Entities/Annotations panel
+ */
+export const highlightedItemUuids: Writable<Set<string>> = writable(new Set());
+
+/**
+ * Clears all highlighted items
+ */
+export function clearHighlights(): void {
+	highlightedItemUuids.set(new Set());
+}
+
+/**
+ * Sets the highlighted items to a specific set of UUIDs
+ */
+export function setHighlights(uuids: string[]): void {
+	highlightedItemUuids.set(new Set(uuids));
+}
+
+// ============================================================================
 // LOOKUP CACHE STORES - Reference Data
 // ============================================================================
 

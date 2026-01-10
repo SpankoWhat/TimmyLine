@@ -4,7 +4,7 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches, showDeletedItems} from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
 	import { initializeSocket, joinIncidentSocket, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
@@ -13,6 +13,7 @@
 	import IncidentStats from '$lib/components/IncidentStats.svelte';
 	import IncidentPageActions from '$lib/components/IncidentPageActions.svelte';
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
+	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 	
     let { data }: PageProps = $props();
@@ -25,6 +26,7 @@
 	});
 
 	let showFieldSelector = $state(false);
+	let showEntitiesPanel = $state(false);
 
 	// Drag and drop state
 	let draggedField: { type: 'event' | 'action'; key: string } | null = $state(null);
@@ -170,10 +172,18 @@
 		unregister('actions');
 		leaveIncidentSocket();
 		disconnectSocket();
+		clearHighlights();
 	});
 
 	function toggleShowDeleted() {
 		showDeletedItems.update(val => !val);
+	}
+
+	function toggleEntitiesPanel() {
+		showEntitiesPanel = !showEntitiesPanel;
+		if (!showEntitiesPanel) {
+			clearHighlights();
+		}
 	}
 </script>
 
@@ -190,6 +200,21 @@
 						Show Deleted Items
 					{/if}
 				</button>
+				<div class="entities-panel-container">
+					<button 
+						class="entities-panel-btn" 
+						class:active={showEntitiesPanel}
+						onclick={toggleEntitiesPanel} 
+						title="View all entities and annotations"
+					>
+						◆
+					</button>
+					{#if showEntitiesPanel}
+						<div class="entities-panel-dropdown" onclick={(e) => e.stopPropagation()}>
+							<EntitiesAnnotationsPanel />
+						</div>
+					{/if}
+				</div>
 				<div class="field-selector-container">
 					<button class="field-selector-btn" onclick={() => showFieldSelector = !showFieldSelector} title="Select visible fields">
 						⚙
@@ -379,6 +404,48 @@
 
 	.toggle-deleted-btn:hover {
 		background: rgba(0, 255, 0, 0.1);
+	}
+
+	/* Entities/Annotations Panel */
+	.entities-panel-container {
+		position: relative;
+	}
+
+	.entities-panel-btn {
+		background: none;
+		border: 1px solid var(--color-border-medium);
+		color: var(--color-text-secondary);
+		cursor: pointer;
+		font-size: var(--font-size-sm);
+		border-radius: var(--border-radius-sm);
+		transition: all 0.2s;
+		height: 24px;
+		width: 24px;
+		padding: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.entities-panel-btn:hover {
+		border-color: var(--color-accent-warning);
+		color: var(--color-accent-warning);
+		background: rgba(251, 191, 36, 0.1);
+	}
+
+	.entities-panel-btn.active {
+		border-color: var(--color-accent-warning);
+		color: var(--color-accent-warning);
+		background: rgba(251, 191, 36, 0.15);
+	}
+
+	.entities-panel-dropdown {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		margin-top: var(--spacing-xs);
+		z-index: 50;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
 	.field-selector-container {

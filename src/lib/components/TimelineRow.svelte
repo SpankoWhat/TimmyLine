@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
-    import { currentSelectedIncident } from '$lib/stores/cacheStore';
+    import { currentSelectedIncident, highlightedItemUuids } from '$lib/stores/cacheStore';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
@@ -25,6 +25,9 @@
     let isBeingEditedByOther = $derived(
         usersOnThisRow.some((user) => user.editingRow === item.uuid)
     );
+
+    // Check if this row is highlighted (from entity/annotation panel)
+    let isHighlighted = $derived($highlightedItemUuids.has(item.uuid));
 
     // Extract related entities and events from enriched data
     let relatedEntities = $derived(
@@ -168,7 +171,12 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="timeline-item" onclick={toggleExpandedDetails}>
+<div 
+    class="timeline-item" 
+    class:highlighted={isHighlighted}
+    data-timeline-uuid={item.uuid}
+    onclick={toggleExpandedDetails}
+>
 
     <div class="main-row">
         <!-- Data Row Fields -->
@@ -338,6 +346,24 @@
         background: var(--color-bg-hover);
         border-color: var(--color-accent-primary);
         box-shadow: 0 0 4px rgba(0, 255, 0, 0.1);
+    }
+
+    /* Highlighted state from entities/annotations panel */
+    .timeline-item.highlighted {
+        border-color: var(--color-accent-warning);
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+        animation: highlightPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes highlightPulse {
+        0%, 100% {
+            box-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+            border-color: var(--color-accent-warning);
+        }
+        50% {
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+            border-color: var(--color-accent-warning);
+        }
     }
 
     .main-row {
