@@ -145,7 +145,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 			logger.warn(`${code}`, { details: JSON.stringify(message) });
 		},
 		debug: (code, ...message) => {
-			logger.debug(`${code}`, { details: JSON.stringify(message) });
+			// logger.debug(`${code}`, { details: JSON.stringify(message) });
 		}
 	},
 	trustHost: true, // Required for production
