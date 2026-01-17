@@ -1,8 +1,9 @@
-export interface UserInfo {
+export interface UserIncidentState {
     analystUUID: string;
     analystName: string;
     focusedRow: string | null;  // Row user is viewing/has expanded
     editingRow: string | null;  // Row user is actively editing
+    socketIds: Set<SocketId>;   // All socket connections for this analyst
 }
 
 export interface UserStatusUpdate {
@@ -11,5 +12,6 @@ export interface UserStatusUpdate {
 }
 
 export type SocketId = string;
-export type Incident = Map<SocketId, UserInfo>;
+export type AnalystUUID = string;
+export type UsersInIncident = Map<AnalystUUID, UserIncidentState>;  // Changed from SocketId to AnalystUUID
 export type IncidentUUID = string;

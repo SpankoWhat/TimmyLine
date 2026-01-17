@@ -6,6 +6,7 @@
         setupIncidentWatcher,
         currentSelectedAnalyst
     } from '$lib/stores/cacheStore';
+    import { initializeSocket, disconnectSocket } from '$lib/stores/collabStore';
     import type { Analyst } from '$lib/server/database';
 
     let { data, children }: LayoutProps = $props();
@@ -34,10 +35,15 @@
             };
             currentSelectedAnalyst.set(sessionAnalyst);
         }
+
+        // Initialize socket connection (will wait for analyst if not ready yet)
+        // This kicks off the connection early so it's ready when needed
+        initializeSocket();
     });
 
     onDestroy(() => {
         unsubscribe?.();
+        disconnectSocket();
     });
 </script>
 

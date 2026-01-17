@@ -7,6 +7,7 @@
 	import DashboardStats from '$lib/components/DashboardStats.svelte';
 	import HomePageActions from '$lib/components/HomePageActions.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
+	import { joinLobbySocket, leaveLobbySocket, usersInLobby, usersInEachIncident, initializeSocket} from '$lib/stores/collabStore';
 
 	let { data }: PageProps = $props();
 	const { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -51,11 +52,14 @@
 		document.title = `Dashboard - TimmyLine`;
 		register('stats', DashboardStats);
 		register('actions', HomePageActions);
+		initializeSocket();
+		joinLobbySocket();
 	});
 
 	onDestroy(() => {
 		unregister('stats');
 		unregister('actions');
+		leaveLobbySocket();
 	});
 
 </script>
@@ -82,6 +86,12 @@
 								<span class="status-badge">{incident.status}</span>
 								<span>•</span>
 								<span>{incident.created_at}</span>
+								{#if ($usersInEachIncident.get(incident.uuid) ?? 0) > 0}
+									<span>•</span>
+									<span class="user-count-badge" title="{$usersInEachIncident.get(incident.uuid) ?? 0} active user{($usersInEachIncident.get(incident.uuid) ?? 0) !== 1 ? 's' : ''}">
+										👤 {$usersInEachIncident.get(incident.uuid) ?? 0}
+									</span>
+								{/if}						
 							</div>
 						</div>
 						<div class="actions">
@@ -123,6 +133,22 @@
 						<span class="info-label">Error</span>
 						<span class="info-value" style="color: var(--color-accent-error)">{data.health.error}</span>
 					</div>
+				{/if}
+			</div>
+		</div>
+		<!-- Collaboration Lobby -->
+		<div class="section">
+			<div class="section-header">Users in Lobby</div>
+			<div class="section-content">
+				{#if $usersInLobby.size > 0}			
+					{#each $usersInLobby as user, i}
+						<div class="info-row">
+							<span class="info-label">{user[1].analystUUID}</span>
+							<span class="info-value">{user[1].analystName}</span>
+						</div>
+					{/each}
+				{:else}
+					<span class="info-value">No users currently in the lobby.</span>
 				{/if}
 			</div>
 		</div>
@@ -287,5 +313,16 @@
 
 	.btn-icon {
 		font-size: 12px;
+	}
+
+	.user-count-badge {
+		padding: 2px var(--spacing-sm);
+		border-radius: var(--border-radius-sm);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+		background: var(--color-bg-primary);
+		border: 1px solid var(--color-accent-info);
+		color: var(--color-accent-info);
+		font-variant-numeric: tabular-nums;
 	}
 </style>

@@ -5,7 +5,7 @@
 	
 	// Store Imports
 	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
-	import { initializeSocket, joinIncidentSocket, leaveIncidentSocket, disconnectSocket } from "$lib/stores/collabStore.js";
+	import { joinIncidentSocket, leaveIncidentSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
 	// Prop Imports
@@ -151,12 +151,6 @@
 		currentSelectedIncident.set(incidentObj);
 		initializeAllCaches();
 		
-		// Check and initialize socket connection
-		if (!initializeSocket() && !$currentSelectedIncident?.uuid && !$currentSelectedAnalyst?.uuid) {
-			console.warn('Socket initialization skipped');
-		}
-		
-		
 		document.title = `Incident - ${$currentSelectedIncident?.title}`;
 		joinIncidentSocket();
 		
@@ -171,7 +165,6 @@
 		unregister('stats');
 		unregister('actions');
 		leaveIncidentSocket();
-		disconnectSocket();
 		clearHighlights();
 	});
 
