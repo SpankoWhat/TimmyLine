@@ -5,14 +5,14 @@ import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
 import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
-import type { UserIncidentState, Incident, IncidentUUID, SocketId, AnalystUUID } from '$lib/config/socketType.ts';
+import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
 let socketReadyPromise: Promise<boolean> | null = null;
 let socketReadyResolve: ((value: boolean) => void) | null = null;
 
 // Incident-specific presence tracking (now keyed by AnalystUUID)
-export const usersInCurrentIncident = writable<Incident>(new Map<AnalystUUID, UserIncidentState>());
+export const usersInCurrentIncident = writable<UsersInIncident>(new Map<AnalystUUID, UserIncidentState>());
 
 // Lobby presence tracking (now keyed by AnalystUUID)
 export const usersInLobby = writable<Map<AnalystUUID, { analystUUID: string; analystName: string }>>(new Map());
@@ -184,11 +184,19 @@ function registerEventListeners(socket: Socket) {
         });
     });
 
-    socket.on('enrich-newUser-incidentState', (incidentDetails: Incident) => {
+    // I do not like how this is handled. 
+    socket.on('enrich-newUser-incidentState', (incidentDetails: Record<string, UserIncidentState> | UsersInIncident) => {
         const tmpIncidentDetails = new Map<AnalystUUID, UserIncidentState>();
 
-        for (const [analystUUID, userInfo] of Object.entries(incidentDetails)) {
-            tmpIncidentDetails.set(analystUUID as AnalystUUID, userInfo);
+        // Handle both Map and Object forms
+        if (incidentDetails instanceof Map) {
+            for (const [analystUUID, userInfo] of incidentDetails) {
+                tmpIncidentDetails.set(analystUUID, userInfo);
+            }
+        } else {
+            for (const [analystUUID, userInfo] of Object.entries(incidentDetails)) {
+                tmpIncidentDetails.set(analystUUID as AnalystUUID, userInfo);
+            }
         }
 
         usersInCurrentIncident.set(tmpIncidentDetails);
@@ -292,7 +300,7 @@ export async function joinIncidentSocket() {
         analystName: localUserInfo.analystName
     })
 
-    console.log(`Joined incident room...${incident!.uuid} - ${incident!.title}`);
+    console.log(`Joined incident room: ${incident!.title} - ${incident!.uuid}`);
     localLastIncidentUUID = incident!.uuid as IncidentUUID;
 }
 
@@ -303,7 +311,7 @@ export function leaveIncidentSocket() {
 
     // Clear local incident users store
     usersInCurrentIncident.update(() => {
-        return new Map<SocketId, UserIncidentState>();
+        return new Map<AnalystUUID, UserIncidentState>();
     });
     localLastIncidentUUID = null;
 }

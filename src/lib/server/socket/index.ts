@@ -1,11 +1,12 @@
 import { Server, type Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
-import type { UserIncidentState, Incident, IncidentUUID, SocketId, AnalystUUID } from '../../config/socketType.ts';
+import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID } from '../../config/socketType.ts';
 import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
 
 import 'dotenv/config';
+import { userInfo } from 'os';
 const ORIGIN = process.env.ORIGIN;
 
 // Use globalThis to persist across HMR reloads
@@ -14,7 +15,7 @@ const globalForSocket = globalThis as unknown as {
 };
 
 // Store for tracking users in incident rooms (single source of truth for presence)
-const allActiveIncidentUsers = new Map<IncidentUUID, Incident>(); 
+const allActiveIncidentUsers = new Map<IncidentUUID, UsersInIncident>(); 
 
 // Reverse lookup: socket.id -> analyst UUID for quick lookups in event handlers
 const socketToAnalystMap = new Map<SocketId, AnalystUUID>(); 
@@ -224,9 +225,8 @@ function registerJoinRoomEvent(socket: Socket) {
         (data: { incidentUUID: string; analystUUID: string; analystName: string }) => {
             const roomName = `incident:${data.incidentUUID}`;
 
-            // Use server-validated analyst info instead of client-provided data
-            const validatedAnalystUUID = socket.data.analystUUID;
-            const validatedAnalystName = socket.data.analystName;
+            const analystUUID = socket.data.analystUUID;
+            const analystName = socket.data.analystName;
 
             // Leave lobby room when entering an incident
             if (socket.rooms.has('lobby')) {
@@ -237,52 +237,61 @@ function registerJoinRoomEvent(socket: Socket) {
             socket.join(roomName);
 
             // Add this socket to the reverse lookup map
-            socketToAnalystMap.set(socket.id, validatedAnalystUUID);
+            socketToAnalystMap.set(socket.id, analystUUID);
 
             // Update internal tracking of user focus
+            let userInfo: UserIncidentState | undefined;
+            let isNewAnalyst = false;
+            
             try {
-                let incident = allActiveIncidentUsers.get(data.incidentUUID);
+                let incidentUsers = allActiveIncidentUsers.get(data.incidentUUID);
 
                 // Create new incident entry if it doesn't exist - first user joining
-                if (!incident) {
-                    incident = new Map<AnalystUUID, UserIncidentState>();
-                    allActiveIncidentUsers.set(data.incidentUUID, incident);
+                if (!incidentUsers) {
+                    incidentUsers = new Map<AnalystUUID, UserIncidentState>();
+                    allActiveIncidentUsers.set(data.incidentUUID, incidentUsers);
                     logger.debug(`Created new incident entry for ${data.incidentUUID}`);
                 }
 
-                let userInfo = incident.get(validatedAnalystUUID);
+                userInfo = incidentUsers.get(analystUUID);
 
                 // If analyst already exists, add this socket to their socketIds set
                 if (userInfo) {
                     userInfo.socketIds.add(socket.id);
-                    logger.debug(`Added socket ${socket.id} to existing analyst ${validatedAnalystUUID} in incident ${data.incidentUUID}`);
+                    logger.debug(`Added socket ${socket.id} to existing analyst ${analystUUID} in incident ${data.incidentUUID}`);
                 } else {
-                    // Initialize user info with server-validated identity
+                    // Initialize user info
                     userInfo = {
-                        analystUUID: validatedAnalystUUID,
-                        analystName: validatedAnalystName,
+                        analystUUID: analystUUID,
+                        analystName: analystName,
                         focusedRow: null,
                         editingRow: null,
                         socketIds: new Set([socket.id])
                     };
 
                     // Add analyst to incident
-                    incident.set(validatedAnalystUUID, userInfo);
-                    allActiveIncidentUsers.set(data.incidentUUID, incident);
-                    logger.debug(`Added new analyst ${validatedAnalystUUID} to incident ${data.incidentUUID}`);
-
-                    // Only emit user-joined-incident for NEW analysts, not new sockets
-                    globalForSocket.io!.to(roomName).emit('user-joined-incident', validatedAnalystUUID, userInfo);
+                    incidentUsers.set(analystUUID, userInfo);
+                    allActiveIncidentUsers.set(data.incidentUUID, incidentUsers);
+                    isNewAnalyst = true;
+                    logger.debug(`Added new analyst ${analystUUID} to incident ${data.incidentUUID}`);
                 }
             } catch (error) {
                 logger.error(`Error occurred while adding user to incident: ${error}`);
                 return;
             }
 
-            // Send current incident state to the new user if others are present
+            // Only emit user-joined-incident for NEW analysts, not additional sockets
+            if (isNewAnalyst && userInfo) {
+                globalForSocket.io!.to(roomName).emit('user-joined-incident', analystUUID, userInfo);
+                logger.debug(`Emitted user-joined-incident for new analyst ${analystUUID}`);
+            }
+            logger.debug(`Current state of allActiveIncidentUsers: ${JSON.stringify([...allActiveIncidentUsers])}`);
+
+            // Send current incident state to ANY new socket (including additional tabs from same user)
             const incident = allActiveIncidentUsers.get(data.incidentUUID)!;
-            if (incident.size > 1) {
+            if (incident.size >= 1) {
                 socket.emit('enrich-newUser-incidentState', Object.fromEntries(incident));
+                logger.debug(`Sent incident state to socket ${socket.id}, incident has ${incident.size} analysts`);
             }
 
             // Broadcast updated incident counts to lobby

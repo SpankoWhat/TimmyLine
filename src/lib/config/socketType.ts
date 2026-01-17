@@ -13,5 +13,5 @@ export interface UserStatusUpdate {
 
 export type SocketId = string;
 export type AnalystUUID = string;
-export type Incident = Map<AnalystUUID, UserIncidentState>;  // Changed from SocketId to AnalystUUID
+export type UsersInIncident = Map<AnalystUUID, UserIncidentState>;  // Changed from SocketId to AnalystUUID
 export type IncidentUUID = string;
