@@ -53,6 +53,26 @@ export interface ModalConfig {
 }
 
 export type DisplayFieldsConfig = {
-	event: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
-	action: Array<{ key: string; label?: string; pinned: boolean; showInNote?: boolean; order: number }>;
+	event: Array<{
+		key: string;
+		label?: string;
+		pinned: boolean;
+		showInNote?: boolean;
+		order: number;
+		hideFromUser?: boolean;
+		allowDynamicFieldRendering?: boolean;
+		parentKey?: string;
+		isDynamic?: boolean;
+	}>;
+	action: Array<{
+		key: string;
+		label?: string;
+		pinned: boolean;
+		showInNote?: boolean;
+		order: number;
+		hideFromUser?: boolean;
+		allowDynamicFieldRendering?: boolean;
+		parentKey?: string;
+		isDynamic?: boolean;
+	}>;
 };

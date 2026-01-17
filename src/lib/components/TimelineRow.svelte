@@ -5,6 +5,7 @@
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
     import { fade } from 'svelte/transition';
+    import { getFieldValue } from '$lib/utils/dynamicFields';
     
     let { 
         item,
@@ -44,6 +45,10 @@
             : []
     );
 
+    // Helper to get field value with support for dynamic JSON fields
+    function getDisplayValue(field: { key: string; isDynamic?: boolean; parentKey?: string; allowDynamicFieldRendering?: boolean }): string {
+        return getFieldValue(item.data as Record<string, unknown>, field);
+    }
 
     // Function to format epoch timestamp to human-readable time
     function formatTimestamp(epochTime: number): string {
@@ -191,12 +196,13 @@
             {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && !f.showInNote).sort((a, b) => a.order - b.order) as field (field.key)}
                 <div 
                     class="datafield data-section" 
+                    class:dynamic-field={field.isDynamic}
                     style="--stagger-delay: {Math.random() * 300}ms;"
                     transition:fade={{ duration: 180 }}
                 >
-                    <span class="field-prefix">│</span>
+                    <span class="field-prefix">{field.isDynamic ? '◈' : '│'}</span>
                     <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
-                    <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                    <span class="datafield value">{getDisplayValue(field)}</span>
                 </div>
             {/each}
         </div>
@@ -208,11 +214,12 @@
                 {#if field.showInNote}
                     <div 
                         class="datafield note-section" 
+                        class:dynamic-field={field.isDynamic}
                         style="--stagger-delay: {Math.random() * 300}ms;"
                         transition:fade={{ duration: 180 }}
                     >
-                        <span class="field-prefix">  └─</span>
-                        <span class="datafield value">{(item.data as any)[field.key] || '—'}</span>
+                        <span class="field-prefix">{field.isDynamic ? '  ◈─' : '  └─'}</span>
+                        <span class="datafield value">{getDisplayValue(field)}</span>
                     </div>
                 {/if}
             {/each}
@@ -435,6 +442,20 @@
         color: var(--color-text-primary);
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    /* Dynamic field styling */
+    .dynamic-field .field-prefix {
+        color: var(--color-accent-warning);
+        font-size: 8px;
+    }
+
+    .dynamic-field .title {
+        color: var(--color-accent-warning);
+    }
+
+    .dynamic-field .value {
+        color: var(--color-text-secondary);
     }
 
     .actions {

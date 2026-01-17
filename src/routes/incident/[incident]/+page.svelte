@@ -4,7 +4,7 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import { currentSelectedIncident, combinedTimeline, currentSelectedAnalyst, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, combinedTimeline, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
 	import { joinIncidentSocket, leaveIncidentSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
@@ -15,6 +15,7 @@
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
+	import { discoverDynamicFields, mergeFieldConfigs } from '$lib/utils/dynamicFields';
 	
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -32,26 +33,100 @@
 	let draggedField: { type: 'event' | 'action'; key: string } | null = $state(null);
 	let dragOverField: { type: 'event' | 'action'; key: string } | null = $state(null);
 
+	// Discover dynamic fields from timeline data
+	const discoveredDynamicFields = $derived({
+		event: discoverDynamicFields(
+			$combinedTimeline.map(item => ({ type: item.type, data: item.data as Record<string, unknown> })),
+			displayFieldsConfig,
+			'event'
+		),
+		action: discoverDynamicFields(
+			$combinedTimeline.map(item => ({ type: item.type, data: item.data as Record<string, unknown> })),
+			displayFieldsConfig,
+			'action'
+		)
+	});
+
+	// Merge static fields with discovered dynamic fields, preserving user state
+	$effect(() => {
+		// Get existing dynamic field states to preserve user preferences
+		const existingEventDynamic = fieldStates.event.filter(f => f.isDynamic);
+		const existingActionDynamic = fieldStates.action.filter(f => f.isDynamic);
+
+		// Merge static config with newly discovered dynamic fields
+		const mergedEventFields = mergeFieldConfigs(
+			displayFieldsConfig.event,
+			discoveredDynamicFields.event,
+			existingEventDynamic
+		);
+		const mergedActionFields = mergeFieldConfigs(
+			displayFieldsConfig.action,
+			discoveredDynamicFields.action,
+			existingActionDynamic
+		);
+
+		// Only update if new dynamic fields were discovered
+		const currentEventKeys = new Set(fieldStates.event.map(f => f.key));
+		const currentActionKeys = new Set(fieldStates.action.map(f => f.key));
+		const newEventKeys = mergedEventFields.filter(f => !currentEventKeys.has(f.key));
+		const newActionKeys = mergedActionFields.filter(f => !currentActionKeys.has(f.key));
+
+		if (newEventKeys.length > 0) {
+			fieldStates.event = [...fieldStates.event, ...newEventKeys];
+		}
+		if (newActionKeys.length > 0) {
+			fieldStates.action = [...fieldStates.action, ...newActionKeys];
+		}
+	});
+
 	// Compute filtered field configs based on selected fields, sorted by order
 	const filteredDisplayFieldsConfig = $derived({
 		event: [...fieldStates.event].sort((a, b) => a.order - b.order),
 		action: [...fieldStates.action].sort((a, b) => a.order - b.order)
 	});
 
-	// Get pinned fields sorted by order for display in dropdown
+	// Get pinned fields sorted by order for display in dropdown (excluding dynamic fields - shown separately)
 	const sortedPinnedFields = $derived({
 		event: fieldStates.event
-			.filter(f => f.pinned && !f.hideFromUser)
+			.filter(f => f.pinned && !f.hideFromUser && !f.isDynamic)
 			.sort((a, b) => a.order - b.order),
 		action: fieldStates.action
-			.filter(f => f.pinned && !f.hideFromUser)
+			.filter(f => f.pinned && !f.hideFromUser && !f.isDynamic)
 			.sort((a, b) => a.order - b.order)
 	});
 
-	// Get unpinned fields for display in dropdown
+	// Get unpinned static fields for display in dropdown
 	const unpinnedFields = $derived({
-		event: fieldStates.event.filter(f => !f.pinned && !f.hideFromUser),
-		action: fieldStates.action.filter(f => !f.pinned && !f.hideFromUser)
+		event: fieldStates.event.filter(f => !f.pinned && !f.hideFromUser && !f.isDynamic),
+		action: fieldStates.action.filter(f => !f.pinned && !f.hideFromUser && !f.isDynamic)
+	});
+
+	// Get parent fields that have dynamic rendering enabled
+	const dynamicParentFields = $derived({
+		event: fieldStates.event.filter(f => f.allowDynamicFieldRendering),
+		action: fieldStates.action.filter(f => f.allowDynamicFieldRendering)
+	});
+
+	// Get pinned dynamic fields
+	const pinnedDynamicFields = $derived({
+		event: fieldStates.event.filter(f => f.isDynamic && f.pinned).sort((a, b) => a.order - b.order),
+		action: fieldStates.action.filter(f => f.isDynamic && f.pinned).sort((a, b) => a.order - b.order)
+	});
+
+	// Get unpinned dynamic fields grouped by parent
+	const unpinnedDynamicFieldsByParent = $derived({
+		event: new Map(
+			dynamicParentFields.event.map(parent => [
+				parent.key,
+				fieldStates.event.filter(f => f.isDynamic && f.parentKey === parent.key && !f.pinned)
+			])
+		),
+		action: new Map(
+			dynamicParentFields.action.map(parent => [
+				parent.key,
+				fieldStates.action.filter(f => f.isDynamic && f.parentKey === parent.key && !f.pinned)
+			])
+		)
 	});
 
 	function toggleFieldPinned(type: 'event' | 'action', fieldKey: string) {
@@ -75,9 +150,13 @@
 	}
 
 	function resetFieldSelection() {
+		// Reset to defaults, keeping discovered dynamic fields but unpinning them
+		const eventDynamic = fieldStates.event.filter(f => f.isDynamic).map(f => ({ ...f, pinned: false }));
+		const actionDynamic = fieldStates.action.filter(f => f.isDynamic).map(f => ({ ...f, pinned: false }));
+		
 		fieldStates = {
-			event: displayFieldsConfig.event.map(f => ({ ...f })),
-			action: displayFieldsConfig.action.map(f => ({ ...f }))
+			event: [...displayFieldsConfig.event.map(f => ({ ...f })), ...eventDynamic],
+			action: [...displayFieldsConfig.action.map(f => ({ ...f })), ...actionDynamic]
 		};
 	}
 
@@ -164,6 +243,7 @@
 		$currentSelectedIncident = null;
 		unregister('stats');
 		unregister('actions');
+		unregister('userActivity');
 		leaveIncidentSocket();
 		clearHighlights();
 	});
@@ -265,6 +345,61 @@
 										{/each}
 									</div>
 								{/if}
+
+								<!-- Dynamic Fields (from JSON) -->
+								{#each dynamicParentFields.event as parentField (parentField.key)}
+									{@const dynamicFields = unpinnedDynamicFieldsByParent.event.get(parentField.key) || []}
+									{#if dynamicFields.length > 0 || pinnedDynamicFields.event.filter(f => f.parentKey === parentField.key).length > 0}
+										<div class="field-subsection-title dynamic-section">
+											<span class="dynamic-icon">◈</span> {parentField.label} Fields
+										</div>
+										<!-- Pinned dynamic fields for this parent -->
+										{@const pinnedForParent = pinnedDynamicFields.event.filter(f => f.parentKey === parentField.key)}
+										{#if pinnedForParent.length > 0}
+											<div class="field-list pinned-list dynamic-list">
+												{#each pinnedForParent as field (field.key)}
+													<div 
+														class="field-row draggable dynamic-field"
+														class:drag-over={dragOverField?.type === 'event' && dragOverField?.key === field.key}
+														draggable="true"
+														ondragstart={() => handleDragStart('event', field.key)}
+														ondragover={(e) => handleDragOver(e, 'event', field.key)}
+														ondragleave={handleDragLeave}
+														ondrop={() => handleDrop('event', field.key)}
+														ondragend={handleDragEnd}
+													>
+														<span class="drag-handle">⋮⋮</span>
+														<label class="field-checkbox-label">
+															<input 
+																type="checkbox" 
+																checked={field.pinned}
+																onchange={() => toggleFieldPinned('event', field.key)}
+															/>
+															<span>{field.label}</span>
+														</label>
+													</div>
+												{/each}
+											</div>
+										{/if}
+										<!-- Unpinned dynamic fields for this parent -->
+										{#if dynamicFields.length > 0}
+											<div class="field-list dynamic-list">
+												{#each dynamicFields as field (field.key)}
+													<div class="field-row dynamic-field">
+														<label class="field-checkbox-label">
+															<input 
+																type="checkbox" 
+																checked={field.pinned}
+																onchange={() => toggleFieldPinned('event', field.key)}
+															/>
+															<span>{field.label}</span>
+														</label>
+													</div>
+												{/each}
+											</div>
+										{/if}
+									{/if}
+								{/each}
 							</div>
 
 							<!-- Actions Fields -->
@@ -318,6 +453,61 @@
 										{/each}
 									</div>
 								{/if}
+
+								<!-- Dynamic Fields (from JSON) -->
+								{#each dynamicParentFields.action as parentField (parentField.key)}
+									{@const dynamicFields = unpinnedDynamicFieldsByParent.action.get(parentField.key) || []}
+									{#if dynamicFields.length > 0 || pinnedDynamicFields.action.filter(f => f.parentKey === parentField.key).length > 0}
+										<div class="field-subsection-title dynamic-section">
+											<span class="dynamic-icon">◈</span> {parentField.label} Fields
+										</div>
+										<!-- Pinned dynamic fields for this parent -->
+										{@const pinnedForParent = pinnedDynamicFields.action.filter(f => f.parentKey === parentField.key)}
+										{#if pinnedForParent.length > 0}
+											<div class="field-list pinned-list dynamic-list">
+												{#each pinnedForParent as field (field.key)}
+													<div 
+														class="field-row draggable dynamic-field"
+														class:drag-over={dragOverField?.type === 'action' && dragOverField?.key === field.key}
+														draggable="true"
+														ondragstart={() => handleDragStart('action', field.key)}
+														ondragover={(e) => handleDragOver(e, 'action', field.key)}
+														ondragleave={handleDragLeave}
+														ondrop={() => handleDrop('action', field.key)}
+														ondragend={handleDragEnd}
+													>
+														<span class="drag-handle">⋮⋮</span>
+														<label class="field-checkbox-label">
+															<input 
+																type="checkbox" 
+																checked={field.pinned}
+																onchange={() => toggleFieldPinned('action', field.key)}
+															/>
+															<span>{field.label}</span>
+														</label>
+													</div>
+												{/each}
+											</div>
+										{/if}
+										<!-- Unpinned dynamic fields for this parent -->
+										{#if dynamicFields.length > 0}
+											<div class="field-list dynamic-list">
+												{#each dynamicFields as field (field.key)}
+													<div class="field-row dynamic-field">
+														<label class="field-checkbox-label">
+															<input 
+																type="checkbox" 
+																checked={field.pinned}
+																onchange={() => toggleFieldPinned('action', field.key)}
+															/>
+															<span>{field.label}</span>
+														</label>
+													</div>
+												{/each}
+											</div>
+										{/if}
+									{/if}
+								{/each}
 							</div>
 
 							<button class="reset-btn" onclick={resetFieldSelection}>Reset to Default</button>
@@ -630,6 +820,36 @@
 		border-color: var(--color-accent-primary);
 		color: var(--color-accent-primary);
 		background: rgba(0, 255, 0, 0.05);
+	}
+
+	/* Dynamic field styles */
+	.dynamic-section {
+		color: var(--color-accent-warning);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.dynamic-icon {
+		font-size: 8px;
+	}
+
+	.dynamic-list {
+		border-left: 2px solid var(--color-accent-warning);
+		margin-left: var(--spacing-xs);
+		padding-left: var(--spacing-xs);
+	}
+
+	.dynamic-field .field-checkbox-label {
+		color: var(--color-text-secondary);
+	}
+
+	.dynamic-field .field-checkbox-label:hover {
+		color: var(--color-text-primary);
+	}
+
+	.dynamic-field input[type="checkbox"] {
+		accent-color: var(--color-accent-warning);
 	}
 
 	.section-content {
