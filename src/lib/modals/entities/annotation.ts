@@ -39,10 +39,10 @@ export const annotationHandler: EntityModalHandler = {
 	submit: async (data, mode) => {
 		const endpoint = mode === 'create'
 			? '/api/create/core/annotation'
-			: `/api/update/core/annotation/${data.uuid}`;
+			: '/api/update/core/annotation';
 		
 		const response = await fetch(endpoint, {
-			method: mode === 'create' ? 'POST' : 'PUT',
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});

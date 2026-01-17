@@ -319,6 +319,9 @@ export function leaveIncidentSocket() {
 export function emitViewRow(rowUUID: string) {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
+
+    // Check if called from an incident
+    if (!incident?.uuid) return;
     console.debug('Emitting view row:', rowUUID);
 
     socket.emit('update-user-status', {
@@ -335,6 +338,9 @@ export function emitViewRow(rowUUID: string) {
 export function emitIdle() {
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
+
+    // Check if called from an incident
+    if (!incident?.uuid) return;
     console.debug('Emitting idle state');
 
     socket.emit('update-user-status', {
@@ -353,8 +359,11 @@ export function emitEditingRowStatus(rowUUID: string | null, isEditing: boolean)
     if (!browser || !socket) return;
     const incident = get(currentSelectedIncident);
 
+    // Don't emit if no incident is selected
+    if (!incident?.uuid) return;
+
     socket.emit('update-user-status', {
-        incidentUUID: incident!.uuid as IncidentUUID,
+        incidentUUID: incident.uuid as IncidentUUID,
         updates: { editingRow: isEditing ? rowUUID : null }
     });
 

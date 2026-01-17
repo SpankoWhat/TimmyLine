@@ -23,10 +23,10 @@ export const analystHandler: EntityModalHandler = {
 	submit: async (data, mode) => {
 		const endpoint = mode === 'create'
 			? '/api/create/core/analyst'
-			: `/api/update/core/analyst/${data.uuid}`;
+			: '/api/update/core/analyst';
 		
 		const response = await fetch(endpoint, {
-			method: mode === 'create' ? 'POST' : 'PUT',
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});

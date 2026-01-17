@@ -62,7 +62,7 @@ export const actionEventsHandler: EntityModalHandler = {
         data.incident_id = get(currentSelectedIncident)?.uuid;
         
         const response = await fetch(endpoint, {
-            method: mode === 'create' ? 'POST' : 'PUT',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
