@@ -18,6 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		discovered_by: body.discovered_by,
 		event_type: body.event_type,
 		discovered_at: body.discovered_at,
+		notes: body.notes,
 		event_data: body.event_data,
 		occurred_at: body.occurred_at,
 		severity: body.severity,

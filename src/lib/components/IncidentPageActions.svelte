@@ -39,7 +39,6 @@
 				{ label: 'Entity Type', action: () => openModal('entity_type') },
 				{ label: 'Event Type', action: () => openModal('event_type') },
 				{ label: 'Annotation Type', action: () => openModal('annotation_type') },
-				{ label: 'Analyst', action: () => openModal('analyst') }
 			]
 		}
 	];

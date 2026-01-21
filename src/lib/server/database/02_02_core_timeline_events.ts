@@ -23,6 +23,7 @@ export const timeline_events = sqliteTable('timeline_events', {
 	discovered_at: integer('discovered_at').notNull(), // When analyst discovered it
 	created_at: integer('created_at').default(sql`(strftime('%s', 'now'))`),
 	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`),
+	notes: text('notes'),
 	event_data: text('event_data').notNull(), // JSON data for flexible event details
 	severity: text('severity', { enum: ['critical', 'high', 'medium', 'low', 'info'] }),
 	confidence: text('confidence', { enum: ['high', 'medium', 'low', 'guess'] }),

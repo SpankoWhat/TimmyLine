@@ -86,6 +86,12 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			helpText: 'When the event actually happened (may be unknown)',
 		},
 		{
+			key: 'notes',
+			label: 'Notes',
+			type: 'textarea',
+			placeholder: 'Additional context or observations about the event',
+		},
+		{
 			key: 'event_data',
 			label: 'Event Details',
 			type: 'textarea',

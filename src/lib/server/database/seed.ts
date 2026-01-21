@@ -5,7 +5,7 @@ import { dbLogger as logger } from '../logging';
 import 'dotenv/config';
 
 
-const moduleFilePath = import.meta.url.replace('file://', '').replace(/%20/g, ' ').replace(/\//g, '\/');
+const moduleFilePath = import.meta.url.replace('file:///', '').replace(/%20/g, ' ').replace(/\//g, '\\');
 const DATABASE_URL = process.env.DATABASE_URL;
 const executedFilePath = process.argv[1]
 

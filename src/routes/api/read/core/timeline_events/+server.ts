@@ -16,6 +16,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const discovered_at = url.searchParams.get('discovered_at');
 	const created_at = url.searchParams.get('created_at');
 	const updated_at = url.searchParams.get('updated_at');
+	const notes = url.searchParams.get('notes');
 	const event_data = url.searchParams.get('event_data');
 	const severity = url.searchParams.get('severity');
 	const confidence = url.searchParams.get('confidence');
@@ -33,6 +34,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (discovered_at) conditions.push(eq(timeline_events.discovered_at, parseInt(discovered_at)));
 	if (created_at) conditions.push(eq(timeline_events.created_at, parseInt(created_at)));
 	if (updated_at) conditions.push(eq(timeline_events.updated_at, parseInt(updated_at)));
+	if (notes) conditions.push(eq(timeline_events.notes, notes));
 	if (event_data) conditions.push(eq(timeline_events.event_data, event_data));
 	if (severity) conditions.push(eq(timeline_events.severity, severity as 'critical' | 'high' | 'medium' | 'low' | 'info'));
 	if (confidence) conditions.push(eq(timeline_events.confidence, confidence as 'high' | 'medium' | 'low' | 'guess'));

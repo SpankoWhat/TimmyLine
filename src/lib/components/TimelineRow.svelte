@@ -194,16 +194,19 @@
             </div>
             <!-- Pinned Entity Fields (sorted by order) -->
             {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && !f.showInNote).sort((a, b) => a.order - b.order) as field (field.key)}
-                <div 
-                    class="datafield data-section" 
-                    class:dynamic-field={field.isDynamic}
-                    style="--stagger-delay: {Math.random() * 300}ms;"
-                    transition:fade={{ duration: 180 }}
-                >
-                    <span class="field-prefix">{field.isDynamic ? '◈' : '│'}</span>
-                    <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
-                    <span class="datafield value">{getDisplayValue(field)}</span>
-                </div>
+                {@const fieldValue = getDisplayValue(field)}
+                {#if fieldValue && fieldValue !== '—'}
+                    <div 
+                        class="datafield data-section" 
+                        class:dynamic-field={field.isDynamic}
+                        style="--stagger-delay: {Math.random() * 300}ms;"
+                        transition:fade={{ duration: 180 }}
+                    >
+                        <span class="field-prefix">{field.isDynamic ? '◈' : '│'}</span>
+                        <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
+                        <span class="datafield value">{fieldValue}</span>
+                    </div>
+                {/if}
             {/each}
         </div>
     </div>

@@ -31,11 +31,12 @@ export const displayFieldsConfig: DisplayFieldsConfiguration = {
 		{ key: 'severity', label: 'Severity', pinned: true, showInNote: false, order: 2 },
 		{ key: 'source', label: 'Source', pinned: true, showInNote: false, order: 3 },
 		{ key: 'source_reliability', label: 'Reliability', pinned: true, showInNote: false, order: 4 },
+		{ key: 'notes', label: 'Notes', pinned: false, showInNote: true, order: 100, hideFromUser: true },
 
 		// Secondary fields (hidden from user, shown in notes) - supports dynamic JSON expansion
-		{ key: 'event_data', label: 'Event Data', pinned: false, showInNote: true, order: 100, hideFromUser: false, allowDynamicFieldRendering: true },
 
 		// Additional fields (unpinned)
+		{ key: 'event_data', label: 'Event Data', pinned: false, showInNote: false, order: 105, allowDynamicFieldRendering: true, hideFromUser: true },
 		{ key: 'confidence', label: 'Confidence', pinned: false, showInNote: false, order: 101 },
 		{ key: 'occurred_at', label: 'Occurred At', pinned: false, showInNote: false, order: 102 },
 		{ key: 'discovered_at', label: 'Discovered At', pinned: false, showInNote: false, order: 103 },
@@ -54,7 +55,7 @@ export const displayFieldsConfig: DisplayFieldsConfiguration = {
 		{ key: 'outcome', label: 'Outcome', pinned: false, showInNote: false, order: 101 },
 		{ key: 'next_steps', label: 'Next Steps', pinned: false, showInNote: false, order: 102 },
 		{ key: 'performed_at', label: 'Performed At', pinned: false, showInNote: false, order: 103 },
-		{ key: 'action_data', label: 'Action Data', pinned: false, showInNote: false, order: 104, allowDynamicFieldRendering: true },
+		{ key: 'action_data', label: 'Action Data', pinned: false, showInNote: false, order: 104, allowDynamicFieldRendering: true, hideFromUser: true },
 		{ key: 'tags', label: 'Tags', pinned: false, showInNote: false, order: 105 },
 	],
 };

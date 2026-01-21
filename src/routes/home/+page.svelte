@@ -67,10 +67,10 @@
 <div class="dashboard">
 	<!-- Recent Incidents -->
 	<div class="section">
-		<div class="section-header">Recent Incidents</div>
+		<div class="section-header">Active Incidents</div>
 		<div class="section-content">
 			<div class="incident-list">
-				{#each $currentCachedIncidents as incident, i}
+				{#each $currentCachedIncidents.filter(incident => incident.status === 'In Progress') as incident, i}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div 
 						class="incident-item" 
@@ -83,9 +83,11 @@
 						<div class="incident-content">
 							<div class="incident-title">{incident.title}</div>
 							<div class="incident-meta">
-								<span class="status-badge">{incident.status}</span>
+								<span>•</span>
+								<span>{incident.status}</span>
 								<span>•</span>
 								<span>{incident.created_at}</span>
+								<!-- User activity -->
 								{#if ($usersInEachIncident.get(incident.uuid) ?? 0) > 0}
 									<span>•</span>
 									<span class="user-count-badge" title="{$usersInEachIncident.get(incident.uuid) ?? 0} active user{($usersInEachIncident.get(incident.uuid) ?? 0) !== 1 ? 's' : ''}">
