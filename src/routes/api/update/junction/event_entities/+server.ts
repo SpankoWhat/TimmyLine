@@ -17,7 +17,7 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	const updateData = {
-		relation_type: body.relation_type
+		role: body.role
 	};
 
 	try {

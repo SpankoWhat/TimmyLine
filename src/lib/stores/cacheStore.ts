@@ -163,6 +163,56 @@ export const combinedTimeline = derived(
 );
 
 /**
+ * Known JSON root keys extracted from event_data and action_data across the timeline.
+ * Used by the JsonKeyValueEditor component to suggest existing keys when building JSON.
+ * Automatically updates when cached events or actions change.
+ */
+export const knownJsonKeys = derived(
+	[currentCachedEvents, currentCachedActions],
+	([$events, $actions]) => {
+		const eventKeys = new Set<string>();
+		const actionKeys = new Set<string>();
+
+		// Scan event_data JSON fields
+		if ($events && Array.isArray($events)) {
+			for (const event of $events) {
+				if (event.event_data && typeof event.event_data === 'string') {
+					try {
+						const parsed = JSON.parse(event.event_data);
+						if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+							for (const key of Object.keys(parsed)) {
+								eventKeys.add(key);
+							}
+						}
+					} catch { /* skip invalid JSON */ }
+				}
+			}
+		}
+
+		// Scan action_data JSON fields
+		if ($actions && Array.isArray($actions)) {
+			for (const action of $actions) {
+				if (action.action_data && typeof action.action_data === 'string') {
+					try {
+						const parsed = JSON.parse(action.action_data);
+						if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+							for (const key of Object.keys(parsed)) {
+								actionKeys.add(key);
+							}
+						}
+					} catch { /* skip invalid JSON */ }
+				}
+			}
+		}
+
+		return {
+			event: [...eventKeys].sort(),
+			action: [...actionKeys].sort()
+		};
+	}
+);
+
+/**
  * Various timeline statistics, currently provides:
  * - Count of actions 
  * - Count of events

@@ -1,6 +1,10 @@
 /**
- * Shared helpers for modal handlers
- * Eliminates duplicated fetch/submit and context-enrichment logic
+ * Shared helpers and factories for modal handlers.
+ *
+ * Three factories cover every handler type:
+ *   createEntityHandler   – core entities (incident, event, action …)
+ *   createJunctionHandler – many-to-many junction tables
+ *   createLookupHandler   – (lives in lookups/index.ts, uses submitToApi)
  */
 
 import { get, type Readable } from 'svelte/store';
@@ -141,5 +145,109 @@ export function createJunctionHandler(
 			const result = await submitToApi(endpoint, data, mode as 'create' | 'edit');
 			return { entity: result };
 		}
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Entity handler factory
+// ---------------------------------------------------------------------------
+
+/** Declares a datetime field that should be auto-converted to epoch seconds. */
+interface EpochField {
+	/** The field key (must match a key in the field config) */
+	key: string;
+	/**
+	 * When the field value is empty/falsy:
+	 *   true  → default to `Math.floor(Date.now() / 1000)`
+	 *   false → default to `null`
+	 */
+	defaultToNow?: boolean;
+}
+
+/** Everything that varies between core-entity handlers. */
+export interface EntityHandlerConfig {
+	/** Key into `entityFieldConfigs` AND the EntityType union (e.g. 'timeline_event') */
+	entityKey: EntityType;
+	/** API path segment after /api/{create|update}/ (e.g. 'core/timeline_event') */
+	apiPath: string;
+	/**
+	 * If set, `addIncidentContext` is called during `prepareData`
+	 * using this value as the analyst-column name
+	 * (e.g. 'discovered_by', 'noted_by', 'actioned_by', 'entered_by').
+	 */
+	analystKey?: string;
+	/**
+	 * Maps a field key to the store that supplies its dropdown options.
+	 * Each store item is expected to have a `.name` property.
+	 * e.g. `{ event_type: eventTypes }`
+	 */
+	storeEnrichments?: Record<string, Readable<any[]>>;
+	/** Datetime fields that should be auto-converted to epoch seconds. */
+	epochFields?: EpochField[];
+	/** Optional custom validation (runs after generic required-field checks). */
+	validate?: (formData: any) => Record<string, string> | null;
+}
+
+/**
+ * Factory that builds an `EntityModalHandler` from a small config object.
+ *
+ * Centralises the four things every core-entity handler does:
+ *   1. Enrich select fields with store data
+ *   2. Attach incident + analyst context
+ *   3. Convert datetime strings → epoch seconds
+ *   4. POST to the correct API endpoint
+ */
+export function createEntityHandler(config: EntityHandlerConfig): EntityModalHandler {
+	const { entityKey, apiPath, analystKey, storeEnrichments, epochFields, validate } = config;
+
+	return {
+		fields: entityFieldConfigs[entityKey],
+
+		getEnrichedFields: () => {
+			if (!storeEnrichments) return entityFieldConfigs[entityKey];
+
+			return entityFieldConfigs[entityKey].map((field: FieldConfig) => {
+				const store = storeEnrichments[field.key];
+				if (store) {
+					return {
+						...field,
+						options: get(store).map((item: any) => ({
+							value: item.name,
+							label: item.name
+						}))
+					};
+				}
+				return field;
+			});
+		},
+
+		prepareData: (formData, _mode) => {
+			let data = analystKey
+				? addIncidentContext(formData, analystKey)
+				: { ...formData };
+
+			if (epochFields) {
+				for (const ef of epochFields) {
+					data[ef.key] = data[ef.key]
+						? Math.floor(new Date(data[ef.key] as string).getTime() / 1000)
+						: ef.defaultToNow
+							? Math.floor(Date.now() / 1000)
+							: null;
+				}
+			}
+
+			return data;
+		},
+
+		submit: async (data, mode) => {
+			const endpoint = mode === 'create'
+				? `/api/create/${apiPath}`
+				: `/api/update/${apiPath}`;
+
+			const entity = await submitToApi(endpoint, data, mode as 'create' | 'edit');
+			return { entity };
+		},
+
+		...(validate ? { validate } : {})
 	};
 }

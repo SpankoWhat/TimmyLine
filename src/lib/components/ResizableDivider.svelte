@@ -24,7 +24,8 @@
         const containerRect = container.getBoundingClientRect();
         const mouseX = e.clientX - containerRect.left;
         const containerWidth = containerRect.width;
-        const newRatio = Math.max(0.2, Math.min(0.8, mouseX / containerWidth));
+        // Calculate ratio for right column (inverted from mouse position)
+        const newRatio = Math.max(0.2, Math.min(0.8, 1 - (mouseX / containerWidth)));
         columnRatio = newRatio;
         onchange?.(newRatio);
     }

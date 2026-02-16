@@ -3,7 +3,7 @@
  * Dynamic values are now handeled in the each modal handler's getEnrichedFields method.
  */
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'select' | 'multiselect' | 'checkbox';
+export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'select' | 'multiselect' | 'checkbox' | 'json';
 
 export type FieldConfig = {
 	key: string;
@@ -112,9 +112,10 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 		{
 			key: 'event_data',
 			label: 'Event Details',
-			type: 'textarea',
+			type: 'json',
 			required: true,
-			placeholder: 'Describe the event details',
+			placeholder: '{"key": "value"}',
+			helpText: 'Structured key-value data. Use builder mode or paste raw JSON.',
 		},
 		{
 			key: 'severity',
@@ -192,8 +193,9 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 		{
 			key: 'action_data',
 			label: 'Action Details',
-			type: 'textarea',
-			placeholder: 'Additional action details or context',
+			type: 'json',
+			placeholder: '{"key": "value"}',
+			helpText: 'Structured key-value data. Use builder mode or paste raw JSON.',
 		},
 		{
 			key: 'notes',

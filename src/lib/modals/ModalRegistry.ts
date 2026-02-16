@@ -74,28 +74,38 @@ export function getHandler(entityType: EntityType): EntityModalHandler {
 }
 
 /**
- * Validate form data using the handler's validation logic
- * Combines field-level validation with custom handler validation
+ * Validate form data using the handler's validation logic.
+ * Combines field-level required/validation checks with custom handler validation.
  * 
  * @param entityType - The type of entity
  * @param formData - The form data to validate
- * @param fields - The field configurations
  * @returns Object with field errors, or null if valid
  */
 export function validateFormData(
 	entityType: EntityType,
-	formData: any,
-	fields: any[]
+	formData: any
 ): Record<string, string> | null {
 	const handler = getHandler(entityType);
 	const errors: Record<string, string> = {};
 	
 	// Generic Field-level validation
-	fields.forEach(field => {
+	handler.fields.forEach(field => {
 		if (field.required && (!formData[field.key] || formData[field.key] === '')) {
 			errors[field.key] = `${field.label} is required`;
 		}
-		
+
+		// JSON field validation: must be a valid JSON object
+		if (field.type === 'json' && formData[field.key] && formData[field.key] !== '') {
+			try {
+				const parsed = JSON.parse(formData[field.key]);
+				if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+					errors[field.key] = `${field.label} must be a JSON object (not array or primitive)`;
+				}
+			} catch {
+				errors[field.key] = `${field.label} contains invalid JSON`;
+			}
+		}
+
 		if (field.validation && formData[field.key]) {
 			const error = field.validation(formData[field.key]);
 			if (error) {
@@ -162,17 +172,4 @@ export function createModalConfig(
 	};
 }
 
-/**
- * Quick shorthands
- */
-export function createModal(entityType: EntityType) {
-	return createModalConfig(entityType, 'create');
-}
 
-export function editModal(entityType: EntityType, existingData: any) {
-	return createModalConfig(entityType, 'edit', existingData);
-}
-
-export function viewModal(entityType: EntityType, existingData: any) {
-	return createModalConfig(entityType, 'view', existingData);
-}

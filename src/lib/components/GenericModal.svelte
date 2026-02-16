@@ -2,6 +2,8 @@
 	import { modalStore, getHandler, validateFormData, submitFormData } from '$lib/modals/ModalRegistry';
 	import type { FieldConfig } from '$lib/config/modalFields';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import JsonKeyValueEditor from './JsonKeyValueEditor.svelte';
+	import { knownJsonKeys } from '$lib/stores/cacheStore';
 	
 	let formData = $state<Record<string, any>>({});
 	let errors = $state<Record<string, string>>({});
@@ -58,13 +60,9 @@
 		const currentModal = $modalStore;
 		if (!currentModal) return;
 		
-		// Validate using ModalRegistry by passing data and fields
-		// to the validate function of the respective modal handler
-		const handler = getHandler(currentModal.entityType);
 		const validationErrors = validateFormData(
 			currentModal.entityType,
-			formData,
-			handler.fields
+			formData
 		);
 		
 		if (validationErrors) {
@@ -168,7 +166,14 @@
 									placeholder={field.placeholder}
 									rows="4"
 									required={field.required}></textarea>
-									
+						{:else if field.type === 'json'}
+							{@const jsonType = currentModal?.entityType === 'timeline_event' ? 'event' : 'action'}
+							<JsonKeyValueEditor
+								value={formData[field.key] ?? ''}
+								knownKeys={$knownJsonKeys[jsonType]}
+								placeholder={field.placeholder}
+								onchange={(v) => { formData[field.key] = v; }}
+							/>									
 							{:else if field.type === 'select'}
 								<select
 									class="field-select"
@@ -333,7 +338,6 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		position: relative;
-		top: 8px;
 		left: 4px;
 	}
 

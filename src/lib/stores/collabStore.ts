@@ -123,10 +123,10 @@ function initializeSocketInternal(analyst: { uuid: string; full_name: string | n
         analystName: (analyst.full_name || analyst.username || 'Unknown') as string,
         focusedRow: null,
         editingRow: null,
-        socketIds: new Set() // Empty on client side, managed by server
+        socketIds: [] // Empty on client side, managed by server
     };
 
-    console.log(`Socket initialized for analyst: ${localUserInfo.analystName} (${analyst.uuid})`);
+    console.log(`Socket initialized for analyst: ${localUserInfo?.analystName} (${analyst.uuid})`);
     return true;
 }
 

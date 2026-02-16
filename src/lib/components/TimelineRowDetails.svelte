@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import ResizableDivider from './ResizableDivider.svelte';
+    import JsonViewer from './JsonViewer.svelte';
 
     let {
         item,
@@ -15,6 +16,9 @@
         onEdit: (item: TimelineItem) => void;
         onDelete: (uuid: string) => void;
     } = $props();
+
+    /** Keys that contain JSON data and should be rendered with the JSON viewer */
+    const jsonFieldKeys = new Set(['event_data', 'action_data']);
 
     // Extract related entities and events from enriched data
     let relatedEntities = $derived(
@@ -43,10 +47,20 @@
             <div class="details-grid">
                 {#each Object.entries(item.data) as [key, value] (key)}
                     {#if value && typeof value !== 'object'}
-                        <div class="detail-item">
-                            <span class="detail-label">│ {key.replace(/_/g, ' ')}:</span>
-                            <span class="detail-value">{value}</span>
-                        </div>
+                        {#if jsonFieldKeys.has(key)}
+                            <div class="detail-item">
+                                <span class="detail-label">│ {key.replace(/_/g, ' ')}:</span>
+                                <span class="detail-value"></span>
+                            </div>
+                            <div class="json-viewer-slot">
+                                <JsonViewer data={String(value)} />
+                            </div>
+                        {:else}
+                            <div class="detail-item">
+                                <span class="detail-label">│ {key.replace(/_/g, ' ')}:</span>
+                                <span class="detail-value">{value}</span>
+                            </div>
+                        {/if}
                     {/if}
                 {/each}
             </div>
@@ -171,6 +185,11 @@
 
     .detail-value {
         color: var(--color-text-primary);
+    }
+
+    /* JSON Viewer Slot */
+    .json-viewer-slot {
+        margin-left: var(--spacing-sm);
     }
 
     /* Relationship Tree (Right Column) */

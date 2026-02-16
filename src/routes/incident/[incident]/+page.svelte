@@ -16,13 +16,16 @@
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
-	import { discoverDynamicFields, mergeFieldConfigs } from '$lib/utils/dynamicFields';
-	
+	import type { DisplayField } from '$lib/config/displayFieldsConfig';
+
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
 
-	// Track selected fields and their pinned state for each type (event/action) independently
-	let fieldStates = $state({
+	// Simplified field states — updated by FieldSelectorPanel via callbacks
+	let fieldStates = $state<{
+		event: DisplayField[];
+		action: DisplayField[];
+	}>({
 		event: displayFieldsConfig.event.map(f => ({ ...f })),
 		action: displayFieldsConfig.action.map(f => ({ ...f }))
 	});
@@ -30,194 +33,23 @@
 	let showFieldSelector = $state(false);
 	let showEntitiesPanel = $state(false);
 
-	// Drag and drop state
-	let draggedField: { type: 'event' | 'action'; key: string } | null = $state(null);
-	let dragOverField: { type: 'event' | 'action'; key: string } | null = $state(null);
+	// References to panel components for reset
+	let eventPanelRef: FieldSelectorPanel | undefined = $state();
+	let actionPanelRef: FieldSelectorPanel | undefined = $state();
 
-	// Discover dynamic fields from timeline data
-	const discoveredDynamicFields = $derived({
-		event: discoverDynamicFields(
-			$combinedTimeline.map(item => ({ type: item.type, data: item.data as Record<string, unknown> })),
-			displayFieldsConfig,
-			'event'
-		),
-		action: discoverDynamicFields(
-			$combinedTimeline.map(item => ({ type: item.type, data: item.data as Record<string, unknown> })),
-			displayFieldsConfig,
-			'action'
-		)
-	});
-
-	// Merge static fields with discovered dynamic fields, preserving user state
-	$effect(() => {
-		// Get existing dynamic field states to preserve user preferences
-		const existingEventDynamic = fieldStates.event.filter(f => f.isDynamic);
-		const existingActionDynamic = fieldStates.action.filter(f => f.isDynamic);
-
-		// Merge static config with newly discovered dynamic fields
-		const mergedEventFields = mergeFieldConfigs(
-			displayFieldsConfig.event,
-			discoveredDynamicFields.event,
-			existingEventDynamic
-		);
-		const mergedActionFields = mergeFieldConfigs(
-			displayFieldsConfig.action,
-			discoveredDynamicFields.action,
-			existingActionDynamic
-		);
-
-		// Only update if new dynamic fields were discovered
-		const currentEventKeys = new Set(fieldStates.event.map(f => f.key));
-		const currentActionKeys = new Set(fieldStates.action.map(f => f.key));
-		const newEventKeys = mergedEventFields.filter(f => !currentEventKeys.has(f.key));
-		const newActionKeys = mergedActionFields.filter(f => !currentActionKeys.has(f.key));
-
-		if (newEventKeys.length > 0) {
-			fieldStates.event = [...fieldStates.event, ...newEventKeys];
-		}
-		if (newActionKeys.length > 0) {
-			fieldStates.action = [...fieldStates.action, ...newActionKeys];
-		}
-	});
-
-	// Compute filtered field configs based on selected fields, sorted by order
+	// Compute filtered field configs based on field states (for passing to TimelineRow)
 	const filteredDisplayFieldsConfig = $derived({
 		event: [...fieldStates.event].sort((a, b) => a.order - b.order),
 		action: [...fieldStates.action].sort((a, b) => a.order - b.order)
 	});
 
-	// Get pinned fields sorted by order for display in dropdown (excluding dynamic fields - shown separately)
-	const sortedPinnedFields = $derived({
-		event: fieldStates.event
-			.filter(f => f.pinned && !f.hideFromUser && !f.isDynamic)
-			.sort((a, b) => a.order - b.order),
-		action: fieldStates.action
-			.filter(f => f.pinned && !f.hideFromUser && !f.isDynamic)
-			.sort((a, b) => a.order - b.order)
-	});
-
-	// Get unpinned static fields for display in dropdown
-	const unpinnedFields = $derived({
-		event: fieldStates.event.filter(f => !f.pinned && !f.hideFromUser && !f.isDynamic),
-		action: fieldStates.action.filter(f => !f.pinned && !f.hideFromUser && !f.isDynamic)
-	});
-
-	// Get parent fields that have dynamic rendering enabled
-	const dynamicParentFields = $derived({
-		event: fieldStates.event.filter(f => f.allowDynamicFieldRendering),
-		action: fieldStates.action.filter(f => f.allowDynamicFieldRendering)
-	});
-
-	// Get pinned dynamic fields
-	const pinnedDynamicFields = $derived({
-		event: fieldStates.event.filter(f => f.isDynamic && f.pinned).sort((a, b) => a.order - b.order),
-		action: fieldStates.action.filter(f => f.isDynamic && f.pinned).sort((a, b) => a.order - b.order)
-	});
-
-	// Get unpinned dynamic fields grouped by parent
-	const unpinnedDynamicFieldsByParent = $derived({
-		event: new Map(
-			dynamicParentFields.event.map(parent => [
-				parent.key,
-				fieldStates.event.filter(f => f.isDynamic && f.parentKey === parent.key && !f.pinned)
-			])
-		),
-		action: new Map(
-			dynamicParentFields.action.map(parent => [
-				parent.key,
-				fieldStates.action.filter(f => f.isDynamic && f.parentKey === parent.key && !f.pinned)
-			])
-		)
-	});
-
-	function toggleFieldPinned(type: 'event' | 'action', fieldKey: string) {
-		const field = fieldStates[type].find(f => f.key === fieldKey);
-		if (field) {
-			if (field.pinned) {
-				// Unpinning: set order to high value
-				const maxOrder = Math.max(...fieldStates[type].map(f => f.order));
-				field.order = maxOrder + 1;
-				field.pinned = false;
-			} else {
-				// Pinning: append to end of pinned fields
-				const pinnedFields = fieldStates[type].filter(f => f.pinned);
-				const maxPinnedOrder = pinnedFields.length > 0 
-					? Math.max(...pinnedFields.map(f => f.order)) 
-					: 0;
-				field.order = maxPinnedOrder + 1;
-				field.pinned = true;
-			}
-		}
+	function handleFieldStatesChange(type: 'event' | 'action', fields: DisplayField[]) {
+		fieldStates[type] = fields;
 	}
 
 	function resetFieldSelection() {
-		// Reset to defaults, keeping discovered dynamic fields but unpinning them
-		const eventDynamic = fieldStates.event.filter(f => f.isDynamic).map(f => ({ ...f, pinned: false }));
-		const actionDynamic = fieldStates.action.filter(f => f.isDynamic).map(f => ({ ...f, pinned: false }));
-		
-		fieldStates = {
-			event: [...displayFieldsConfig.event.map(f => ({ ...f })), ...eventDynamic],
-			action: [...displayFieldsConfig.action.map(f => ({ ...f })), ...actionDynamic]
-		};
-	}
-
-	// Drag and drop handlers
-	function handleDragStart(type: 'event' | 'action', fieldKey: string) {
-		draggedField = { type, key: fieldKey };
-	}
-
-	function handleDragOver(e: DragEvent, type: 'event' | 'action', fieldKey: string) {
-		e.preventDefault();
-		if (draggedField && draggedField.type === type && draggedField.key !== fieldKey) {
-			dragOverField = { type, key: fieldKey };
-		}
-	}
-
-	function handleDragLeave() {
-		dragOverField = null;
-	}
-
-	function handleDrop(type: 'event' | 'action', targetFieldKey: string) {
-		if (!draggedField || draggedField.type !== type) {
-			draggedField = null;
-			dragOverField = null;
-			return;
-		}
-
-		const draggedFieldObj = fieldStates[type].find(f => f.key === draggedField!.key);
-		const targetFieldObj = fieldStates[type].find(f => f.key === targetFieldKey);
-
-		if (draggedFieldObj && targetFieldObj && draggedFieldObj.pinned && targetFieldObj.pinned) {
-			// Swap orders between dragged and target
-			const pinnedFields = fieldStates[type]
-				.filter(f => f.pinned && !f.hideFromUser)
-				.sort((a, b) => a.order - b.order);
-			
-			const draggedIndex = pinnedFields.findIndex(f => f.key === draggedField!.key);
-			const targetIndex = pinnedFields.findIndex(f => f.key === targetFieldKey);
-
-			if (draggedIndex !== -1 && targetIndex !== -1) {
-				// Reorder: move dragged to target position
-				const [removed] = pinnedFields.splice(draggedIndex, 1);
-				pinnedFields.splice(targetIndex, 0, removed);
-
-				// Reassign orders based on new positions
-				pinnedFields.forEach((field, index) => {
-					const stateField = fieldStates[type].find(f => f.key === field.key);
-					if (stateField) {
-						stateField.order = index + 1;
-					}
-				});
-			}
-		}
-
-		draggedField = null;
-		dragOverField = null;
-	}
-
-	function handleDragEnd() {
-		draggedField = null;
-		dragOverField = null;
+		eventPanelRef?.resetFieldSelection();
+		actionPanelRef?.resetFieldSelection();
 	}
 	
 	onMount(() => {
@@ -298,38 +130,22 @@
 							<div class="field-selector-panels">
 								<!-- Events Fields -->
 								<FieldSelectorPanel
+									bind:this={eventPanelRef}
 									title="Event Fields"
 									type="event"
-									sortedPinnedFields={sortedPinnedFields.event}
-									unpinnedFields={unpinnedFields.event}
-									dynamicParentFields={dynamicParentFields.event}
-									pinnedDynamicFields={pinnedDynamicFields.event}
-									unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.event}
-									onTogglePin={toggleFieldPinned}
-									onDragStart={handleDragStart}
-									onDragOver={handleDragOver}
-									onDragLeave={handleDragLeave}
-									onDrop={handleDrop}
-									onDragEnd={handleDragEnd}
-									{dragOverField}
+									timelineItems={$combinedTimeline}
+									staticFieldConfig={displayFieldsConfig.event}
+									onfieldstateschange={(fields) => handleFieldStatesChange('event', fields)}
 								/>
 
 								<!-- Actions Fields -->
 								<FieldSelectorPanel
+									bind:this={actionPanelRef}
 									title="Action Fields"
 									type="action"
-									sortedPinnedFields={sortedPinnedFields.action}
-									unpinnedFields={unpinnedFields.action}
-									dynamicParentFields={dynamicParentFields.action}
-									pinnedDynamicFields={pinnedDynamicFields.action}
-									unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.action}
-									onTogglePin={toggleFieldPinned}
-									onDragStart={handleDragStart}
-									onDragOver={handleDragOver}
-									onDragLeave={handleDragLeave}
-									onDrop={handleDrop}
-									onDragEnd={handleDragEnd}
-									{dragOverField}
+									timelineItems={$combinedTimeline}
+									staticFieldConfig={displayFieldsConfig.action}
+									onfieldstateschange={(fields) => handleFieldStatesChange('action', fields)}
 								/>
 							</div>
 
