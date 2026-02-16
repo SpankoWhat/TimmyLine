@@ -3,10 +3,14 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { getSocketIO } from '$lib/server/socket';
 import * as schema from '$lib/server/database';
+import { requireWriteAccess } from '$lib/server/auth/authorization';
 
 // Should be using the type lookup tables: event_type, action_type, relation_type, annotation_type, entity_type instead of this
 // But for now this works...
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async (event) => {
+	await requireWriteAccess(event);
+	const { request } = event;
+
 	const { table, name, description } = await request.json();
 	
 	if (!table || !name || !description) {

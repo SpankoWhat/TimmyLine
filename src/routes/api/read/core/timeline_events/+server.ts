@@ -3,8 +3,12 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { timeline_events } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
+import { requireReadAccess } from '$lib/server/auth/authorization';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async (event) => {
+	await requireReadAccess(event);
+	const { url } = event;
+
 	const conditions: SQL[] = [];
 
 	// Get all query parameters and build WHERE conditions

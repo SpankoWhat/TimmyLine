@@ -3,8 +3,12 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq } from 'drizzle-orm';
+import { requireWriteAccess } from '$lib/server/auth/authorization';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async (event) => {
+	await requireWriteAccess(event);
+	const { request } = event;
+
 	const { table, name } = await request.json();
 
 	if (!table || !name) {

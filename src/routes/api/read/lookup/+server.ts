@@ -2,8 +2,12 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
+import { requireReadAccess } from '$lib/server/auth/authorization';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async (event) => {
+	await requireReadAccess(event);
+	const { url } = event;
+
 	const userTableInput = url.searchParams.get('table');
 
 	if (!userTableInput) {

@@ -4,8 +4,12 @@ import { db } from '$lib/server';
 import { incidents } from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
+import { requireAdminAccess } from '$lib/server/auth/authorization';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async (event) => {
+	await requireAdminAccess(event);
+	const { request } = event;
+
 	const body = await request.json();
 
 	if (!body.uuid) {

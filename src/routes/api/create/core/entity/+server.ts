@@ -4,8 +4,12 @@ import { error, json } from '@sveltejs/kit';
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
+import { requireWriteAccess } from '$lib/server/auth/authorization';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async (event) => {
+	await requireWriteAccess(event);
+	const { request } = event;
+
 	let body;
 	try {
 		body = await request.json();

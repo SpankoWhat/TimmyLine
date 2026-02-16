@@ -4,8 +4,12 @@ import { db } from '$lib/server';
 import { investigation_actions } from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
+import { requireWriteAccess } from '$lib/server/auth/authorization';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async (event) => {
+	await requireWriteAccess(event);
+	const { request } = event;
+
 	const body = await request.json();
 
 	if (!body.uuid) {

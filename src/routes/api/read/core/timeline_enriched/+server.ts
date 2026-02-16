@@ -1,12 +1,16 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { db } from '$lib/server';
+import { requireReadAccess } from '$lib/server/auth/authorization';
 
 /**
  * Enriched timeline endpoint
  * Fetches events and actions with their relationships pre-joined
  * Returns events with linked entities, and actions with linked events and entities
  */
-export async function GET({ url }: RequestEvent) {
+export async function GET(event: RequestEvent) {
+	await requireReadAccess(event);
+	const { url } = event;
+
 	const incident_id = url.searchParams.get('incident_id');
 	const include_deleted = url.searchParams.get('include_deleted');
 
