@@ -14,6 +14,7 @@
 	import IncidentPageActions from '$lib/components/IncidentPageActions.svelte';
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
+	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 	import { discoverDynamicFields, mergeFieldConfigs } from '$lib/utils/dynamicFields';
 	
@@ -295,220 +296,40 @@
 					{#if showFieldSelector}
 						<div class="field-selector-dropdown" onclick={(e) => e.stopPropagation()}>
 							<!-- Events Fields -->
-							<div class="field-section">
-								<div class="field-section-title">Event Fields</div>
-								
-								<!-- Pinned fields (draggable) -->
-								{#if sortedPinnedFields.event.length > 0}
-									<div class="field-subsection-title">Pinned (drag to reorder)</div>
-									<div class="field-list pinned-list">
-										{#each sortedPinnedFields.event as field (field.key)}
-											<div 
-												class="field-row draggable"
-												class:drag-over={dragOverField?.type === 'event' && dragOverField?.key === field.key}
-												draggable="true"
-												ondragstart={() => handleDragStart('event', field.key)}
-												ondragover={(e) => handleDragOver(e, 'event', field.key)}
-												ondragleave={handleDragLeave}
-												ondrop={() => handleDrop('event', field.key)}
-												ondragend={handleDragEnd}
-											>
-												<span class="drag-handle">⋮⋮</span>
-												<label class="field-checkbox-label">
-													<input 
-														type="checkbox" 
-														checked={field.pinned}
-														onchange={() => toggleFieldPinned('event', field.key)}
-													/>
-													<span>{field.label}</span>
-												</label>
-											</div>
-										{/each}
-									</div>
-								{/if}
-								
-								<!-- Unpinned fields -->
-								{#if unpinnedFields.event.length > 0}
-									<div class="field-subsection-title">Available</div>
-									<div class="field-list">
-										{#each unpinnedFields.event as field (field.key)}
-											<div class="field-row">
-												<label class="field-checkbox-label">
-													<input 
-														type="checkbox" 
-														checked={field.pinned}
-														onchange={() => toggleFieldPinned('event', field.key)}
-													/>
-													<span>{field.label}</span>
-												</label>
-											</div>
-										{/each}
-									</div>
-								{/if}
-
-								<!-- Dynamic Fields (from JSON) -->
-								{#each dynamicParentFields.event as parentField (parentField.key)}
-									{@const dynamicFields = unpinnedDynamicFieldsByParent.event.get(parentField.key) || []}
-									{#if dynamicFields.length > 0 || pinnedDynamicFields.event.filter(f => f.parentKey === parentField.key).length > 0}
-										<div class="field-subsection-title dynamic-section">
-											<span class="dynamic-icon">◈</span> {parentField.label} Fields
-										</div>
-										<!-- Pinned dynamic fields for this parent -->
-										{@const pinnedForParent = pinnedDynamicFields.event.filter(f => f.parentKey === parentField.key)}
-										{#if pinnedForParent.length > 0}
-											<div class="field-list pinned-list dynamic-list">
-												{#each pinnedForParent as field (field.key)}
-													<div 
-														class="field-row draggable dynamic-field"
-														class:drag-over={dragOverField?.type === 'event' && dragOverField?.key === field.key}
-														draggable="true"
-														ondragstart={() => handleDragStart('event', field.key)}
-														ondragover={(e) => handleDragOver(e, 'event', field.key)}
-														ondragleave={handleDragLeave}
-														ondrop={() => handleDrop('event', field.key)}
-														ondragend={handleDragEnd}
-													>
-														<span class="drag-handle">⋮⋮</span>
-														<label class="field-checkbox-label">
-															<input 
-																type="checkbox" 
-																checked={field.pinned}
-																onchange={() => toggleFieldPinned('event', field.key)}
-															/>
-															<span>{field.label}</span>
-														</label>
-													</div>
-												{/each}
-											</div>
-										{/if}
-										<!-- Unpinned dynamic fields for this parent -->
-										{#if dynamicFields.length > 0}
-											<div class="field-list dynamic-list">
-												{#each dynamicFields as field (field.key)}
-													<div class="field-row dynamic-field">
-														<label class="field-checkbox-label">
-															<input 
-																type="checkbox" 
-																checked={field.pinned}
-																onchange={() => toggleFieldPinned('event', field.key)}
-															/>
-															<span>{field.label}</span>
-														</label>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									{/if}
-								{/each}
-							</div>
+							<FieldSelectorPanel
+								title="Event Fields"
+								type="event"
+								sortedPinnedFields={sortedPinnedFields.event}
+								unpinnedFields={unpinnedFields.event}
+								dynamicParentFields={dynamicParentFields.event}
+								pinnedDynamicFields={pinnedDynamicFields.event}
+								unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.event}
+								onTogglePin={toggleFieldPinned}
+								onDragStart={handleDragStart}
+								onDragOver={handleDragOver}
+								onDragLeave={handleDragLeave}
+								onDrop={handleDrop}
+								onDragEnd={handleDragEnd}
+								{dragOverField}
+							/>
 
 							<!-- Actions Fields -->
-							<div class="field-section">
-								<div class="field-section-title">Action Fields</div>
-								
-								<!-- Pinned fields (draggable) -->
-								{#if sortedPinnedFields.action.length > 0}
-									<div class="field-subsection-title">Pinned (drag to reorder)</div>
-									<div class="field-list pinned-list">
-										{#each sortedPinnedFields.action as field (field.key)}
-											<div 
-												class="field-row draggable"
-												class:drag-over={dragOverField?.type === 'action' && dragOverField?.key === field.key}
-												draggable="true"
-												ondragstart={() => handleDragStart('action', field.key)}
-												ondragover={(e) => handleDragOver(e, 'action', field.key)}
-												ondragleave={handleDragLeave}
-												ondrop={() => handleDrop('action', field.key)}
-												ondragend={handleDragEnd}
-											>
-												<span class="drag-handle">⋮⋮</span>
-												<label class="field-checkbox-label">
-													<input 
-														type="checkbox" 
-														checked={field.pinned}
-														onchange={() => toggleFieldPinned('action', field.key)}
-													/>
-													<span>{field.label}</span>
-												</label>
-											</div>
-										{/each}
-									</div>
-								{/if}
-								
-								<!-- Unpinned fields -->
-								{#if unpinnedFields.action.length > 0}
-									<div class="field-subsection-title">Available</div>
-									<div class="field-list">
-										{#each unpinnedFields.action as field (field.key)}
-											<div class="field-row">
-												<label class="field-checkbox-label">
-													<input 
-														type="checkbox" 
-														checked={field.pinned}
-														onchange={() => toggleFieldPinned('action', field.key)}
-													/>
-													<span>{field.label}</span>
-												</label>
-											</div>
-										{/each}
-									</div>
-								{/if}
-
-								<!-- Dynamic Fields (from JSON) -->
-								{#each dynamicParentFields.action as parentField (parentField.key)}
-									{@const dynamicFields = unpinnedDynamicFieldsByParent.action.get(parentField.key) || []}
-									{#if dynamicFields.length > 0 || pinnedDynamicFields.action.filter(f => f.parentKey === parentField.key).length > 0}
-										<div class="field-subsection-title dynamic-section">
-											<span class="dynamic-icon">◈</span> {parentField.label} Fields
-										</div>
-										<!-- Pinned dynamic fields for this parent -->
-										{@const pinnedForParent = pinnedDynamicFields.action.filter(f => f.parentKey === parentField.key)}
-										{#if pinnedForParent.length > 0}
-											<div class="field-list pinned-list dynamic-list">
-												{#each pinnedForParent as field (field.key)}
-													<div 
-														class="field-row draggable dynamic-field"
-														class:drag-over={dragOverField?.type === 'action' && dragOverField?.key === field.key}
-														draggable="true"
-														ondragstart={() => handleDragStart('action', field.key)}
-														ondragover={(e) => handleDragOver(e, 'action', field.key)}
-														ondragleave={handleDragLeave}
-														ondrop={() => handleDrop('action', field.key)}
-														ondragend={handleDragEnd}
-													>
-														<span class="drag-handle">⋮⋮</span>
-														<label class="field-checkbox-label">
-															<input 
-																type="checkbox" 
-																checked={field.pinned}
-																onchange={() => toggleFieldPinned('action', field.key)}
-															/>
-															<span>{field.label}</span>
-														</label>
-													</div>
-												{/each}
-											</div>
-										{/if}
-										<!-- Unpinned dynamic fields for this parent -->
-										{#if dynamicFields.length > 0}
-											<div class="field-list dynamic-list">
-												{#each dynamicFields as field (field.key)}
-													<div class="field-row dynamic-field">
-														<label class="field-checkbox-label">
-															<input 
-																type="checkbox" 
-																checked={field.pinned}
-																onchange={() => toggleFieldPinned('action', field.key)}
-															/>
-															<span>{field.label}</span>
-														</label>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									{/if}
-								{/each}
-							</div>
+							<FieldSelectorPanel
+								title="Action Fields"
+								type="action"
+								sortedPinnedFields={sortedPinnedFields.action}
+								unpinnedFields={unpinnedFields.action}
+								dynamicParentFields={dynamicParentFields.action}
+								pinnedDynamicFields={pinnedDynamicFields.action}
+								unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.action}
+								onTogglePin={toggleFieldPinned}
+								onDragStart={handleDragStart}
+								onDragOver={handleDragOver}
+								onDragLeave={handleDragLeave}
+								onDrop={handleDrop}
+								onDragEnd={handleDragEnd}
+								{dragOverField}
+							/>
 
 							<button class="reset-btn" onclick={resetFieldSelection}>Reset to Default</button>
 						</div>
@@ -672,136 +493,6 @@
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
-	.field-section {
-		margin-bottom: var(--spacing-sm);
-	}
-
-	.field-section:last-of-type {
-		margin-bottom: var(--spacing-md);
-	}
-
-	.field-section-title {
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-semibold);
-		color: var(--color-accent-primary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--spacing-xs);
-		padding-bottom: var(--spacing-xs);
-		border-bottom: 1px solid var(--color-border-subtle);
-	}
-
-	.field-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xs);
-	}
-
-	.field-list.pinned-list {
-		background: var(--color-bg-tertiary);
-		border-radius: var(--border-radius-sm);
-		padding: var(--spacing-xs);
-	}
-
-	.field-subsection-title {
-		font-size: 9px;
-		color: var(--color-text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-top: var(--spacing-xs);
-		margin-bottom: calc(var(--spacing-xs) / 2);
-	}
-
-	.field-row {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-		justify-content: flex-start;
-	}
-
-	.field-row.draggable {
-		cursor: grab;
-		border: 1px solid transparent;
-		border-radius: var(--border-radius-sm);
-		padding: 2px;
-		margin: -2px;
-		transition: all 0.15s ease;
-	}
-
-	.field-row.draggable:hover {
-		background: var(--color-bg-hover);
-		border-color: var(--color-border-medium);
-	}
-
-	.field-row.draggable:active {
-		cursor: grabbing;
-	}
-
-	.field-row.drag-over {
-		border-color: var(--color-accent-primary);
-		background: rgba(0, 255, 0, 0.1);
-	}
-
-	.drag-handle {
-		color: var(--color-text-tertiary);
-		font-size: 10px;
-		user-select: none;
-		cursor: grab;
-		padding: 0 2px;
-	}
-
-	.field-row.draggable:hover .drag-handle {
-		color: var(--color-accent-primary);
-	}
-
-	.field-checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-		cursor: pointer;
-		font-size: var(--font-size-xs);
-		color: var(--color-text-primary);
-		user-select: none;
-		transition: background 0.2s;
-		padding: var(--spacing-xs) calc(var(--spacing-xs) / 2);
-		border-radius: var(--border-radius-sm);
-		flex: 1;
-	}
-
-	.field-checkbox-label:hover {
-		background: var(--color-bg-hover);
-	}
-
-	.field-checkbox-label input[type="checkbox"] {
-		cursor: pointer;
-		accent-color: var(--color-accent-primary);
-	}
-
-	.pin-toggle-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		font-size: var(--font-size-sm);
-		padding: 0;
-		color: var(--color-text-secondary);
-		transition: all 0.2s;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 20px;
-		height: 20px;
-		border-radius: var(--border-radius-sm);
-	}
-
-	.pin-toggle-btn:hover {
-		background: var(--color-bg-hover);
-		color: var(--color-accent-primary);
-	}
-
-	.pin-toggle-btn.pinned {
-		color: var(--color-accent-primary);
-	}
-
 	.reset-btn {
 		width: 100%;
 		background: var(--color-bg-tertiary);
@@ -820,36 +511,6 @@
 		border-color: var(--color-accent-primary);
 		color: var(--color-accent-primary);
 		background: rgba(0, 255, 0, 0.05);
-	}
-
-	/* Dynamic field styles */
-	.dynamic-section {
-		color: var(--color-accent-warning);
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.dynamic-icon {
-		font-size: 8px;
-	}
-
-	.dynamic-list {
-		border-left: 2px solid var(--color-accent-warning);
-		margin-left: var(--spacing-xs);
-		padding-left: var(--spacing-xs);
-	}
-
-	.dynamic-field .field-checkbox-label {
-		color: var(--color-text-secondary);
-	}
-
-	.dynamic-field .field-checkbox-label:hover {
-		color: var(--color-text-primary);
-	}
-
-	.dynamic-field input[type="checkbox"] {
-		accent-color: var(--color-accent-warning);
 	}
 
 	.section-content {
