@@ -60,10 +60,11 @@ const loggingHandle: Handle = async ({ event, resolve }) => {
         const duration = Date.now() - startTime;
 
         if (response.status >= 400) {
+            const cloned = response.clone();
             log.warn('API request completed with error status', {
                 status: response.status,
                 duration: `${duration}ms`,
-                returnMessage: await response.text()
+                returnMessage: await cloned.text()
             });
             return response;
         }
