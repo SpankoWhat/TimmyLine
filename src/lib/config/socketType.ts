@@ -3,7 +3,7 @@ export interface UserIncidentState {
     analystName: string;
     focusedRow: string | null;  // Row user is viewing/has expanded
     editingRow: string | null;  // Row user is actively editing
-    socketIds: Set<SocketId>;   // All socket connections for this analyst
+    socketIds: SocketId[];      // All socket connections for this analyst
 }
 
 export interface UserStatusUpdate {

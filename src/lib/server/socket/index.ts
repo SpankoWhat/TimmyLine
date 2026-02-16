@@ -255,9 +255,11 @@ function registerJoinRoomEvent(socket: Socket) {
 
                 userInfo = incidentUsers.get(analystUUID);
 
-                // If analyst already exists, add this socket to their socketIds set
+                // If analyst already exists, add this socket to their socketIds array
                 if (userInfo) {
-                    userInfo.socketIds.add(socket.id);
+                    if (!userInfo.socketIds.includes(socket.id)) {
+                        userInfo.socketIds.push(socket.id);
+                    }
                     logger.debug(`Added socket ${socket.id} to existing analyst ${analystUUID} in incident ${data.incidentUUID}`);
                 } else {
                     // Initialize user info
@@ -266,7 +268,7 @@ function registerJoinRoomEvent(socket: Socket) {
                         analystName: analystName,
                         focusedRow: null,
                         editingRow: null,
-                        socketIds: new Set([socket.id])
+                        socketIds: [socket.id]
                     };
 
                     // Add analyst to incident
@@ -317,12 +319,12 @@ function registerDisconnectEvent(socket: Socket) {
 
             wasInAnyIncident = true;
 
-            // Remove this socket from the analyst's socket set
-            userInfo.socketIds.delete(socket.id);
+            // Remove this socket from the analyst's socket array
+            userInfo.socketIds = userInfo.socketIds.filter(id => id !== socket.id);
             logger.debug(`Removed socket ${socket.id} from analyst ${analystUUID} in incident ${incidentUUID}`);
 
             // If analyst has no more sockets, remove them from the incident
-            if (userInfo.socketIds.size === 0) {
+            if (userInfo.socketIds.length === 0) {
                 incident.delete(analystUUID);
 
                 // Notify ALL clients that this analyst left
@@ -417,11 +419,11 @@ function registerLeaveRoomEvent(socket: Socket) {
             let userInfo = incident.get(analystUUID);
             if (!userInfo) throw new Error(`Analyst ${analystUUID} not found in incident ${data.incidentUUID}`);
 
-            // Remove this socket from the analyst's socket set
-            userInfo.socketIds.delete(socket.id);
+            // Remove this socket from the analyst's socket array
+            userInfo.socketIds = userInfo.socketIds.filter(id => id !== socket.id);
 
             // If analyst has no more sockets, remove them from the incident
-            if (userInfo.socketIds.size === 0) {
+            if (userInfo.socketIds.length === 0) {
                 incident.delete(analystUUID);
 
                 // Notify ALL clients that this analyst left
