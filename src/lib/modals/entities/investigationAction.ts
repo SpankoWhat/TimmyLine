@@ -33,8 +33,8 @@ export const investigationActionHandler: EntityModalHandler = {
 			...formData,
 			incident_id: incident?.uuid,
 			actioned_by: analyst?.uuid,
-			// Convert datetime field to epoch timestamp
-			performed_at: formData.performed_at ? new Date(formData.performed_at).getTime() : Date.now(),
+			// Convert datetime field to epoch timestamp (seconds)
+			performed_at: formData.performed_at ? Math.floor(new Date(formData.performed_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
 		};
 	},
 	

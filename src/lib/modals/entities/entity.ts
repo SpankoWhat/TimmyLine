@@ -33,9 +33,9 @@ export const entityHandler: EntityModalHandler = {
 			...formData,
 			incident_id: incident?.uuid,
 			entered_by: analyst?.uuid,
-			// Convert datetime fields to epoch timestamps
-			first_seen: formData.first_seen ? new Date(formData.first_seen).getTime() : null,
-			last_seen: formData.last_seen ? new Date(formData.last_seen).getTime() : null,
+			// Convert datetime fields to epoch timestamps (seconds)
+			first_seen: formData.first_seen ? Math.floor(new Date(formData.first_seen).getTime() / 1000) : null,
+			last_seen: formData.last_seen ? Math.floor(new Date(formData.last_seen).getTime() / 1000) : null,
 		};
 	},
 	

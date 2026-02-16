@@ -33,9 +33,9 @@ export const timelineEventHandler: EntityModalHandler = {
 			...formData,
 			incident_id: incident?.uuid,
 			discovered_by: analyst?.uuid,
-			// Convert datetime fields to epoch timestamps
-			occurred_at: formData.occurred_at ? new Date(formData.occurred_at).getTime() : null,
-			discovered_at: formData.discovered_at ? new Date(formData.discovered_at).getTime() : Date.now(),
+			// Convert datetime fields to epoch timestamps (seconds)
+			occurred_at: formData.occurred_at ? Math.floor(new Date(formData.occurred_at).getTime() / 1000) : null,
+			discovered_at: formData.discovered_at ? Math.floor(new Date(formData.discovered_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
 		};
 	},
 	
