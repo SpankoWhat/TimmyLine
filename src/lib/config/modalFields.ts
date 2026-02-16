@@ -17,6 +17,29 @@ export type FieldConfig = {
 	helpText?: string;
 };
 
+// Shared option arrays used across multiple field configs
+export const SEVERITY_OPTIONS: FieldConfig['options'] = [
+	{ value: 'critical', label: 'Critical' },
+	{ value: 'high', label: 'High' },
+	{ value: 'medium', label: 'Medium' },
+	{ value: 'low', label: 'Low' },
+	{ value: 'info', label: 'Info' },
+];
+
+export const CONFIDENCE_OPTIONS: FieldConfig['options'] = [
+	{ value: 'high', label: 'High' },
+	{ value: 'medium', label: 'Medium' },
+	{ value: 'low', label: 'Low' },
+	{ value: 'guess', label: 'Guess' },
+];
+
+export const PRIORITY_OPTIONS: FieldConfig['options'] = [
+	{ value: 'critical', label: 'Critical' },
+	{ value: 'high', label: 'High' },
+	{ value: 'medium', label: 'Medium' },
+	{ value: 'low', label: 'Low' },
+];
+
 export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 	// Core Tables
 	incident: [
@@ -40,12 +63,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			label: 'Priority',
 			type: 'select',
 			required: true,
-			options: [
-				{ value: 'critical', label: 'Critical' },
-				{ value: 'high', label: 'High' },
-				{ value: 'medium', label: 'Medium' },
-				{ value: 'low', label: 'Low' },
-			],
+			options: PRIORITY_OPTIONS,
 			defaultValue: 'medium',
 		},
 		{
@@ -102,24 +120,13 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			key: 'severity',
 			label: 'Severity',
 			type: 'select',
-			options: [
-				{ value: 'critical', label: 'Critical' },
-				{ value: 'high', label: 'High' },
-				{ value: 'medium', label: 'Medium' },
-				{ value: 'low', label: 'Low' },
-				{ value: 'info', label: 'Info' },
-			],
+			options: SEVERITY_OPTIONS,
 		},
 		{
 			key: 'confidence',
 			label: 'Confidence',
 			type: 'select',
-			options: [
-				{ value: 'high', label: 'High' },
-				{ value: 'medium', label: 'Medium' },
-				{ value: 'low', label: 'Low' },
-				{ value: 'guess', label: 'Guess' },
-			],
+			options: CONFIDENCE_OPTIONS,
 		},
 		{
 			key: 'source',
@@ -296,12 +303,7 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			key: 'confidence',
 			label: 'Confidence',
 			type: 'select',
-			options: [
-				{ value: 'high', label: 'High' },
-				{ value: 'medium', label: 'Medium' },
-				{ value: 'low', label: 'Low' },
-				{ value: 'guess', label: 'Guess' },
-			],
+			options: CONFIDENCE_OPTIONS,
 		},
 		{
 			key: 'is_hypothesis',

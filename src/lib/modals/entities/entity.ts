@@ -5,7 +5,8 @@
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import { get } from 'svelte/store';
-import { currentSelectedAnalyst, currentSelectedIncident, entityTypes } from '$lib/stores/cacheStore';
+import { entityTypes } from '$lib/stores/cacheStore';
+import { submitToApi, addIncidentContext } from '../helpers';
 
 export const entityHandler: EntityModalHandler = {
 	fields: entityFieldConfigs.entity,
@@ -26,13 +27,9 @@ export const entityHandler: EntityModalHandler = {
 	},
 	
 	prepareData: (formData, mode) => {
-		const incident = get(currentSelectedIncident);
-		const analyst = get(currentSelectedAnalyst);
-		
+		const enriched = addIncidentContext(formData, 'entered_by');
 		return {
-			...formData,
-			incident_id: incident?.uuid,
-			entered_by: analyst?.uuid,
+			...enriched,
 			// Convert datetime fields to epoch timestamps (seconds)
 			first_seen: formData.first_seen ? Math.floor(new Date(formData.first_seen).getTime() / 1000) : null,
 			last_seen: formData.last_seen ? Math.floor(new Date(formData.last_seen).getTime() / 1000) : null,
@@ -44,18 +41,7 @@ export const entityHandler: EntityModalHandler = {
 			? '/api/create/core/entity'
 			: '/api/update/core/entity';
 		
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(data)
-		});
-		
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || `Failed to ${mode} entity`);
-		}
-		
-		const entity = await response.json();
+		const entity = await submitToApi(endpoint, data, mode as 'create' | 'edit');
 		return { entity };
 	}
 };

@@ -4,6 +4,7 @@
 
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
+import { submitToApi } from '../helpers';
 
 export const analystHandler: EntityModalHandler = {
 	fields: entityFieldConfigs.analyst,
@@ -25,18 +26,7 @@ export const analystHandler: EntityModalHandler = {
 			? '/api/create/core/analyst'
 			: '/api/update/core/analyst';
 		
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(data)
-		});
-		
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || `Failed to ${mode} analyst`);
-		}
-		
-		const entity = await response.json();
+		const entity = await submitToApi(endpoint, data, mode as 'create' | 'edit');
 		return { entity };
 	}
 };

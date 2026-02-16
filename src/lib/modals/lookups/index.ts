@@ -5,6 +5,7 @@
 
 import type { EntityModalHandler, EntityType } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
+import { submitToApi } from '../helpers';
 
 function createLookupHandler(lookupType: EntityType): EntityModalHandler {
 	return {
@@ -28,16 +29,7 @@ function createLookupHandler(lookupType: EntityType): EntityModalHandler {
 				? '/api/create/lookup'
 				: `/api/update/lookup`;
 			
-			const response = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(data)
-			});
-			
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || `Failed to ${mode} ${lookupType}`);
-			}
+			await submitToApi(endpoint, data, mode as 'create' | 'edit');
 			
 			// For lookup tables, fetch the updated list
 			const lookupResponse = await fetch(`/api/read/lookup?table=${data.table}`);

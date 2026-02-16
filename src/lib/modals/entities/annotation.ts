@@ -5,7 +5,8 @@
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import { get } from 'svelte/store';
-import { currentSelectedAnalyst, currentSelectedIncident, annotationTypes } from '$lib/stores/cacheStore';
+import { annotationTypes } from '$lib/stores/cacheStore';
+import { submitToApi, addIncidentContext } from '../helpers';
 
 export const annotationHandler: EntityModalHandler = {
 	fields: entityFieldConfigs.annotation,
@@ -26,14 +27,7 @@ export const annotationHandler: EntityModalHandler = {
 	},
 	
 	prepareData: (formData, mode) => {
-		const incident = get(currentSelectedIncident);
-		const analyst = get(currentSelectedAnalyst);
-		
-		return {
-			...formData,
-			incident_id: incident?.uuid,
-			noted_by: analyst?.uuid,
-		};
+		return addIncidentContext(formData, 'noted_by');
 	},
 	
 	submit: async (data, mode) => {
@@ -41,18 +35,7 @@ export const annotationHandler: EntityModalHandler = {
 			? '/api/create/core/annotation'
 			: '/api/update/core/annotation';
 		
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(data)
-		});
-		
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || `Failed to ${mode} annotation`);
-		}
-		
-		const entity = await response.json();
+		const entity = await submitToApi(endpoint, data, mode as 'create' | 'edit');
 		return { entity };
 	}
 };

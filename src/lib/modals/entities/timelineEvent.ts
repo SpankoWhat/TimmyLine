@@ -5,7 +5,8 @@
 import type { EntityModalHandler } from '../types';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import { get } from 'svelte/store';
-import { currentSelectedAnalyst, currentSelectedIncident, eventTypes } from '$lib/stores/cacheStore';
+import { eventTypes } from '$lib/stores/cacheStore';
+import { submitToApi, addIncidentContext } from '../helpers';
 
 export const timelineEventHandler: EntityModalHandler = {
 	fields: entityFieldConfigs.timeline_event,
@@ -26,13 +27,9 @@ export const timelineEventHandler: EntityModalHandler = {
 	},
 	
 	prepareData: (formData, mode) => {
-		const incident = get(currentSelectedIncident);
-		const analyst = get(currentSelectedAnalyst);
-		
+		const enriched = addIncidentContext(formData, 'discovered_by');
 		return {
-			...formData,
-			incident_id: incident?.uuid,
-			discovered_by: analyst?.uuid,
+			...enriched,
 			// Convert datetime fields to epoch timestamps (seconds)
 			occurred_at: formData.occurred_at ? Math.floor(new Date(formData.occurred_at).getTime() / 1000) : null,
 			discovered_at: formData.discovered_at ? Math.floor(new Date(formData.discovered_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
@@ -44,18 +41,7 @@ export const timelineEventHandler: EntityModalHandler = {
 			? '/api/create/core/timeline_event'
 			: '/api/update/core/timeline_event';
 		
-		const response = await fetch(endpoint, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(data)
-		});
-		
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || `Failed to ${mode} timeline event`);
-		}
-		
-		const entity = await response.json();
+		const entity = await submitToApi(endpoint, data, mode as 'create' | 'edit');
 		return { entity };
 	},
 	
