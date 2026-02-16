@@ -1,4 +1,5 @@
 import { writable, derived, get, type Writable } from 'svelte/store';
+import { browser } from '$app/environment';
 import type {
 	Incident,
 	TimelineEvent,
@@ -175,8 +176,10 @@ export const investigationStats = derived(combinedTimeline, ($items) => ({
 /**
  * Handles calling cache update functions when showDeletedItems changes
  * Ensures that caches reflect the current preference for showing deleted items
+ * Only runs in browser to avoid SSR fetch issues
  */
 showDeletedItems.subscribe(async (includeDeleted) => {
+	if (!browser) return;
 	await updateLookupCache();
 	const incident = get(currentSelectedIncident);
 	if (incident) {
@@ -192,8 +195,10 @@ showDeletedItems.subscribe(async (includeDeleted) => {
  * Fetches and updates incident-specific data (timeline events, actions, annotations, entities)
  * Called automatically when currentSelectedIncident changes
  * Now uses enriched endpoint to get events/actions with their relationships
+ * Only runs in browser to avoid SSR fetch issues with relative URLs
  */
 export async function updateIncidentCache(incident: Incident): Promise<void> {
+	if (!browser) return;
 	try {
 		const includeDeleted = get(showDeletedItems);
 		const deletedParam = includeDeleted ? '&include_deleted=true' : '';
@@ -243,8 +248,10 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 /**
  * Fetches and updates all lookup tables and incidents list
  * Should be called on app initialization or when reference data changes
+ * Only runs in browser to avoid SSR fetch issues with relative URLs
  */
 export async function updateLookupCache(): Promise<void> {
+	if (!browser) return;
 	try {
 		const includeDeleted = get(showDeletedItems);
 		const deletedParam = includeDeleted ? '?include_deleted=true' : '';
