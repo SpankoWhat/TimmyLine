@@ -295,41 +295,43 @@
 					</button>
 					{#if showFieldSelector}
 						<div class="field-selector-dropdown" onclick={(e) => e.stopPropagation()}>
-							<!-- Events Fields -->
-							<FieldSelectorPanel
-								title="Event Fields"
-								type="event"
-								sortedPinnedFields={sortedPinnedFields.event}
-								unpinnedFields={unpinnedFields.event}
-								dynamicParentFields={dynamicParentFields.event}
-								pinnedDynamicFields={pinnedDynamicFields.event}
-								unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.event}
-								onTogglePin={toggleFieldPinned}
-								onDragStart={handleDragStart}
-								onDragOver={handleDragOver}
-								onDragLeave={handleDragLeave}
-								onDrop={handleDrop}
-								onDragEnd={handleDragEnd}
-								{dragOverField}
-							/>
+							<div class="field-selector-panels">
+								<!-- Events Fields -->
+								<FieldSelectorPanel
+									title="Event Fields"
+									type="event"
+									sortedPinnedFields={sortedPinnedFields.event}
+									unpinnedFields={unpinnedFields.event}
+									dynamicParentFields={dynamicParentFields.event}
+									pinnedDynamicFields={pinnedDynamicFields.event}
+									unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.event}
+									onTogglePin={toggleFieldPinned}
+									onDragStart={handleDragStart}
+									onDragOver={handleDragOver}
+									onDragLeave={handleDragLeave}
+									onDrop={handleDrop}
+									onDragEnd={handleDragEnd}
+									{dragOverField}
+								/>
 
-							<!-- Actions Fields -->
-							<FieldSelectorPanel
-								title="Action Fields"
-								type="action"
-								sortedPinnedFields={sortedPinnedFields.action}
-								unpinnedFields={unpinnedFields.action}
-								dynamicParentFields={dynamicParentFields.action}
-								pinnedDynamicFields={pinnedDynamicFields.action}
-								unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.action}
-								onTogglePin={toggleFieldPinned}
-								onDragStart={handleDragStart}
-								onDragOver={handleDragOver}
-								onDragLeave={handleDragLeave}
-								onDrop={handleDrop}
-								onDragEnd={handleDragEnd}
-								{dragOverField}
-							/>
+								<!-- Actions Fields -->
+								<FieldSelectorPanel
+									title="Action Fields"
+									type="action"
+									sortedPinnedFields={sortedPinnedFields.action}
+									unpinnedFields={unpinnedFields.action}
+									dynamicParentFields={dynamicParentFields.action}
+									pinnedDynamicFields={pinnedDynamicFields.action}
+									unpinnedDynamicFieldsByParent={unpinnedDynamicFieldsByParent.action}
+									onTogglePin={toggleFieldPinned}
+									onDragStart={handleDragStart}
+									onDragOver={handleDragOver}
+									onDragLeave={handleDragLeave}
+									onDrop={handleDrop}
+									onDragEnd={handleDragEnd}
+									{dragOverField}
+								/>
+							</div>
 
 							<button class="reset-btn" onclick={resetFieldSelection}>Reset to Default</button>
 						</div>
@@ -486,11 +488,19 @@
 		background: var(--color-bg-secondary);
 		border: 1px solid var(--color-border-medium);
 		border-radius: var(--border-radius-md);
-		padding: var(--spacing-sm);
+		padding: var(--spacing-md);
 		margin-top: var(--spacing-xs);
 		z-index: 50;
-		/* min-width: 250px; */
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 1200px;
+		max-width: 95vw;
+	}
+
+	.field-selector-panels {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--spacing-xl);
+		margin-bottom: var(--spacing-md);
 	}
 
 	.reset-btn {

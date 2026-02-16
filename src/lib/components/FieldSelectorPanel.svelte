@@ -32,13 +32,35 @@
         onDragEnd: () => void;
         dragOverField: { type: 'event' | 'action'; key: string } | null;
     } = $props();
+
+    let searchQuery = $state('');
+
+    function matchesSearch(field: DisplayField): boolean {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        return field.label.toLowerCase().includes(query) || field.key.toLowerCase().includes(query);
+    }
+
+    const filteredSortedPinnedFields = $derived(sortedPinnedFields.filter(matchesSearch));
+    const filteredUnpinnedFields = $derived(unpinnedFields.filter(matchesSearch));
+    const filteredPinnedDynamicFields = $derived(pinnedDynamicFields.filter(matchesSearch));
 </script>
 
 <div class="field-section">
-    <div class="field-section-title">{title}</div>
+    <div class="field-section-header">
+        <div class="field-section-title">{title}</div>
+        <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Search fields..."
+            bind:value={searchQuery}
+        />
+    </div>
 
-    <!-- Pinned fields (draggable) -->
-    {#if sortedPinnedFields.length > 0}
+    <div class="fields-container">
+        <div class="fields-column">
+            <!-- Pinned fields (draggable) -->
+            {#if filteredSortedPinnedFields.length > 0}
         <div class="field-subsection-title">Pinned (drag to reorder)</div>
         <div class="field-list pinned-list">
             {#each sortedPinnedFields as field (field.key)}
@@ -67,10 +89,10 @@
     {/if}
 
     <!-- Unpinned fields -->
-    {#if unpinnedFields.length > 0}
+    {#if filteredUnpinnedFields.length > 0}
         <div class="field-subsection-title">Available</div>
         <div class="field-list">
-            {#each unpinnedFields as field (field.key)}
+            {#each filteredUnpinnedFields as field (field.key)}
                 <div class="field-row">
                     <label class="field-checkbox-label">
                         <input
@@ -84,19 +106,21 @@
             {/each}
         </div>
     {/if}
+        </div>
 
-    <!-- Dynamic Fields (from JSON) -->
-    {#each dynamicParentFields as parentField (parentField.key)}
-        {@const dynamicFields = unpinnedDynamicFieldsByParent.get(parentField.key) || []}
-        {#if dynamicFields.length > 0 || pinnedDynamicFields.filter(f => f.parentKey === parentField.key).length > 0}
-            <div class="field-subsection-title dynamic-section">
-                <span class="dynamic-icon">◈</span> {parentField.label} Fields
-            </div>
-            <!-- Pinned dynamic fields for this parent -->
-            {@const pinnedForParent = pinnedDynamicFields.filter(f => f.parentKey === parentField.key)}
-            {#if pinnedForParent.length > 0}
+        <div class="fields-column">
+            <!-- Dynamic Fields (from JSON) -->
+            {#each dynamicParentFields as parentField (parentField.key)}
+                {@const dynamicFields = (unpinnedDynamicFieldsByParent.get(parentField.key) || []).filter(matchesSearch)}
+                {@const pinnedForParentAll = filteredPinnedDynamicFields.filter(f => f.parentKey === parentField.key)}
+                {#if dynamicFields.length > 0 || pinnedForParentAll.length > 0}
+                    <div class="field-subsection-title dynamic-section">
+                        <span class="dynamic-icon">◈</span> {parentField.label} Fields
+                    </div>
+                    <!-- Pinned dynamic fields for this parent -->
+                    {#if pinnedForParentAll.length > 0}
                 <div class="field-list pinned-list dynamic-list">
-                    {#each pinnedForParent as field (field.key)}
+                    {#each pinnedForParentAll as field (field.key)}
                         <div
                             class="field-row draggable dynamic-field"
                             class:drag-over={dragOverField?.type === type && dragOverField?.key === field.key}
@@ -137,17 +161,28 @@
                     {/each}
                 </div>
             {/if}
-        {/if}
-    {/each}
+                {/if}
+            {/each}
+        </div>
+    </div>
 </div>
 
 <style>
     .field-section {
         margin-bottom: var(--spacing-sm);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 200px);
+        overflow: hidden;
     }
 
     .field-section:last-of-type {
         margin-bottom: var(--spacing-md);
+    }
+
+    .field-section-header {
+        flex-shrink: 0;
+        margin-bottom: var(--spacing-xs);
     }
 
     .field-section-title {
@@ -159,6 +194,43 @@
         margin-bottom: var(--spacing-xs);
         padding-bottom: var(--spacing-xs);
         border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: var(--spacing-xs);
+        background: var(--color-bg-tertiary);
+        border: 1px solid var(--color-border-medium);
+        border-radius: var(--border-radius-sm);
+        color: var(--color-text-primary);
+        font-size: var(--font-size-xs);
+        font-family: var(--font-mono);
+        transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--color-accent-primary);
+        background: var(--color-bg-secondary);
+    }
+
+    .search-input::placeholder {
+        color: var(--color-text-tertiary);
+    }
+
+    .fields-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-sm);
+        overflow-y: auto;
+        flex: 1;
+        padding-right: var(--spacing-xs);
+    }
+
+    .fields-column {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
     }
 
     .field-list {
