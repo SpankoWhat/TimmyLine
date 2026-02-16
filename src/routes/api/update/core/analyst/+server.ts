@@ -7,10 +7,19 @@ import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
 	if (!body.uuid) {
 		throw error(400, 'Missing required field: uuid');
+	}
+
+	if (body.role && !['analyst', 'on-point lead', 'observer'].includes(body.role)) {
+		throw error(400, `Invalid role value: ${body.role}`);
 	}
 
 	const analystData: Partial<NewAnalyst> = {
@@ -19,10 +28,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		role: body.role,
 		active: body.active
 	};
-
-	if (!analystData) {
-		throw error(400, `Missing required analyst data`);
-	}
 
 	try {
 		const [updatedAnalyst] = await db

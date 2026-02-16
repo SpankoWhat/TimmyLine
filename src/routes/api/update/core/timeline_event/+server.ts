@@ -7,10 +7,27 @@ import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
 	if (!body.uuid) {
 		throw error(400, 'Missing required field: uuid');
+	}
+
+	if (body.severity && !['critical', 'high', 'medium', 'low', 'info'].includes(body.severity)) {
+		throw error(400, `Invalid severity value: ${body.severity}`);
+	}
+
+	if (body.confidence && !['high', 'medium', 'low', 'guess'].includes(body.confidence)) {
+		throw error(400, `Invalid confidence value: ${body.confidence}`);
+	}
+
+	if (body.source_reliability && !['A', 'B', 'C', 'D', 'E', 'F'].includes(body.source_reliability)) {
+		throw error(400, `Invalid source_reliability value: ${body.source_reliability}`);
 	}
 
 	const timelineEventData: Partial<NewTimelineEvent> = {
@@ -27,10 +44,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		source: body.source,
 		tags: body.tags
 	};
-
-	if (!timelineEventData) {
-		throw error(400, 'Missing required timeline event data');
-	}
 
 	try {
 		const [updatedEvent] = await db

@@ -6,8 +6,23 @@ import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
+	// Validate required fields
+	const requiredFields = { incident_id: body.incident_id, discovered_by: body.discovered_by, event_type: body.event_type, discovered_at: body.discovered_at, event_data: body.event_data };
+	const missingFields = Object.entries(requiredFields)
+		.filter(([_, value]) => value === undefined || value === null || value === '')
+		.map(([key]) => key);
+
+	if (missingFields.length > 0) {
+		throw error(400, `Missing required fields: ${missingFields.join(', ')}`);
+	}
+
 	const timelineEventData: NewTimelineEvent = {
 		incident_id: body.incident_id,
 		discovered_by: body.discovered_by,
@@ -21,10 +36,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		source: body.source,
 		tags: body.tags
 	};
-
-	if (!timelineEventData) {
-		throw error(400, 'Missing required timeline event data');
-	}
 
 	try {
 		const [createdEvent] = await db

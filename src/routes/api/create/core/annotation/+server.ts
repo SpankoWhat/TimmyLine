@@ -6,7 +6,22 @@ import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
+	// Validate required fields
+	const requiredFields = { incident_id: body.incident_id, noted_by: body.noted_by, annotation_type: body.annotation_type, content: body.content };
+	const missingFields = Object.entries(requiredFields)
+		.filter(([_, value]) => value === undefined || value === null || value === '')
+		.map(([key]) => key);
+
+	if (missingFields.length > 0) {
+		throw error(400, `Missing required fields: ${missingFields.join(', ')}`);
+	}
 
 	const annotationData: NewAnnotation = {
 		incident_id: body.incident_id,
@@ -18,10 +33,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		is_hypothesis: body.is_hypothesis,
 		tags: body.tags
 	};
-
-	if (!annotationData) {
-		throw error(400, 'Missing required annotation data');
-	}
 
 	try {
 		const [createdAnnotation] = await db

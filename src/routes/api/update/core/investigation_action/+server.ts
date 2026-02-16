@@ -7,10 +7,19 @@ import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
 
 	if (!body.uuid) {
 		throw error(400, 'Missing required field: uuid');
+	}
+
+	if (body.result && !['success', 'failed', 'partial', 'pending'].includes(body.result)) {
+		throw error(400, `Invalid result value: ${body.result}`);
 	}
 
 	const investigationActionData: Partial<NewInvestigationAction> = {
@@ -25,10 +34,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		next_steps: body.next_steps,
 		tags: body.tags
 	};
-
-	if (!investigationActionData) {
-		throw error(400, 'Missing required investigation action data');
-	}
 
 	try {
 		const [updatedAction] = await db

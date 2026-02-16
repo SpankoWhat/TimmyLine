@@ -7,10 +7,23 @@ import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
 
 	if (!body.uuid) {
 		throw error(400, 'Missing required field: uuid');
+	}
+
+	if (body.status && !['active', 'inactive', 'unknown'].includes(body.status)) {
+		throw error(400, `Invalid status value: ${body.status}`);
+	}
+
+	if (body.criticality && !['critical', 'high', 'medium', 'low', 'unknown'].includes(body.criticality)) {
+		throw error(400, `Invalid criticality value: ${body.criticality}`);
 	}
 
 	const entityData: Partial<NewEntity> = {
@@ -26,10 +39,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		criticality: body.criticality,
 		tags: body.tags
 	};
-
-	if (!entityData) {
-		throw error(400, 'Missing required entity data');
-	}
 
 	try {
 		const [updatedEntity] = await db

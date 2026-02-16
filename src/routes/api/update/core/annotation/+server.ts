@@ -7,10 +7,19 @@ import { getSocketIO } from '$lib/server/socket';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
 
 	if (!body.uuid) {
 		throw error(400, 'Missing required field: uuid');
+	}
+
+	if (body.confidence && !['high', 'medium', 'low', 'guess'].includes(body.confidence)) {
+		throw error(400, `Invalid confidence value: ${body.confidence}`);
 	}
 
 	const annotationData: Partial<NewAnnotation> = {
@@ -23,10 +32,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		is_hypothesis: body.is_hypothesis,
 		tags: body.tags
 	};
-
-	if (!annotationData) {
-		throw error(400, 'Missing required annotation data');
-	}
 
 	try {
 		const [updatedAnnotation] = await db

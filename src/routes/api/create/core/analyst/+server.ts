@@ -6,18 +6,29 @@ import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
+	// Validate required fields
+	const requiredFields = { username: body.username };
+	const missingFields = Object.entries(requiredFields)
+		.filter(([_, value]) => value === undefined || value === null || value === '')
+		.map(([key]) => key);
+
+	if (missingFields.length > 0) {
+		throw error(400, `Missing required fields: ${missingFields.join(', ')}`);
+	}
+
 	const analystData: NewAnalyst = {
 		username: body.username,
 		full_name: body.full_name,
 		role: body.role,
 		active: body.active
 	};
-
-	if (!analystData) {
-		throw error(400, `Missing required analyst data`);
-	}
 
 	try {
 		const [createdAnalyst] = await db

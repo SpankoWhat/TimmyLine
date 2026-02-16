@@ -6,7 +6,22 @@ import * as schema from '$lib/server/database';
 import { getSocketIO } from '$lib/server/socket';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
+	let body;
+	try {
+		body = await request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
+	}
+
+	// Validate required fields
+	const requiredFields = { incident_id: body.incident_id, entered_by: body.entered_by, entity_type: body.entity_type, identifier: body.identifier };
+	const missingFields = Object.entries(requiredFields)
+		.filter(([_, value]) => value === undefined || value === null || value === '')
+		.map(([key]) => key);
+
+	if (missingFields.length > 0) {
+		throw error(400, `Missing required fields: ${missingFields.join(', ')}`);
+	}
 
 	const entityData: NewEntity = {
 		incident_id: body.incident_id,
@@ -21,10 +36,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		criticality: body.criticality,
 		tags: body.tags
 	};
-
-	if (!entityData) {
-		throw error(400, 'Missing required entity data');
-	}
 
 	try {
 		const [createdEntity] = await db
