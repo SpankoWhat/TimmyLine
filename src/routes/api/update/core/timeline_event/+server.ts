@@ -42,13 +42,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		confidence: body.confidence,
 		source_reliability: body.source_reliability,
 		source: body.source,
-		tags: body.tags
+		tags: body.tags,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(timelineEventData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedEvent] = await db
 		.update(schema.timeline_events)
-		.set(timelineEventData)
+		.set(cleanedData)
 		.where(eq(schema.timeline_events.uuid, body.uuid))
 		.returning();
 

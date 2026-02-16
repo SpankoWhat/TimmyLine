@@ -1,4 +1,4 @@
-import { sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, primaryKey, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { investigation_actions } from './02_03_core_investigation_actions';
 import { entities } from './02_05_core_entities';
@@ -19,7 +19,10 @@ export const action_entities = sqliteTable(
 			.notNull()
 			.references(() => relation_type.name)
 	},
-	(table) => [primaryKey({ columns: [table.action_id, table.entity_id] })]
+	(table) => [
+		primaryKey({ columns: [table.action_id, table.entity_id] }),
+		index('idx_action_entities_entity_id').on(table.entity_id)
+	]
 );
 
 // Define relations for query API

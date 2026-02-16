@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { incidents } from './02_01_core_incidents';
 import { analysts } from './02_00_core_analysts';
@@ -25,7 +25,9 @@ export const annotations = sqliteTable('annotations', {
 	is_hypothesis: integer('is_hypothesis', { mode: 'boolean' }).default(sql`0`),
 	tags: text('tags'),
 	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
-});
+}, (table) => [
+	index('idx_annotations_incident_id').on(table.incident_id)
+]);
 
 // Export types for use throughout the app
 export type Annotation = typeof annotations.$inferSelect;

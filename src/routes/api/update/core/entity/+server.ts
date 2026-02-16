@@ -37,13 +37,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		display_name: body.display_name,
 		attributes: body.attributes,
 		criticality: body.criticality,
-		tags: body.tags
+		tags: body.tags,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(entityData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedEntity] = await db
 		.update(schema.entities)
-		.set(entityData)
+		.set(cleanedData)
 		.where(eq(schema.entities.uuid, body.uuid))
 		.returning();
 

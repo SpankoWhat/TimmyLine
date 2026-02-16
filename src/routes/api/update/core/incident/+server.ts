@@ -30,13 +30,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		title: body.title,
 		status: body.status,
 		priority: body.priority,
-		soar_ticket_id: body.soar_ticket_id
+		soar_ticket_id: body.soar_ticket_id,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(incidentData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedIncident] = await db
 		.update(schema.incidents)
-		.set(incidentData)
+		.set(cleanedData)
 		.where(eq(schema.incidents.uuid, body.uuid))
 		.returning();
 

@@ -1,4 +1,4 @@
-import { sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, primaryKey, index } from 'drizzle-orm/sqlite-core';
 import { annotations } from './02_04_core_annotations';
 
 // Annotation references
@@ -15,7 +15,10 @@ export const annotation_references = sqliteTable(
 		reference_id: text('reference_id').notNull(), // UUID of the referenced object
 		context: text('context')
 	},
-	(table) => [primaryKey({ columns: [table.annotation_id, table.reference_type, table.reference_id] })]
+	(table) => [
+		primaryKey({ columns: [table.annotation_id, table.reference_type, table.reference_id] }),
+		index('idx_annotation_references_reference_id').on(table.reference_id)
+	]
 );
 
 // Export types for use throughout the app

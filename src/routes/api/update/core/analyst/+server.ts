@@ -26,13 +26,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		username: body.username,
 		full_name: body.full_name,
 		role: body.role,
-		active: body.active
+		active: body.active,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(analystData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedAnalyst] = await db
 		.update(schema.analysts)
-		.set(analystData)
+		.set(cleanedData)
 		.where(eq(schema.analysts.uuid, body.uuid))
 		.returning();
 

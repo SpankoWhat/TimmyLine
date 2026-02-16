@@ -32,13 +32,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		tool_used: body.tool_used,
 		notes: body.notes,
 		next_steps: body.next_steps,
-		tags: body.tags
+		tags: body.tags,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(investigationActionData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedAction] = await db
 		.update(schema.investigation_actions)
-		.set(investigationActionData)
+		.set(cleanedData)
 		.where(eq(schema.investigation_actions.uuid, body.uuid))
 		.returning();
 

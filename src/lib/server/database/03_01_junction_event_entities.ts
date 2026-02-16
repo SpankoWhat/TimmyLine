@@ -1,4 +1,4 @@
-import { sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, primaryKey, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 import { timeline_events } from './02_02_core_timeline_events';
 import { entities } from './02_05_core_entities';
@@ -17,7 +17,10 @@ export const event_entities = sqliteTable(
 		role: text('role'), // e.g., 'source', 'target', 'observer'
 		context: text('context') // Additional context about the relationship
 	},
-	(table) => [primaryKey({ columns: [table.event_id, table.entity_id] })]
+	(table) => [
+		primaryKey({ columns: [table.event_id, table.entity_id] }),
+		index('idx_event_entities_entity_id').on(table.entity_id)
+	]
 );
 
 

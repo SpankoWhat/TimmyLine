@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql, relations } from 'drizzle-orm';
 import { incidents } from './02_01_core_incidents';
 import { analysts } from './02_00_core_analysts';
@@ -29,7 +29,9 @@ export const investigation_actions = sqliteTable('investigation_actions', {
 	next_steps: text('next_steps'),
 	tags: text('tags'),
 	deleted_at: integer('deleted_at') // NULL = active, timestamp = soft deleted
-});
+}, (table) => [
+	index('idx_investigation_actions_incident_id').on(table.incident_id)
+]);
 
 // Define relations for query API
 export const investigationActionsRelations = relations(investigation_actions, ({ many }) => ({

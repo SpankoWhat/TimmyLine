@@ -30,13 +30,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		confidence: body.confidence,
 		refers_to: body.refers_to,
 		is_hypothesis: body.is_hypothesis,
-		tags: body.tags
+		tags: body.tags,
+		updated_at: Math.floor(Date.now() / 1000)
 	};
+
+	const cleanedData = Object.fromEntries(
+		Object.entries(annotationData).filter(([_, v]) => v !== undefined)
+	);
 
 	try {
 		const [updatedAnnotation] = await db
 		.update(schema.annotations)
-		.set(annotationData)
+		.set(cleanedData)
 		.where(eq(schema.annotations.uuid, body.uuid))
 		.returning();
 
