@@ -3,6 +3,7 @@
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import { discoverDynamicFields, mergeFieldConfigs } from '$lib/utils/dynamicFields';
     import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
+    import { saveFieldPreferences, loadFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldPreferences';
 
     let {
         title,
@@ -22,8 +23,9 @@
     // svelte-ignore state_referenced_locally
     const initialStaticConfig: DisplayField[] = staticFieldConfig.map(f => ({ ...f }));
 
-    // Internal field state — owned by this component
-    let fieldStates: DisplayField[] = $state(initialStaticConfig.map(f => ({ ...f })));
+    // Internal field state — owned by this component, hydrated from localStorage if available
+    // svelte-ignore state_referenced_locally
+    let fieldStates: DisplayField[] = $state(loadFieldPreferences(type, initialStaticConfig));
 
     // Drag and drop state — scoped to this panel
     let draggedField: string | null = $state(null);
@@ -51,16 +53,20 @@
         );
 
         const currentKeys = new Set(fieldStates.map(f => f.key));
-        const newFields = mergedFields.filter(f => !currentKeys.has(f.key));
+        let newFields = mergedFields.filter(f => !currentKeys.has(f.key));
 
         if (newFields.length > 0) {
+            // Apply any stored preferences to newly discovered dynamic fields
+            newFields = loadFieldPreferences(type, newFields);
             fieldStates = [...fieldStates, ...newFields];
         }
     });
 
-    // Notify parent whenever fieldStates changes
+    // Notify parent and persist to localStorage whenever fieldStates changes
     $effect(() => {
-        onfieldstateschange([...fieldStates].sort((a, b) => a.order - b.order));
+        const sorted = [...fieldStates].sort((a, b) => a.order - b.order);
+        onfieldstateschange(sorted);
+        saveFieldPreferences(type, fieldStates);
     });
 
     // Computed deriveds
@@ -122,6 +128,7 @@
 
     // Reset to defaults, keeping discovered dynamic fields but unpinning them
     export function resetFieldSelection() {
+        clearFieldPreferences(type);
         const dynamicFields = fieldStates.filter(f => f.isDynamic).map(f => ({ ...f, pinned: false }));
         fieldStates = [...staticFieldConfig.map(f => ({ ...f })), ...dynamicFields];
     }

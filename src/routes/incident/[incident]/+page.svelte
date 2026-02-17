@@ -17,11 +17,12 @@
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 	import type { DisplayField } from '$lib/config/displayFieldsConfig';
+	import { loadFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldPreferences';
 
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
 
-	// Simplified field states — updated by FieldSelectorPanel via callbacks
+	// Simplified field states — starts with defaults, hydrated from localStorage in onMount
 	let fieldStates = $state<{
 		event: DisplayField[];
 		action: DisplayField[];
@@ -48,11 +49,30 @@
 	}
 
 	function resetFieldSelection() {
-		eventPanelRef?.resetFieldSelection();
-		actionPanelRef?.resetFieldSelection();
+		clearFieldPreferences('event');
+		clearFieldPreferences('action');
+		if (eventPanelRef) {
+			eventPanelRef.resetFieldSelection();
+		} else {
+			fieldStates.event = displayFieldsConfig.event.map(f => ({ ...f }));
+		}
+		if (actionPanelRef) {
+			actionPanelRef.resetFieldSelection();
+		} else {
+			fieldStates.action = displayFieldsConfig.action.map(f => ({ ...f }));
+		}
 	}
 	
 	onMount(() => {
+		// Hydrate field preferences from localStorage (client-only)
+		const loadedEvent = loadFieldPreferences('event', displayFieldsConfig.event);
+		const loadedAction = loadFieldPreferences('action', displayFieldsConfig.action);
+		console.log('[FieldPrefs] Raw localStorage event:', localStorage.getItem('timmyline:fieldPrefs:event'));
+		console.log('[FieldPrefs] Loaded event fields:', loadedEvent.map(f => ({ key: f.key, pinned: f.pinned, order: f.order })));
+		console.log('[FieldPrefs] Loaded action fields:', loadedAction.map(f => ({ key: f.key, pinned: f.pinned, order: f.order })));
+		fieldStates.event = loadedEvent;
+		fieldStates.action = loadedAction;
+
 		let incidentObj = data.incident as Incident;
 		if (!incidentObj) {
 			console.warn('No incident data found from server for incident uuid:', incidentObj);
