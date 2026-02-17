@@ -3,6 +3,7 @@
  */
 
 import type { FieldConfig } from '$lib/config/modalFields';
+import type { DisplayField } from '$lib/config/displayFieldsConfig';
 
 export type EntityType = 
 	| 'incident' 
@@ -53,26 +54,6 @@ export interface ModalConfig {
 }
 
 export type DisplayFieldsConfig = {
-	event: Array<{
-		key: string;
-		label?: string;
-		pinned: boolean;
-		showInNote?: boolean;
-		order: number;
-		hideFromUser?: boolean;
-		allowDynamicFieldRendering?: boolean;
-		parentKey?: string;
-		isDynamic?: boolean;
-	}>;
-	action: Array<{
-		key: string;
-		label?: string;
-		pinned: boolean;
-		showInNote?: boolean;
-		order: number;
-		hideFromUser?: boolean;
-		allowDynamicFieldRendering?: boolean;
-		parentKey?: string;
-		isDynamic?: boolean;
-	}>;
+	event: DisplayField[];
+	action: DisplayField[];
 };

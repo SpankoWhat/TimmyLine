@@ -26,7 +26,6 @@ export type TimelineItem = {
 	uuid: string;
 	type: 'event' | 'action';
 	timestamp: number;
-	displayType: 'EVENT' | 'ACTION';
 	data: TimelineEvent | InvestigationAction;
 };
 
@@ -52,8 +51,7 @@ export const showDeletedItems: Writable<boolean> = writable(false);
 // ============================================================================
 
 export const currentCachedIncidents: Writable<Incident[]> = writable([]);
-export const currentCachedEvents: Writable<TimelineEvent[]> = writable([]);
-export const currentCachedActions: Writable<InvestigationAction[]> = writable([]);
+export const currentCachedTimeline: Writable<TimelineItem[]> = writable([]);
 export const currentCachedAnnotations: Writable<Annotation[]> = writable([]);
 export const currentCachedEntities: Writable<Entity[]> = writable([]);
 
@@ -123,44 +121,7 @@ export const entityStats = derived(currentCachedEntities, ($entities) => ({
 }));
 
 
-/**
- * Combined timeline of events and actions, sorted by timestamp
- * Automatically updates when timeline events or investigation actions change
- */
-export const combinedTimeline = derived(
-	[currentCachedEvents, currentCachedActions],
-	([$events, $actions]) => {
-		const timeline: TimelineItem[] = [];
 
-		// Add timeline events
-		if ($events && Array.isArray($events)) {
-			const timelineEvents: TimelineItem[] = $events.map((event) => ({
-				uuid: event.uuid,
-				type: 'event' as const,
-				timestamp: event.occurred_at || event.discovered_at || 0,
-				displayType: 'EVENT' as const,
-				data: event
-			}));
-			timeline.push(...timelineEvents);
-		}
-
-		// Add investigation actions
-		if ($actions && Array.isArray($actions)) {
-			const investigationActions: TimelineItem[] = $actions.map((action) => ({
-				uuid: action.uuid,
-				type: 'action' as const,
-				timestamp: action.performed_at || 0,
-				displayType: 'ACTION' as const,
-				data: action
-			}));
-			timeline.push(...investigationActions);
-		}
-		// Sort by timestamp (ascending order - oldest first)
-		timeline.sort((a, b) => a.timestamp - b.timestamp);
-
-		return timeline;
-	}
-);
 
 /**
  * Known JSON root keys extracted from event_data and action_data across the timeline.
@@ -168,40 +129,26 @@ export const combinedTimeline = derived(
  * Automatically updates when cached events or actions change.
  */
 export const knownJsonKeys = derived(
-	[currentCachedEvents, currentCachedActions],
-	([$events, $actions]) => {
+	currentCachedTimeline,
+	($timeline) => {
 		const eventKeys = new Set<string>();
 		const actionKeys = new Set<string>();
 
-		// Scan event_data JSON fields
-		if ($events && Array.isArray($events)) {
-			for (const event of $events) {
-				if (event.event_data && typeof event.event_data === 'string') {
-					try {
-						const parsed = JSON.parse(event.event_data);
-						if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-							for (const key of Object.keys(parsed)) {
-								eventKeys.add(key);
-							}
-						}
-					} catch { /* skip invalid JSON */ }
-				}
-			}
-		}
+		for (const item of $timeline) {
+			const jsonField = item.type === 'event'
+				? (item.data as any).event_data
+				: (item.data as any).action_data;
+			const targetSet = item.type === 'event' ? eventKeys : actionKeys;
 
-		// Scan action_data JSON fields
-		if ($actions && Array.isArray($actions)) {
-			for (const action of $actions) {
-				if (action.action_data && typeof action.action_data === 'string') {
-					try {
-						const parsed = JSON.parse(action.action_data);
-						if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-							for (const key of Object.keys(parsed)) {
-								actionKeys.add(key);
-							}
+			if (jsonField && typeof jsonField === 'string') {
+				try {
+					const parsed = JSON.parse(jsonField);
+					if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+						for (const key of Object.keys(parsed)) {
+							targetSet.add(key);
 						}
-					} catch { /* skip invalid JSON */ }
-				}
+					}
+				} catch { /* skip invalid JSON */ }
 			}
 		}
 
@@ -217,7 +164,7 @@ export const knownJsonKeys = derived(
  * - Count of actions 
  * - Count of events
  */
-export const investigationStats = derived(combinedTimeline, ($items) => ({
+export const investigationStats = derived(currentCachedTimeline, ($items) => ({
 	total: $items.length,
 	events: $items.filter((item) => item.type === 'event').length,
 	actions: $items.filter((item) => item.type === 'action').length
@@ -266,9 +213,23 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 		// Extract events and actions from enriched response
 		const { events, actions } = timelineData;
 
-		// Store the enriched data (with nested relationships)
-		currentCachedEvents.set(events as TimelineEvent[]);
-		currentCachedActions.set(actions as InvestigationAction[]);
+		// Build unified timeline
+		const timelineItems: TimelineItem[] = [
+			...events.map((event: any) => ({
+				uuid: event.uuid,
+				type: 'event' as const,
+				timestamp: event.occurred_at || event.discovered_at || 0,
+				data: event
+			})),
+			...actions.map((action: any) => ({
+				uuid: action.uuid,
+				type: 'action' as const,
+				timestamp: action.performed_at || 0,
+				data: action
+			}))
+		];
+		timelineItems.sort((a, b) => a.timestamp - b.timestamp);
+		currentCachedTimeline.set(timelineItems);
 		currentCachedAnnotations.set(annotations as Annotation[]);
 
 		// Extract unique entities from nested data for backwards compatibility
@@ -288,8 +249,7 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 	} catch (error) {
 		console.error('Failed to update incident cache:', error);
 		// Reset stores on error
-		currentCachedEvents.set([]);
-		currentCachedActions.set([]);
+		currentCachedTimeline.set([]);
 		currentCachedAnnotations.set([]);
 		currentCachedEntities.set([]);
 	}
@@ -381,8 +341,7 @@ export function setupIncidentWatcher() {
 			updateIncidentCache(incident);
 		} else if (incident === null) {
 			// Only clear if explicitly set to null (not undefined during initialization)
-			currentCachedEvents.set([]);
-			currentCachedActions.set([]);
+			currentCachedTimeline.set([]);
 			currentCachedAnnotations.set([]);
 			currentCachedEntities.set([]);
 		}
@@ -400,26 +359,40 @@ export function setupIncidentWatcher() {
 export function upsertEntity(entityType: string, entity: any) {
 	switch (entityType) {
 		case 'timeline_event':
-			currentCachedEvents.update((events) => {
-				const index = events.findIndex((e) => e.uuid === entity.uuid);
+			currentCachedTimeline.update((items) => {
+				const index = items.findIndex((i) => i.type === 'event' && i.uuid === entity.uuid);
+				const newItem: TimelineItem = {
+					uuid: entity.uuid,
+					type: 'event',
+					timestamp: entity.occurred_at || entity.discovered_at || 0,
+					data: entity
+				};
 				if (index >= 0) {
-					events[index] = entity;
+					items[index] = newItem;
 				} else {
-					events.push(entity);
+					items.push(newItem);
 				}
-				return events;
+				items.sort((a, b) => a.timestamp - b.timestamp);
+				return items;
 			});
 			break;
 
 		case 'investigation_action':
-			currentCachedActions.update((actions) => {
-				const index = actions.findIndex((a) => a.uuid === entity.uuid);
+			currentCachedTimeline.update((items) => {
+				const index = items.findIndex((i) => i.type === 'action' && i.uuid === entity.uuid);
+				const newItem: TimelineItem = {
+					uuid: entity.uuid,
+					type: 'action',
+					timestamp: entity.performed_at || 0,
+					data: entity
+				};
 				if (index >= 0) {
-					actions[index] = entity;
+					items[index] = newItem;
 				} else {
-					actions.push(entity);
+					items.push(newItem);
 				}
-				return actions;
+				items.sort((a, b) => a.timestamp - b.timestamp);
+				return items;
 			});
 			break;
 
@@ -486,11 +459,11 @@ export function upsertEntity(entityType: string, entity: any) {
 export function removeEntity(entityType: string, uuid: string) {
 	switch (entityType) {
 		case 'timeline_event':
-			currentCachedEvents.update((events) => events.filter((e) => e.uuid !== uuid));
+			currentCachedTimeline.update((items) => items.filter((i) => !(i.type === 'event' && i.uuid === uuid)));
 			break;
 
 		case 'investigation_action':
-			currentCachedActions.update((actions) => actions.filter((a) => a.uuid !== uuid));
+			currentCachedTimeline.update((items) => items.filter((i) => !(i.type === 'action' && i.uuid === uuid)));
 			break;
 
 		case 'annotation':

@@ -4,8 +4,9 @@
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
+    import type { DisplayField } from '$lib/config/displayFieldsConfig';
     import { fade } from 'svelte/transition';
-    import { getFieldValue } from '$lib/utils/dynamicFields';
+    import { getFieldValue } from '$lib/utils/fieldUtils';
     import TimelineRowDetails from './TimelineRowDetails.svelte';
     
     let { 
@@ -31,7 +32,7 @@
     let isHighlighted = $derived($highlightedItemUuids.has(item.uuid));
 
     // Helper to get field value with support for dynamic JSON fields
-    function getDisplayValue(field: { key: string; isDynamic?: boolean; parentKey?: string; allowDynamicFieldRendering?: boolean }): string {
+    function getDisplayValue(field: DisplayField): string {
         return getFieldValue(item.data as Record<string, unknown>, field);
     }
 
@@ -142,16 +143,16 @@
                 <span class="timestamp value">{formatTimestamp(item.timestamp)}</span>
             </div>
             <!-- Pinned Entity Fields (sorted by order) -->
-            {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && !f.showInNote).sort((a, b) => a.order - b.order) as field (field.key)}
+            {#each [...displayFieldsConfig[item.type]].filter(f => f.pinned && f.kind !== 'system').sort((a, b) => a.order - b.order) as field (field.key)}
                 {@const fieldValue = getDisplayValue(field)}
                 {#if fieldValue && fieldValue !== '—'}
                     <div 
                         class="datafield data-section" 
-                        class:dynamic-field={field.isDynamic}
+                        class:dynamic-field={field.kind === 'dynamic'}
                         style="--stagger-delay: {Math.random() * 300}ms;"
                         transition:fade={{ duration: 180 }}
                     >
-                        <span class="field-prefix">{field.isDynamic ? '◈' : '│'}</span>
+                        <span class="field-prefix">{field.kind === 'dynamic' ? '◈' : '│'}</span>
                         <span class="datafield title">{field.label?.toUpperCase() || '-'}</span>
                         <span class="datafield value">{fieldValue}</span>
                     </div>
@@ -163,14 +164,13 @@
     <div class="secondary-row">
         <div class="note-snippet">
             {#each displayFieldsConfig[item.type] as field, idx (field.key)}
-                {#if field.showInNote}
+                {#if field.kind === 'system' && field.showInNote}
                     <div 
                         class="datafield note-section" 
-                        class:dynamic-field={field.isDynamic}
                         style="--stagger-delay: {Math.random() * 300}ms;"
                         transition:fade={{ duration: 180 }}
                     >
-                        <span class="field-prefix">{field.isDynamic ? '  ◈─' : '  └─'}</span>
+                        <span class="field-prefix">  └─</span>
                         <span class="datafield value">{getDisplayValue(field)}</span>
                     </div>
                 {/if}

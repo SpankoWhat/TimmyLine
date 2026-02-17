@@ -4,7 +4,7 @@
 	import type { PageProps } from './$types';
 	
 	// Store Imports
-	import { currentSelectedIncident, combinedTimeline, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
+	import { currentSelectedIncident, currentCachedTimeline, initializeAllCaches, showDeletedItems, clearHighlights} from "$lib/stores/cacheStore.js";
 	import { joinIncidentSocket, leaveIncidentSocket } from "$lib/stores/collabStore.js";
     import type { Incident } from '$lib/server/database';
 	
@@ -17,7 +17,7 @@
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 	import type { DisplayField } from '$lib/config/displayFieldsConfig';
-	import { loadFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldPreferences';
+	import { loadFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldUtils';
 
     let { data }: PageProps = $props();
 	let { register, unregister } : any = getContext('dynamicLayoutSlots');
@@ -34,44 +34,23 @@
 	let showFieldSelector = $state(false);
 	let showEntitiesPanel = $state(false);
 
-	// References to panel components for reset
-	let eventPanelRef: FieldSelectorPanel | undefined = $state();
-	let actionPanelRef: FieldSelectorPanel | undefined = $state();
-
 	// Compute filtered field configs based on field states (for passing to TimelineRow)
 	const filteredDisplayFieldsConfig = $derived({
 		event: [...fieldStates.event].sort((a, b) => a.order - b.order),
 		action: [...fieldStates.action].sort((a, b) => a.order - b.order)
 	});
 
-	function handleFieldStatesChange(type: 'event' | 'action', fields: DisplayField[]) {
-		fieldStates[type] = fields;
-	}
-
 	function resetFieldSelection() {
 		clearFieldPreferences('event');
 		clearFieldPreferences('action');
-		if (eventPanelRef) {
-			eventPanelRef.resetFieldSelection();
-		} else {
-			fieldStates.event = displayFieldsConfig.event.map(f => ({ ...f }));
-		}
-		if (actionPanelRef) {
-			actionPanelRef.resetFieldSelection();
-		} else {
-			fieldStates.action = displayFieldsConfig.action.map(f => ({ ...f }));
-		}
+		fieldStates.event = displayFieldsConfig.event.map(f => ({ ...f }));
+		fieldStates.action = displayFieldsConfig.action.map(f => ({ ...f }));
 	}
 	
 	onMount(() => {
 		// Hydrate field preferences from localStorage (client-only)
-		const loadedEvent = loadFieldPreferences('event', displayFieldsConfig.event);
-		const loadedAction = loadFieldPreferences('action', displayFieldsConfig.action);
-		console.log('[FieldPrefs] Raw localStorage event:', localStorage.getItem('timmyline:fieldPrefs:event'));
-		console.log('[FieldPrefs] Loaded event fields:', loadedEvent.map(f => ({ key: f.key, pinned: f.pinned, order: f.order })));
-		console.log('[FieldPrefs] Loaded action fields:', loadedAction.map(f => ({ key: f.key, pinned: f.pinned, order: f.order })));
-		fieldStates.event = loadedEvent;
-		fieldStates.action = loadedAction;
+		fieldStates.event = loadFieldPreferences('event', displayFieldsConfig.event);
+		fieldStates.action = loadFieldPreferences('action', displayFieldsConfig.action);
 
 		let incidentObj = data.incident as Incident;
 		if (!incidentObj) {
@@ -150,22 +129,18 @@
 							<div class="field-selector-panels">
 								<!-- Events Fields -->
 								<FieldSelectorPanel
-									bind:this={eventPanelRef}
 									title="Event Fields"
 									type="event"
-									timelineItems={$combinedTimeline}
-									staticFieldConfig={displayFieldsConfig.event}
-									onfieldstateschange={(fields) => handleFieldStatesChange('event', fields)}
+									timelineItems={$currentCachedTimeline}
+									bind:fields={fieldStates.event}
 								/>
 
 								<!-- Actions Fields -->
 								<FieldSelectorPanel
-									bind:this={actionPanelRef}
 									title="Action Fields"
 									type="action"
-									timelineItems={$combinedTimeline}
-									staticFieldConfig={displayFieldsConfig.action}
-									onfieldstateschange={(fields) => handleFieldStatesChange('action', fields)}
+									timelineItems={$currentCachedTimeline}
+									bind:fields={fieldStates.action}
 								/>
 							</div>
 
@@ -182,7 +157,7 @@
 					<div class="empty-title">No incident selected</div>
 					<div class="empty-description">Select an active incident to view timeline events.</div>
 				</div>
-			{:else if $combinedTimeline.length === 0}
+			{:else if $currentCachedTimeline.length === 0}
 				<div class="empty-state info">
 					<span class="empty-icon">📊</span>
 					<div class="empty-title">No timeline data found</div>
@@ -190,7 +165,7 @@
 				</div>
 			{:else}
 				<div class="timeline-list">
-					{#each $combinedTimeline as item (item.uuid)}
+					{#each $currentCachedTimeline as item (item.uuid)}
 						<TimeLineRow {item} displayFieldsConfig={filteredDisplayFieldsConfig}/>
 					{/each}
 				</div>

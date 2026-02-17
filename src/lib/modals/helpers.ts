@@ -7,15 +7,14 @@
  *   createLookupHandler   – (lives in lookups/index.ts, uses submitToApi)
  */
 
-import { get, type Readable } from 'svelte/store';
+import { get, derived, type Readable } from 'svelte/store';
 import type { EntityModalHandler, EntityType, ModalSubmitResult } from './types';
 import type { FieldConfig } from '$lib/config/modalFields';
 import { entityFieldConfigs } from '$lib/config/modalFields';
 import {
 	currentSelectedIncident,
 	currentSelectedAnalyst,
-	currentCachedActions,
-	currentCachedEvents,
+	currentCachedTimeline,
 	currentCachedEntities,
 	relationTypes
 } from '$lib/stores/cacheStore';
@@ -78,10 +77,10 @@ interface JunctionFieldMapping {
 	labelFn: (item: any) => string;
 }
 
-/** Map symbolic store names to their actual writable stores */
+/** Map symbolic store names to their actual readable stores */
 const storeMap: Record<string, Readable<any[]>> = {
-	actions: currentCachedActions,
-	events: currentCachedEvents,
+	actions: derived(currentCachedTimeline, ($t) => $t.filter(i => i.type === 'action').map(i => i.data)),
+	events: derived(currentCachedTimeline, ($t) => $t.filter(i => i.type === 'event').map(i => i.data)),
 	entities: currentCachedEntities
 };
 

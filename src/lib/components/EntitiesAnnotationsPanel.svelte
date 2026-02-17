@@ -2,8 +2,7 @@
 	import { 
 		currentCachedEntities, 
 		currentCachedAnnotations,
-		currentCachedEvents,
-		currentCachedActions,
+		currentCachedTimeline,
 		entityTypes,
 		annotationTypes,
 		setHighlights,
@@ -62,19 +61,18 @@
 	function highlightEntityReferences(entityUuid: string) {
 		const matchingUuids: string[] = [];
 
-		// Search through events for this entity
-		for (const event of $currentCachedEvents) {
-			const eventEntities = (event as any).eventEntities || [];
-			if (eventEntities.some((ee: any) => ee.entity?.uuid === entityUuid)) {
-				matchingUuids.push(event.uuid);
-			}
-		}
-
-		// Search through actions for this entity
-		for (const action of $currentCachedActions) {
-			const actionEntities = (action as any).actionEntities || [];
-			if (actionEntities.some((ae: any) => ae.entity?.uuid === entityUuid)) {
-				matchingUuids.push(action.uuid);
+		// Search through timeline items for this entity
+		for (const item of $currentCachedTimeline) {
+			if (item.type === 'event') {
+				const eventEntities = (item.data as any).eventEntities || [];
+				if (eventEntities.some((ee: any) => ee.entity?.uuid === entityUuid)) {
+					matchingUuids.push(item.uuid);
+				}
+			} else if (item.type === 'action') {
+				const actionEntities = (item.data as any).actionEntities || [];
+				if (actionEntities.some((ae: any) => ae.entity?.uuid === entityUuid)) {
+					matchingUuids.push(item.uuid);
+				}
 			}
 		}
 
@@ -96,16 +94,10 @@
 		const matchingUuids: string[] = [];
 		
 		if (annotation.refers_to) {
-			// Check if it references an event
-			const matchingEvent = $currentCachedEvents.find(e => e.uuid === annotation.refers_to);
-			if (matchingEvent) {
-				matchingUuids.push(matchingEvent.uuid);
-			}
-
-			// Check if it references an action
-			const matchingAction = $currentCachedActions.find(a => a.uuid === annotation.refers_to);
-			if (matchingAction) {
-				matchingUuids.push(matchingAction.uuid);
+			// Check if it references an event or action in the timeline
+			const matchingItem = $currentCachedTimeline.find(i => i.uuid === annotation.refers_to);
+			if (matchingItem) {
+				matchingUuids.push(matchingItem.uuid);
 			}
 		}
 
