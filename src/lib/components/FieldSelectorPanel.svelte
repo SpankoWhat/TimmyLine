@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { DisplayField } from '$lib/config/displayFieldsConfig';
     import type { TimelineItem } from '$lib/stores/cacheStore';
-    import { discoverDynamicFields, mergeFieldConfigs, saveFieldPreferences, loadFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldUtils';
+    import { discoverDynamicFields, mergeFieldConfigs, saveFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldUtils';
     import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 
     let {
@@ -32,6 +32,7 @@
     );
 
     // Merge static fields with discovered dynamic fields, preserving user state
+    // Also removes dynamic fields that are no longer discovered (e.g., after switching incidents)
     $effect(() => {
         const existingDynamic = fields.filter(f => f.kind === 'dynamic');
 
@@ -41,13 +42,22 @@
             existingDynamic
         );
 
-        const currentKeys = new Set(fields.map(f => f.key));
-        let newFields = mergedFields.filter(f => !currentKeys.has(f.key));
+        // Build set of currently valid dynamic field keys
+        const validDynamicKeys = new Set(
+            mergedFields.filter(f => f.kind === 'dynamic').map(f => f.key)
+        );
 
-        if (newFields.length > 0) {
-            // Apply any stored preferences to newly discovered dynamic fields
-            newFields = loadFieldPreferences(type, newFields);
-            fields = [...fields, ...newFields];
+        // Remove stale dynamic fields that are no longer discovered
+        const withoutStale = fields.filter(f => f.kind !== 'dynamic' || validDynamicKeys.has(f.key));
+
+        // Find new fields to add
+        const currentKeys = new Set(withoutStale.map(f => f.key));
+        const newFields = mergedFields.filter(f => !currentKeys.has(f.key));
+
+        // Only update if there are actual changes (avoids infinite reactivity loops)
+        const staleRemoved = withoutStale.length !== fields.length;
+        if (newFields.length > 0 || staleRemoved) {
+            fields = [...withoutStale, ...newFields];
         }
     });
 
@@ -96,21 +106,19 @@
 
     // Toggle pin/unpin
     function toggleFieldPinned(fieldKey: string) {
-        const field = fields.find(f => f.key === fieldKey);
-        if (field) {
-            if (field.pinned) {
-                const maxOrder = Math.max(...fields.map(f => f.order));
-                field.order = maxOrder + 1;
-                field.pinned = false;
+        fields = fields.map(f => {
+            if (f.key !== fieldKey) return f;
+            if (f.pinned) {
+                const maxOrder = Math.max(...fields.map(x => x.order));
+                return { ...f, pinned: false, order: maxOrder + 1 };
             } else {
-                const pinnedFields = fields.filter(f => f.pinned);
+                const pinnedFields = fields.filter(x => x.pinned);
                 const maxPinnedOrder = pinnedFields.length > 0
-                    ? Math.max(...pinnedFields.map(f => f.order))
+                    ? Math.max(...pinnedFields.map(x => x.order))
                     : 0;
-                field.order = maxPinnedOrder + 1;
-                field.pinned = true;
+                return { ...f, pinned: true, order: maxPinnedOrder + 1 };
             }
-        }
+        });
     }
 
     // Reset to defaults, keeping discovered dynamic fields but unpinning them
@@ -158,12 +166,9 @@
                 const [removed] = pinnedFields.splice(draggedIndex, 1);
                 pinnedFields.splice(targetIndex, 0, removed);
 
-                pinnedFields.forEach((field, index) => {
-                    const stateField = fields.find(f => f.key === field.key);
-                    if (stateField) {
-                        stateField.order = index + 1;
-                    }
-                });
+                // Build new order map from reordered pinned list
+                const orderMap = new Map(pinnedFields.map((f, i) => [f.key, i + 1]));
+                fields = fields.map(f => orderMap.has(f.key) ? { ...f, order: orderMap.get(f.key)! } : f);
             }
         }
 
