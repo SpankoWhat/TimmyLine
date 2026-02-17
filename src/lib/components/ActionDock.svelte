@@ -5,7 +5,7 @@
 	type ButtonConfig = {
 		label: string;
 		id: string;
-		variant: 'home' | 'create' | 'relate' | 'config' | 'other';
+		variant: 'home' | 'create' | 'relate' | 'config' | 'export' | 'other';
 		items?: Array<{
 			label: string;
 			action: () => void | Promise<void>;
@@ -163,6 +163,16 @@
 	.action-btn.other:hover {
 		border-color: var(--color-accent-primary);
 		background: rgba(139, 92, 246, 0.1);
+	}
+
+	.action-btn.export {
+		border-color: var(--color-accent-primary);
+		color: var(--color-accent-primary);
+	}
+
+	.action-btn.export:hover {
+		border-color: var(--color-accent-primary);
+		background: rgba(96, 165, 250, 0.1);
 	}
 
 	.dropdown-menu {

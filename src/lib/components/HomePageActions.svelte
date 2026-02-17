@@ -7,16 +7,6 @@
 		modalStore.open(createModalConfig(entityType as EntityType, 'create'));
 	}
 
-	function handleImport() {
-		console.log('Import data');
-		// TODO: Implement import functionality
-	}
-
-	function handleExport() {
-		console.log('Export data');
-		// TODO: Implement export functionality
-	}
-
 	function toggleTheme() {
 		console.log('Toggle theme');
 		// TODO: Implement theme toggle
@@ -41,8 +31,6 @@
 			label: 'Other',
 			variant: 'other' as const,
 			items: [
-				{ label: 'Import Data', action: handleImport },
-				{ label: 'Export Data', action: handleExport },
 				{ label: 'Toggle Theme', action: toggleTheme },
 				{ label: 'Help', action: showHelp }
 			]
