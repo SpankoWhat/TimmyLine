@@ -34,6 +34,7 @@ export const POST: RequestHandler = async (event) => {
 		discovered_at: body.discovered_at,
 		event_data: body.event_data,
 		occurred_at: body.occurred_at,
+		notes: body.notes,
 		severity: body.severity,
 		confidence: body.confidence,
 		source_reliability: body.source_reliability,

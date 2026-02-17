@@ -359,7 +359,7 @@ server.registerTool(
 	'export_incident_html',
 	{
 		description:
-			'Export a full incident as a self-contained interactive HTML report. Returns the raw HTML string that can be saved as an .html file and opened in a browser. Includes all events, actions, entities, annotations, and analysts rendered in TimmyLine\'s terminal-aesthetic UI.',
+			'Export a full incident as a self-contained interactive HTML report. Returns the raw HTML string that can be saved as an .html file and opened in a browser. Includes all events, actions, entities, annotations, and analysts rendered in TimmyLine\'s terminal-aesthetic UI. This tool returns a complete HTML document with embedded JavaScript. Save the response directly using Python\'s file.write() or the create_file tool to preserve exact encoding. Bash heredocs will corrupt the output.',
 		inputSchema: {
 			incident_id: z.string().describe('The incident UUID to export')
 		}
@@ -417,6 +417,7 @@ server.registerTool(
 			event_type: z.string().describe('Event type name (must exist in event_type lookup)'),
 			discovered_at: z.number().describe('When the event was discovered (Unix epoch seconds)'),
 			event_data: z.string().describe('JSON string of structured event data'),
+			note: z.string().optional().describe('Free-text notes about the event'),
 			occurred_at: z.number().optional().describe('When the event actually occurred (Unix epoch seconds)'),
 			severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).optional().describe('Event severity'),
 			confidence: z.enum(['high', 'medium', 'low', 'guess']).optional().describe('Confidence in this event'),
