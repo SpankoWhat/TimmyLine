@@ -5,12 +5,16 @@
  * endpoints as tools for AI assistants. Uses stdio transport and makes
  * fetch calls to the running SvelteKit server.
  *
+ * Authentication uses a dedicated API key (Bearer token) instead of
+ * user session cookies. The key acts on behalf of the analyst it was
+ * generated for, with role-scoped permissions.
+ *
  * Usage:
  *   npx tsx src/lib/server/mcp/server.ts
  *
  * Requires:
  *   - TimmyLine SvelteKit server running (default: http://localhost:5173)
- *   - MCP_API_TOKEN env var set (must match a valid session token)
+ *   - MCP_API_KEY env var set (generate via Settings → API Keys in the UI)
  *   - ORIGIN env var set (base URL of the running server)
  */
 
@@ -24,12 +28,17 @@ import 'dotenv/config';
 // ============================================================================
 
 const BASE_URL = process.env.ORIGIN || 'http://localhost:5173';
-const API_TOKEN = process.env.MCP_API_TOKEN || '';
+const API_KEY = process.env.MCP_API_KEY || '';
+
+if (!API_KEY) {
+	console.error('[TimmyLine MCP] WARNING: MCP_API_KEY is not set. All API calls will fail.');
+	console.error('[TimmyLine MCP] Generate an API key in TimmyLine: Settings → API Keys');
+}
 
 /** Standard headers sent with every API request */
 function getHeaders(method: 'GET' | 'POST' = 'GET'): Record<string, string> {
 	const headers: Record<string, string> = {
-		Cookie: `authjs.session-token=${API_TOKEN}`
+		Authorization: `Bearer ${API_KEY}`
 	};
 	if (method === 'POST') {
 		headers['Content-Type'] = 'application/json';

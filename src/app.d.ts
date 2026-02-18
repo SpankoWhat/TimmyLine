@@ -7,6 +7,14 @@ declare global {
 			logger?: import('./lib/server/logging/index').Logger;
 			session?: import('@auth/sveltekit').Session | null;
 			auth: () => Promise<import('@auth/sveltekit').Session | null>;
+			/** Set when request is authenticated via API key */
+			apiKey?: {
+				id: string;
+				name: string;
+				analystUUID: string;
+				analystUsername: string;
+				analystRole: string;
+			};
 		}
 		// interface PageData {}
 		// interface PageState {}

@@ -15,6 +15,7 @@ export * from './01_06_auth_users';
 export * from './01_07_auth_accounts';
 export * from './01_08_auth_sessions';
 export * from './01_09_auth_verification_tokens';
+export * from './01_10_api_keys';
 
 // Core tables
 export * from './02_00_core_analysts';
