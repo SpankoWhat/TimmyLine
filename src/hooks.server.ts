@@ -91,8 +91,7 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
 
     // Public routes that don't require authentication
     const publicRoutes = ['/login', '/auth', '/api/health'];
-    const isPublicRoute = publicRoutes.some((route) => event.url.pathname.startsWith(route));
-    const isRootRoute = event.url.pathname === '/';
+    const isPublicRoute = publicRoutes.some((route) => event.url.pathname.startsWith(route)) || event.url.pathname === '/';
 
     // Redirect unauthenticated users to login
     if (!session?.user && !isPublicRoute) {
