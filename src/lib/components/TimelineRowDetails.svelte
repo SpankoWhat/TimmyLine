@@ -43,13 +43,13 @@
     <div class="details-container" style="grid-template-columns: {1 - columnRatio}fr auto {columnRatio}fr;">
         <!-- Left Column: Full Details -->
         <div class="details-column">
-            <div class="column-header">┌─ FULL DETAILS ─────────────────────────────</div>
+            <div class="column-header">Full Details</div>
             <div class="details-grid">
                 {#each Object.entries(item.data) as [key, value] (key)}
                     {#if value && typeof value !== 'object'}
                         {#if jsonFieldKeys.has(key)}
                             <div class="detail-item">
-                                <span class="detail-label">│ {key.replace(/_/g, ' ')}:</span>
+                                <span class="detail-label">{key.replace(/_/g, ' ')}</span>
                                 <span class="detail-value"></span>
                             </div>
                             <div class="json-viewer-slot">
@@ -57,14 +57,13 @@
                             </div>
                         {:else}
                             <div class="detail-item">
-                                <span class="detail-label">│ {key.replace(/_/g, ' ')}:</span>
+                                <span class="detail-label">{key.replace(/_/g, ' ')}</span>
                                 <span class="detail-value">{value}</span>
                             </div>
                         {/if}
                     {/if}
                 {/each}
             </div>
-            <div class="column-footer">└────────────────────────────────────────────</div>
         </div>
 
         <!-- Resize Divider -->
@@ -72,9 +71,9 @@
 
         <!-- Right Column: Relationship Graph -->
         <div class="graph-column">
-            <div class="column-header">┌─ RELATIONSHIPS ────────────────────────────</div>
+            <div class="column-header">Relationships</div>
             <div class="relationship-tree">
-                <div class="tree-root">│ {type === 'event' ? '◉ EVENT' : '◆ ACTION'}: {(item.data as any)[type === 'event' ? 'event_type' : 'action_type']}</div>
+                <div class="tree-root">{type === 'event' ? '◉ EVENT' : '◆ ACTION'}: {(item.data as any)[type === 'event' ? 'event_type' : 'action_type']}</div>
 
                 <!-- Related Entities -->
                 {#if relatedEntities.length > 0}
@@ -115,25 +114,25 @@
                     <div class="tree-empty">└─ <span class="empty-text">No relationships found</span></div>
                 {/if}
             </div>
-            <div class="column-footer">└────────────────────────────────────────────</div>
         </div>
     </div>
 </div>
 
 <style>
-    /* Expanded Details Styles */
+    /* Expanded Details Container */
     .expanded-details {
         width: 100%;
-        background: var(--color-bg-tertiary);
-        border: 1px solid var(--color-border-medium);
-        border-radius: var(--border-radius-sm);
+        background: hsl(var(--bg-surface-75));
+        border: var(--border-width) solid hsl(var(--border-default));
+        border-radius: var(--radius-sm);
+        overflow: hidden;
     }
 
+    /* Two-column grid layout */
     .details-container {
         display: grid;
-        grid-template-columns: .8fr 0.60fr;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm);
+        gap: var(--space-2);
+        padding: var(--space-3);
     }
 
     .details-container * {
@@ -149,61 +148,72 @@
         min-height: 200px;
     }
 
-    .column-header,
-    .column-footer {
-        font-family: 'Courier New', monospace;
-        font-size: var(--font-size-xs);
-        color: var(--color-accent-primary);
+    /* Column Headers */
+    .column-header {
+        font-size: var(--text-xs);
+        font-weight: var(--font-semibold);
+        color: hsl(var(--fg-light));
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-wide);
+        padding-bottom: var(--space-2);
+        border-bottom: var(--border-width) solid hsl(var(--border-muted));
+        margin-bottom: var(--space-2);
         user-select: none;
-    }
-
-    .column-footer {
-        margin-top: 0;
-        margin-bottom: 0;
     }
 
     /* Details Grid (Left Column) */
     .details-grid {
         display: flex;
         flex-direction: column;
-        font-family: 'Courier New', monospace;
-        font-size: var(--font-size-xs);
-        line-height: normal;
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        line-height: var(--leading-snug);
     }
 
     .detail-item {
         display: grid;
-        grid-template-columns: 200px 1fr;
-        gap: var(--spacing-sm);
+        grid-template-columns: 180px 1fr;
+        gap: var(--space-2);
+        padding: var(--space-0\.5) 0;
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        line-height: var(--leading-snug);
     }
 
     .detail-label {
-        color: var(--color-accent-primary);
+        color: hsl(var(--fg-lighter));
         text-transform: uppercase;
-        font-size: var(--font-size-xs);
+        font-size: var(--text-2xs);
+        font-weight: var(--font-medium);
     }
 
     .detail-value {
-        color: var(--color-text-primary);
+        color: hsl(var(--fg-data));
+        word-break: break-all;
     }
 
     /* JSON Viewer Slot */
     .json-viewer-slot {
-        margin-left: var(--spacing-sm);
+        margin-left: var(--space-2);
+        padding: var(--space-2);
+        background: hsl(var(--bg-alternative));
+        border-radius: var(--radius-sm);
+        border: var(--border-width) solid hsl(var(--border-muted));
     }
 
     /* Relationship Tree (Right Column) */
     .relationship-tree {
-        font-family: 'Courier New', monospace;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        color: hsl(var(--fg-default));
     }
 
     .tree-root {
-        color: var(--color-accent-primary);
-        font-weight: bold;
-        margin-bottom: 0;
-        padding-left: 0;
+        color: hsl(var(--brand-default));
+        font-weight: var(--font-semibold);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        margin-bottom: var(--space-1);
     }
 
     .tree-branch {
@@ -212,62 +222,72 @@
     }
 
     .branch-header {
-        color: var(--color-accent-secondary);
-        font-weight: bold;
-        margin-bottom: 0;
+        color: hsl(var(--info-default));
+        font-weight: var(--font-semibold);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
     }
 
     .tree-node {
         display: flex;
         align-items: baseline;
-        padding-left: var(--spacing-sm);
-        transition: background 0.15s ease;
+        gap: var(--space-1);
+        padding: var(--space-0\.5) var(--space-1);
+        transition: var(--transition-colors);
     }
 
     .tree-node:hover {
-        background: var(--color-bg-hover);
+        background: hsl(var(--bg-surface-200));
+        border-radius: var(--radius-xs);
         cursor: pointer;
     }
 
     .node-connector {
-        color: var(--color-border-medium);
+        color: hsl(var(--fg-muted));
         user-select: none;
         min-width: 20px;
+        flex-shrink: 0;
     }
 
     .node-type {
-        color: var(--color-accent-warning);
-        font-weight: bold;
+        color: hsl(var(--warning-default));
+        font-weight: var(--font-semibold);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
         min-width: 80px;
+        flex-shrink: 0;
     }
 
     .node-value {
-        color: var(--color-text-primary);
-        font-weight: bold;
+        color: hsl(var(--fg-data));
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
     }
 
     .node-meta {
-        color: var(--color-text-secondary);
+        color: hsl(var(--fg-lighter));
         font-style: italic;
-        font-size: calc(var(--font-size-xs) - 1px);
+        font-size: var(--text-2xs);
     }
 
     .tree-empty {
-        padding-left: var(--spacing-xs);
-        color: var(--color-border-medium);
+        padding-left: var(--space-1);
+        color: hsl(var(--fg-muted));
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
     }
 
     .empty-text {
-        color: var(--color-text-tertiary);
+        color: hsl(var(--fg-lighter));
         font-style: italic;
     }
 
     /* Entity/Event specific node styling */
     .entity-node .node-type {
-        color: var(--color-accent-warning);
+        color: hsl(var(--warning-default));
     }
 
     .event-node .node-type {
-        color: var(--color-accent-primary);
+        color: hsl(var(--brand-default));
     }
 </style>

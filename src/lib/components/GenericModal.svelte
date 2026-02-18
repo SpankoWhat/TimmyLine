@@ -116,355 +116,444 @@
 </script>
 
 {#if $modalStore}
-	<!-- Modal Overlay -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<div class="modal-overlay" onclick={handleCancel}>
-		<!-- Modal Container -->
+	<div class="modal-backdrop" onclick={handleCancel}>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="modal-container" onclick={(e) => e.stopPropagation()}>
-			<!-- Modal Header -->
-			<div class="modal-header">
-				<div class="header-content">
-					<span class="header-icon">
-						{$modalStore.mode === 'create' ? '➕' : $modalStore.mode === 'edit' ? '✏️' : $modalStore.mode === 'delete' ? '🗑️' : '👁️'}
-					</span>
-					<h2 class="header-title">
-						{$modalStore.mode} {$modalStore.title}
-					</h2>
-				</div>
-				<button class="close-btn" onclick={handleCancel}>✕</button>
-			</div>
-			
-			<!-- Modal Body -->
+		<div class="modal" onclick={(e) => e.stopPropagation()}>
+			<header class="modal-header">
+				<h2 class="modal-title">
+					{$modalStore.mode} {$modalStore.title}
+				</h2>
+				<button
+					type="button"
+					class="btn-icon"
+					aria-label="Close modal"
+					onclick={handleCancel}
+				>
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+						<path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+					</svg>
+				</button>
+			</header>
+
 			<div class="modal-body">
-				<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="modal-form">
-					{#each enrichedFields as field}
+				<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+					{#each enrichedFields as field (field.key)}
 						{@const error = errors[field.key]}
-						
-						<div class="field-group">
-							<div class="field-label">
+
+						<div class="field">
+							<label class="label" for="field-{field.key}">
 								{field.label}
 								{#if field.required}
-									<span class="field-required">*</span>
+									<span class="field-required" aria-hidden="true">*</span>
 								{/if}
-							</div>
-							
+							</label>
+
 							{#if field.type === 'text'}
 								<input
+									id="field-{field.key}"
 									type="text"
-									class="field-input"
+									class="input"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
 									required={field.required} />
-									
+
 							{:else if field.type === 'textarea'}
 								<textarea
-									class="field-textarea"
+									id="field-{field.key}"
+									class="input textarea"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
 									rows="4"
 									required={field.required}></textarea>
-						{:else if field.type === 'json'}
-							{@const jsonType = currentModal?.entityType === 'timeline_event' ? 'event' : 'action'}
-							<JsonKeyValueEditor
-								value={formData[field.key] ?? ''}
-								knownKeys={$knownJsonKeys[jsonType]}
-								placeholder={field.placeholder}
-								onchange={(v) => { formData[field.key] = v; }}
-							/>									
+
+							{:else if field.type === 'json'}
+								{@const jsonType = currentModal?.entityType === 'timeline_event' ? 'event' : 'action'}
+								<JsonKeyValueEditor
+									value={formData[field.key] ?? ''}
+									knownKeys={$knownJsonKeys[jsonType]}
+									placeholder={field.placeholder}
+									onchange={(v) => { formData[field.key] = v; }}
+								/>
+
 							{:else if field.type === 'select'}
 								<select
-									class="field-select"
+									id="field-{field.key}"
+									class="input select"
 									bind:value={formData[field.key]}
 									required={field.required}>
 									<option value="">Select {field.label}</option>
-									{#each field.options || [] as option}
+									{#each field.options || [] as option (option.value)}
 										<option value={option.value}>{option.label}</option>
 									{/each}
 								</select>
-								
+
 							{:else if field.type === 'datetime'}
 								<input
+									id="field-{field.key}"
 									type="datetime-local"
-									class="field-input"
+									class="input"
 									value={formData[field.key] ? convertFromEpoch(formData[field.key]) : ''}
 									oninput={(e) => {
 										formData[field.key] = e.currentTarget.value;
 									}}
 									required={field.required} />
-									
+
 							{:else if field.type === 'number'}
 								<input
+									id="field-{field.key}"
 									type="number"
-									class="field-input"
+									class="input"
 									bind:value={formData[field.key]}
 									placeholder={field.placeholder}
 									required={field.required} />
+
 							{:else if field.type === 'checkbox'}
-								<input
-									type="checkbox"
-									class="field-input checkbox-input"
-									bind:checked={formData[field.key]}
-									required={field.required} />
+								<div class="checkbox-row">
+									<input
+										id="field-{field.key}"
+										type="checkbox"
+										class="checkbox"
+										bind:checked={formData[field.key]}
+										required={field.required} />
+									<!-- label already rendered above -->
+								</div>
 							{/if}
-							
+
 							{#if error}
-								<p class="field-error">
-									<span>⚠</span> {error}
+								<p class="field-error" role="alert">
+									{error}
 								</p>
 							{/if}
-							
+
 							{#if field.helpText}
-								<p class="field-help">{field.helpText}</p>
+								<p class="field-hint">{field.helpText}</p>
 							{/if}
 						</div>
 					{/each}
 				</form>
 			</div>
-			
-			<!-- Modal Footer -->
-			<div class="modal-footer">
-				<button type="button" class="btn btn-cancel" onclick={handleCancel}>
+
+			<footer class="modal-footer">
+				<button type="button" class="btn-secondary" onclick={handleCancel}>
 					Cancel
 				</button>
 				<button
 					type="submit"
-					class="btn btn-submit"
+					class="btn-primary"
 					onclick={handleSubmit}
-					disabled={isSubmitting}>
+					disabled={isSubmitting}
+				>
 					{#if isSubmitting}
-						<span class="spinner">⚙️</span>
+						<span class="spinner" aria-hidden="true">
+							<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+								<circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="28" stroke-dashoffset="8" stroke-linecap="round"/>
+							</svg>
+						</span>
 						<span>Submitting...</span>
 					{:else}
 						<span>{$modalStore.mode === 'create' ? 'Create' : 'Save'}</span>
 					{/if}
 				</button>
-			</div>
+			</footer>
 		</div>
 	</div>
 {/if}
 
 <style>
-	.modal-overlay {
+	/* ── Backdrop ── */
+	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.8);
-		backdrop-filter: blur(4px);
-		z-index: 200;
+		background: hsl(0 0% 0% / 0.65);
+		z-index: var(--z-overlay);
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		padding: var(--space-8);
 	}
 
-	.modal-container {
-		/* background: var(--color-bg-secondary); */
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-lg);
-		box-shadow: var(--shadow-md);
-		max-width: 600px;
+	/* ── Modal container ── */
+	.modal {
+		background: hsl(var(--bg-surface-100));
+		border: var(--border-width) solid hsl(var(--border-overlay));
+		border-radius: var(--radius-xl);
+		padding: var(--space-6);
+		max-width: 560px;
 		width: 100%;
-		max-height: 90vh;
-		overflow: hidden;
+		max-height: 85vh;
+		overflow-y: auto;
+		z-index: var(--z-modal);
+		box-shadow: var(--shadow-overlay);
 		display: flex;
 		flex-direction: column;
 	}
 
+	/* ── Header ── */
 	.modal-header {
-		background: #2c2e3373;
-		border-bottom: 1px solid var(--color-border-subtle);
-		padding: 0 var(--spacing-md);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+		margin-bottom: var(--space-4);
 	}
 
-	.header-content {
-		display: flex;
+	.modal-title {
+		font-size: var(--text-lg);
+		font-weight: var(--font-semibold);
+		color: hsl(var(--fg-default));
+		text-transform: capitalize;
+		margin: 0;
+	}
+
+	/* ── Close button (btn-icon pattern) ── */
+	.btn-icon {
+		display: inline-flex;
 		align-items: center;
-		gap: var(--spacing-md);
-	}
-
-	.header-icon {
-		font-size: var(--font-size-lg);
-	}
-
-	.header-title {
-		font-size: var(--font-size-md);
-		font-weight: var(--font-weight-semibold);
-		color: var(--color-text-primary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.close-btn {
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		color: hsl(var(--fg-lighter));
 		background: transparent;
-		border: none;
-		color: var(--color-accent-error);
-		font-size: var(--font-size-lg);
+		border: var(--border-width) solid transparent;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
-		transition: all var(--transition-fast);
-		line-height: 1;
+		transition: var(--transition-colors);
+		flex-shrink: 0;
+	}
+	.btn-icon:hover {
+		background: hsl(var(--bg-surface-300));
+		color: hsl(var(--fg-default));
+	}
+	.btn-icon:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 1px;
 	}
 
-	.close-btn:hover {
-		transform: scale(1.4);
-		color: var(--color-text-primary);
-	}
-
+	/* ── Body ── */
 	.modal-body {
-		padding: 0 var(--spacing-lg);
 		overflow-y: auto;
-		max-height: calc(90vh - 180px);
+		color: hsl(var(--fg-light));
+		font-size: var(--text-sm);
+		line-height: var(--leading-normal);
 	}
 
-	.modal-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xs);
-	}
-
-	.field-group {
+	/* ── Field group ── */
+	.field {
 		display: flex;
 		flex-direction: column;
 	}
+	.field + .field {
+		margin-top: var(--space-3);
+	}
 
-	.field-label {
+	/* ── Label ── */
+	.label {
 		display: block;
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-semibold);
-		color: var(--color-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		position: relative;
-		left: 4px;
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: hsl(var(--fg-light));
+		margin-bottom: var(--space-1);
 	}
 
 	.field-required {
-		color: var(--color-accent-error);
+		color: hsl(var(--destructive-default));
 	}
 
-	.field-input,
-	.field-textarea,
-	.field-select {
+	/* ── Inputs (text, textarea, select, datetime, number) ── */
+	.input {
 		width: 100%;
-		background: #2c2e3373;
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-sm);
-		padding: var(--spacing-xs) var(--spacing-sm);
-		color: var(--color-text-primary);
-		font-size: var(--font-size-sm);
-		transition: all var(--transition-fast);
+		padding: var(--space-1\.5) var(--space-2);
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-normal);
+		line-height: var(--leading-normal);
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-control));
+		border: var(--border-width) solid hsl(var(--border-control));
+		border-radius: var(--radius-md);
+		transition: var(--transition-colors);
+		min-height: 32px;
 	}
-
-	.field-input::placeholder,
-	.field-textarea::placeholder {
-		color: var(--color-text-dim);
+	.input::placeholder {
+		color: hsl(var(--fg-lighter));
 	}
-
-	.field-input:focus,
-	.field-textarea:focus,
-	.field-select:focus {
+	.input:focus {
 		outline: none;
-		border-color: #f08d3173;
+		border-color: hsl(var(--border-focus));
+		box-shadow: 0 0 0 1px hsl(var(--border-focus));
+	}
+	.input:focus-visible {
+		outline: none;
+		border-color: hsl(var(--border-focus));
+		box-shadow: 0 0 0 1px hsl(var(--border-focus));
+	}
+	.input:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		background: hsl(var(--bg-muted));
 	}
 
-	.field-textarea {
+	/* ── Textarea ── */
+	.textarea {
 		resize: vertical;
 		min-height: 80px;
+		font-family: var(--font-mono);
 	}
 
-	.field-select {
+	/* ── Select ── */
+	.select {
 		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237d7672' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right var(--space-2) center;
+		background-size: 14px;
+		padding-right: var(--space-8);
 	}
 
-	.field-error {
-		color: var(--color-accent-error);
-		font-size: var(--font-size-xs);
+	/* ── Checkbox ── */
+	.checkbox-row {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-xs);
+		gap: var(--space-2);
+		min-height: 32px;
 	}
-
-	.field-help {
-		color: var(--color-text-tertiary);
-		font-size: var(--font-size-xs);
-	}
-
-	.modal-footer {
-		padding: var(--spacing-lg);
-		display: flex;
-		justify-content: space-between;
-		gap: var(--spacing-md);
-	}
-
-	.btn {
-		padding: var(--spacing-xs) var(--spacing-sm);
-		border-radius: var(--border-radius-sm);
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-medium);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+	.checkbox {
+		width: 16px;
+		height: 16px;
+		accent-color: hsl(var(--brand-default));
 		cursor: pointer;
-		transition: all var(--transition-fast);
-		border: 1px solid var(--color-border-medium);
+	}
+	.checkbox:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 2px;
 	}
 
-	.btn-cancel {
-		background: var(--color-bg-secondary);
-		color: var(--color-text-secondary);
+	/* ── Validation error ── */
+	.field-error {
+		font-size: var(--text-xs);
+		color: hsl(var(--destructive-default));
+		margin-top: var(--space-1);
 	}
 
-	.btn-cancel:hover {
-		background: var(--color-bg-hover);
-		color: var(--color-text-primary);
+	/* ── Help text ── */
+	.field-hint {
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+		margin-top: var(--space-1);
 	}
 
-	.btn-submit {
-		background: var(--color-accent-primary);
+	/* ── Footer ── */
+	.modal-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--space-3);
+		margin-top: var(--space-6);
 	}
 
-	.btn-submit:hover:not(:disabled) {
-		background: var(--color-accent-secondary);
-		border-color: var(--color-accent-secondary);
+	/* ── Secondary button (Cancel) ── */
+	.btn-secondary {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-2);
+		padding: var(--space-1\.5) var(--space-3);
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		line-height: var(--leading-tight);
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-surface-100));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: var(--transition-colors);
+		min-height: 32px;
+		white-space: nowrap;
 	}
-
-	.btn-submit:disabled {
+	.btn-secondary:hover {
+		background: hsl(var(--bg-surface-300));
+		border-color: hsl(var(--border-strong));
+	}
+	.btn-secondary:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 2px;
+	}
+	.btn-secondary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
-	.spinner {
-		animation: spin 1s linear infinite;
+	/* ── Primary button (Submit) ── */
+	.btn-primary {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-2);
+		padding: var(--space-1\.5) var(--space-3);
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		line-height: var(--leading-tight);
+		color: hsl(var(--fg-contrast));
+		background: hsl(var(--brand-default));
+		border: var(--border-width) solid transparent;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: var(--transition-colors);
+		min-height: 32px;
+		white-space: nowrap;
+	}
+	.btn-primary:hover {
+		background: hsl(var(--brand-600));
+	}
+	.btn-primary:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 2px;
+	}
+	.btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
+	/* ── Spinner ── */
+	.spinner {
+		display: inline-flex;
+		animation: spin 1s linear infinite;
+	}
 	@keyframes spin {
 		from { transform: rotate(0deg); }
 		to { transform: rotate(360deg); }
 	}
 
-	/* Custom scrollbar */
-	.modal-body::-webkit-scrollbar {
-		width: 8px;
+	/* ── Scrollbar ── */
+	.modal::-webkit-scrollbar {
+		width: 6px;
+	}
+	.modal::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.modal::-webkit-scrollbar-thumb {
+		background: hsl(var(--border-strong));
+		border-radius: var(--radius-full);
+	}
+	.modal::-webkit-scrollbar-thumb:hover {
+		background: hsl(var(--fg-muted));
 	}
 
-	.modal-body::-webkit-scrollbar-track {
-		background: var(--color-bg-primary);
-	}
-
-	.modal-body::-webkit-scrollbar-thumb {
-		background: var(--color-border-strong);
-		border-radius: var(--border-radius-sm);
-	}
-
-	.modal-body::-webkit-scrollbar-thumb:hover {
-		background: var(--color-text-dim);
-	}
-
-	/* Datetime input styling */
+	/* ── Datetime picker indicator ── */
 	input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 		filter: invert(0.7);
 		cursor: pointer;
+	}
+
+	/* ── Reduced motion ── */
+	@media (prefers-reduced-motion: reduce) {
+		.spinner {
+			animation-duration: 0.01ms !important;
+		}
 	}
 </style>

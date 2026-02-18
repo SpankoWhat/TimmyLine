@@ -289,7 +289,7 @@
 
 <style>
     .field-section {
-        margin-bottom: var(--spacing-sm);
+        margin-bottom: var(--space-2);
         display: flex;
         flex-direction: column;
         max-height: calc(100vh - 200px);
@@ -297,102 +297,108 @@
     }
 
     .field-section:last-of-type {
-        margin-bottom: var(--spacing-md);
+        margin-bottom: var(--space-3);
     }
 
     .field-section-header {
         flex-shrink: 0;
-        margin-bottom: var(--spacing-xs);
+        margin-bottom: var(--space-1);
     }
 
     .field-section-title {
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-accent-primary);
+        font-size: var(--text-xs);
+        font-weight: var(--font-semibold);
+        color: hsl(var(--brand-default));
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: var(--spacing-xs);
-        padding-bottom: var(--spacing-xs);
-        border-bottom: 1px solid var(--color-border-subtle);
+        letter-spacing: var(--tracking-wide);
+        margin-bottom: var(--space-1);
+        padding-bottom: var(--space-1);
+        border-bottom: var(--border-width) solid hsl(var(--border-muted));
     }
 
     .search-input {
         width: 100%;
-        padding: var(--spacing-xs);
-        background: var(--color-bg-tertiary);
-        border: 1px solid var(--color-border-medium);
-        border-radius: var(--border-radius-sm);
-        color: var(--color-text-primary);
-        font-size: var(--font-size-xs);
+        padding: var(--space-1);
+        background: hsl(var(--bg-surface-200));
+        border: var(--border-width) solid hsl(var(--border-default));
+        border-radius: var(--radius-sm);
+        color: hsl(var(--fg-default));
+        font-size: var(--text-xs);
         font-family: var(--font-mono);
-        transition: border-color 0.2s;
+        transition: var(--transition-colors);
     }
 
     .search-input:focus {
         outline: none;
-        border-color: var(--color-accent-primary);
-        background: var(--color-bg-secondary);
+        border-color: hsl(var(--brand-default));
+        background: hsl(var(--bg-surface-100));
     }
 
     .search-input::placeholder {
-        color: var(--color-text-tertiary);
+        color: hsl(var(--fg-lighter));
+    }
+
+    .search-input:focus-visible,
+    .field-checkbox-label input:focus-visible {
+        outline: var(--border-width-thick) solid hsl(var(--border-focus));
+        outline-offset: 1px;
     }
 
     .fields-container {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-sm);
+        gap: var(--space-2);
         overflow-y: auto;
         flex: 1;
-        padding-right: var(--spacing-xs);
+        padding-right: var(--space-1);
     }
 
     .fields-column {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: var(--space-2);
     }
 
     .field-list {
         display: flex;
         flex-direction: column;
-        gap: var(--spacing-xs);
+        gap: var(--space-1);
     }
 
     .field-list.pinned-list {
-        background: var(--color-bg-tertiary);
-        border-radius: var(--border-radius-sm);
-        padding: var(--spacing-xs);
+        background: hsl(var(--bg-surface-200));
+        border-radius: var(--radius-sm);
+        padding: var(--space-1);
     }
 
     .field-subsection-title {
-        font-size: 9px;
-        color: var(--color-text-tertiary);
+        font-size: var(--text-2xs);
+        color: hsl(var(--fg-lighter));
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: var(--spacing-xs);
-        margin-bottom: calc(var(--spacing-xs) / 2);
+        letter-spacing: var(--tracking-wide);
+        margin-top: var(--space-1);
+        margin-bottom: var(--space-0\.5);
     }
 
     .field-row {
         display: flex;
         align-items: center;
-        gap: var(--spacing-xs);
+        gap: var(--space-1);
         justify-content: flex-start;
     }
 
     .field-row.draggable {
         cursor: grab;
-        border: 1px solid transparent;
-        border-radius: var(--border-radius-sm);
-        padding: 2px;
-        margin: -2px;
-        transition: all 0.15s ease;
+        border: var(--border-width) solid transparent;
+        border-radius: var(--radius-sm);
+        padding: var(--space-0\.5);
+        margin: calc(-1 * var(--space-0\.5));
+        transition: var(--transition-colors);
     }
 
     .field-row.draggable:hover {
-        background: var(--color-bg-hover);
-        border-color: var(--color-border-medium);
+        background: hsl(var(--bg-surface-200));
+        border-color: hsl(var(--border-default));
     }
 
     .field-row.draggable:active {
@@ -400,51 +406,51 @@
     }
 
     .field-row.drag-over {
-        border-color: var(--color-accent-primary);
-        background: rgba(0, 255, 0, 0.1);
+        border-color: hsl(var(--brand-default));
+        background: hsl(var(--brand-default) / 0.1);
     }
 
     .drag-handle {
-        color: var(--color-text-tertiary);
-        font-size: 10px;
+        color: hsl(var(--fg-lighter));
+        font-size: var(--text-2xs);
         user-select: none;
         cursor: grab;
-        padding: 0 2px;
+        padding: 0 var(--space-0\.5);
     }
 
     .field-row.draggable:hover .drag-handle {
-        color: var(--color-accent-primary);
+        color: hsl(var(--brand-default));
     }
 
     .field-checkbox-label {
         display: flex;
         align-items: center;
-        gap: var(--spacing-xs);
+        gap: var(--space-1);
         cursor: pointer;
-        font-size: var(--font-size-xs);
-        color: var(--color-text-primary);
+        font-size: var(--text-xs);
+        color: hsl(var(--fg-default));
         user-select: none;
-        transition: background 0.2s;
-        padding: var(--spacing-xs) calc(var(--spacing-xs) / 2);
-        border-radius: var(--border-radius-sm);
+        transition: var(--transition-colors);
+        padding: var(--space-1) var(--space-0\.5);
+        border-radius: var(--radius-sm);
         flex: 1;
     }
 
     .field-checkbox-label:hover {
-        background: var(--color-bg-hover);
+        background: hsl(var(--bg-surface-200));
     }
 
     .field-checkbox-label input[type="checkbox"] {
         cursor: pointer;
-        accent-color: var(--color-accent-primary);
+        accent-color: hsl(var(--brand-default));
     }
 
     /* Dynamic field styles */
     .dynamic-section {
-        color: var(--color-accent-warning);
+        color: hsl(var(--warning-default));
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: var(--space-1);
     }
 
     .dynamic-icon {
@@ -452,20 +458,20 @@
     }
 
     .dynamic-list {
-        border-left: 2px solid var(--color-accent-warning);
-        margin-left: var(--spacing-xs);
-        padding-left: var(--spacing-xs);
+        border-left: var(--border-width-thick) solid hsl(var(--warning-default));
+        margin-left: var(--space-1);
+        padding-left: var(--space-1);
     }
 
     .dynamic-field .field-checkbox-label {
-        color: var(--color-text-secondary);
+        color: hsl(var(--fg-light));
     }
 
     .dynamic-field .field-checkbox-label:hover {
-        color: var(--color-text-primary);
+        color: hsl(var(--fg-default));
     }
 
     .dynamic-field input[type="checkbox"] {
-        accent-color: var(--color-accent-warning);
+        accent-color: hsl(var(--warning-default));
     }
 </style>

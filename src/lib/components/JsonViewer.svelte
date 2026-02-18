@@ -124,34 +124,34 @@
         display: flex;
         overflow-y: auto;
         overflow-x: hidden;
-        font-family: 'Courier New', monospace;
-        font-size: var(--font-size-xs);
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
     }
 
     .json-viewer-container::-webkit-scrollbar {
-        width: 4px;
+        width: var(--space-1);
     }
 
     .json-viewer-container::-webkit-scrollbar-track {
-        background: var(--color-bg-secondary);
+        background: hsl(var(--bg-surface-100));
     }
 
     .json-viewer-container::-webkit-scrollbar-thumb {
-        background: var(--color-border-medium);
-        border-radius: 2px;
+        background: hsl(var(--border-default));
+        border-radius: var(--radius-xs);
     }
 
     .json-pipe-column {
         flex-shrink: 0;
         user-select: none;
-        padding-top: var(--spacing-xs);
-        padding-bottom: var(--spacing-xs);
+        padding-top: var(--space-1);
+        padding-bottom: var(--space-1);
     }
 
     .json-pipe-line {
         line-height: 16px;
         height: 16px;
-        color: var(--color-accent-primary);
+        color: hsl(var(--brand-default));
         white-space: pre;
     }
 
@@ -159,23 +159,23 @@
         flex: 1;
         min-width: 0;
         overflow-x: auto;
-        background: var(--color-bg-primary);
-        border-left: 2px solid var(--color-border-medium);
-        padding: var(--spacing-xs) var(--spacing-xs);
-        border-radius: var(--border-radius-sm);
+        background: hsl(var(--bg-alternative));
+        border-left: var(--border-width-thick) solid hsl(var(--border-default));
+        padding: var(--space-1) var(--space-1);
+        border-radius: var(--radius-sm);
     }
 
     .json-content::-webkit-scrollbar {
-        height: 4px;
+        height: var(--space-1);
     }
 
     .json-content::-webkit-scrollbar-track {
-        background: var(--color-bg-secondary);
+        background: hsl(var(--bg-surface-100));
     }
 
     .json-content::-webkit-scrollbar-thumb {
-        background: var(--color-border-medium);
-        border-radius: 2px;
+        background: hsl(var(--border-default));
+        border-radius: var(--radius-xs);
     }
 
     .json-line {
@@ -190,33 +190,33 @@
     }
 
     .json-key {
-        color: var(--color-accent-primary);
-        font-weight: bold;
+        color: hsl(var(--brand-default));
+        font-weight: var(--font-bold);
     }
 
     .json-string {
-        color: var(--color-accent-success);
+        color: hsl(var(--success-default));
     }
 
     .json-number {
-        color: var(--color-accent-warning);
+        color: hsl(var(--info-default));
     }
 
     .json-boolean {
-        color: var(--color-accent-secondary);
-        font-weight: bold;
+        color: hsl(var(--warning-default));
+        font-weight: var(--font-bold);
     }
 
     .json-null {
-        color: var(--color-text-tertiary);
+        color: hsl(var(--fg-muted));
         font-style: italic;
     }
 
     .json-punctuation {
-        color: var(--color-text-secondary);
+        color: hsl(var(--fg-lighter));
     }
 
     .json-raw {
-        color: var(--color-text-primary);
+        color: hsl(var(--fg-default));
     }
 </style>

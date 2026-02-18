@@ -1,68 +1,91 @@
 <script lang="ts">
 	import { userNamesInCurrentIncident } from '$lib/stores/collabStore';
 	import { currentSelectedIncident } from '$lib/stores/cacheStore';
+
+	let users = $derived($userNamesInCurrentIncident);
+	let incident = $derived($currentSelectedIncident);
+
+	/**
+	 * Generate a deterministic HSL color from a string (username).
+	 * Produces warm, readable hues against dark backgrounds.
+	 */
+	function colorFromString(str: string): string {
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			hash = str.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const hue = ((hash % 360) + 360) % 360;
+		return `hsl(${hue}, 55%, 50%)`;
+	}
 </script>
 
-{#if $currentSelectedIncident && $userNamesInCurrentIncident.length > 0}
-	<div class="active-users-indicator">
-		<span class="header-label">Users Viewing: </span>
-		<span class="header-value">{$userNamesInCurrentIncident.length}</span>
-		<div class="users-tooltip">
-			{#each $userNamesInCurrentIncident as userName}
-				<div class="tooltip-user">
-					<div class="divider">| </div>
-					 <span class="user-name">{userName} </span>
+{#if incident && users.length > 0}
+	<div class="presence-indicator">
+		<div class="presence-stack">
+			{#each users.slice(0, 3) as name (name)}
+				<div class="avatar avatar-sm" style:background-color={colorFromString(name)} title={name}>
+					{name.charAt(0).toUpperCase()}
 				</div>
 			{/each}
 		</div>
+		{#if users.length > 3}
+			<span class="presence-count">+{users.length - 3}</span>
+		{/if}
+		<span class="presence-label">{users.length} viewing</span>
 	</div>
 {/if}
 
 <style>
-	.active-users-indicator {
-		display: flex;
-		flex-direction: row;
-		padding-left: var(--spacing-xs);
-		padding-right: var(--spacing-xs);
-		align-items: center;
-		gap: var(--spacing-xs);
-		font-size: var(--font-size-sm);
-		transition: all 0.2s ease;
-	}
-
-	.header-label {
-		color: var(--color-text-tertiary);
-	}
-
-	.header-value {
-		color: var(--color-accent-primary);
-		font-weight: var(--font-weight-medium);
-	}
-
-	.active-users-indicator:hover {
-		border-color: var(--color-accent-primary);
-	}
-
-	.active-users-indicator:hover .users-tooltip {
-		opacity: 1;
-		visibility: visible;
-	}
-
-	.users-tooltip {
-		opacity: 0;
-		display: flex;
-		flex-direction: row;
-		visibility: hidden;
-		transition: all 0.2s ease;
-	}
-
-	.tooltip-user {
+	.presence-indicator {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-xs);
+		gap: var(--space-2);
 	}
 
-	.user-name {
-		font-size: var(--font-size-sm);
+	.presence-stack {
+		display: flex;
+		align-items: center;
+	}
+
+	.presence-stack .avatar {
+		margin-left: -6px;
+		border: var(--border-width-thick) solid hsl(var(--bg-root));
+	}
+
+	.presence-stack .avatar:first-child {
+		margin-left: 0;
+	}
+
+	.avatar {
+		width: 28px;
+		height: 28px;
+		border-radius: var(--radius-full);
+		background: hsl(var(--bg-surface-300));
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: var(--text-2xs);
+		font-weight: var(--font-semibold);
+		color: hsl(var(--fg-light));
+		overflow: hidden;
+		flex-shrink: 0;
+	}
+
+	.avatar-sm {
+		width: 20px;
+		height: 20px;
+		font-size: 8px;
+	}
+
+	.presence-count {
+		margin-left: var(--space-1);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+	}
+
+	.presence-label {
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+		margin-left: var(--space-2);
 	}
 </style>

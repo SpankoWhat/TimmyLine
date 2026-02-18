@@ -1,59 +1,104 @@
 <script lang="ts">
-	import { 
-		incidentStats,
-	} from '$lib/stores/cacheStore';
+	import { incidentStats } from '$lib/stores/cacheStore';
 </script>
 
-<div class="stat-card info">
-<div class="stat-label">Total</div>
-    <div class="stat-value">{$incidentStats.total || 0}</div>
-</div>
-<div class="divider"> | </div>
-<div class="stat-card critical">
-    <div class="stat-label">Critical</div>
-    <div class="stat-value">{$incidentStats.critical || 0}</div>
-</div>
-<div class="stat-card warning">
-    <div class="stat-label">High</div>
-    <div class="stat-value">{$incidentStats.high || 0}</div>
-</div>
-<div class="divider"> | </div>
-<div class="stat-card info">
-    <div class="stat-label">In Progress</div>
-    <div class="stat-value">{$incidentStats.inProgress || 0}</div>
-</div>
-<div class="stat-card success">
-    <div class="stat-label">Closed</div>
-    <div class="stat-value">{$incidentStats.closed || 0}</div>
+<div class="stats-grid">
+	<div class="stat-card total">
+		<span class="stat-value">{$incidentStats.total}</span>
+		<span class="stat-label">Total</span>
+	</div>
+
+	<div class="stat-card critical">
+		<span class="stat-value">{$incidentStats.critical}</span>
+		<span class="stat-label">Critical</span>
+	</div>
+
+	<div class="stat-card high">
+		<span class="stat-value">{$incidentStats.high}</span>
+		<span class="stat-label">High</span>
+	</div>
+
+	<div class="stat-card medium">
+		<span class="stat-value">{$incidentStats.medium}</span>
+		<span class="stat-label">Medium</span>
+	</div>
+
+	<div class="stat-card low">
+		<span class="stat-value">{$incidentStats.low}</span>
+		<span class="stat-label">Low</span>
+	</div>
+
+	<div class="stat-card in-progress">
+		<span class="stat-value">{$incidentStats.inProgress}</span>
+		<span class="stat-label">In Progress</span>
+	</div>
+
+	<div class="stat-card closed">
+		<span class="stat-value">{$incidentStats.closed}</span>
+		<span class="stat-label">Closed</span>
+	</div>
 </div>
 
 <style>
-    .stat-card {
-		display: flex;
-		flex-direction: row;
-		background: var(--color-bg-secondary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-md);
-		padding-left: var(--spacing-md);
-		padding-right: var(--spacing-md);
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		gap: var(--space-3);
 	}
 
-	.stat-label {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+	.stat-card {
+		display: flex;
+		flex-direction: column;
+		background: hsl(var(--bg-surface-100));
+		border: 1px solid hsl(var(--border-default));
+		border-radius: var(--radius-lg);
+		padding: var(--space-4);
 	}
 
 	.stat-value {
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-semibold);
-		padding-left: var(--spacing-sm);
-		color: var(--color-text-primary);
+		font-family: var(--font-mono);
+		font-weight: var(--font-bold);
+		font-size: var(--text-2xl);
+		line-height: var(--leading-tight);
+		color: hsl(var(--fg-default));
 	}
 
-	.stat-card.critical .stat-value { color: var(--color-accent-error); }
-	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
-	.stat-card.success .stat-value { color: var(--color-accent-success); }
-	.stat-card.info .stat-value { color: var(--color-accent-primary); }
+	.stat-label {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		font-weight: var(--font-medium);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+		color: hsl(var(--fg-light));
+		margin-top: var(--space-1);
+	}
+
+	/* Severity & status value colors */
+	.stat-card.total .stat-value {
+		color: hsl(var(--brand-default));
+	}
+
+	.stat-card.critical .stat-value {
+		color: hsl(var(--severity-critical));
+	}
+
+	.stat-card.high .stat-value {
+		color: hsl(var(--severity-high));
+	}
+
+	.stat-card.medium .stat-value {
+		color: hsl(var(--severity-medium));
+	}
+
+	.stat-card.low .stat-value {
+		color: hsl(var(--severity-low));
+	}
+
+	.stat-card.in-progress .stat-value {
+		color: hsl(var(--status-open));
+	}
+
+	.stat-card.closed .stat-value {
+		color: hsl(var(--success-default));
+	}
 </style>

@@ -1,58 +1,78 @@
 <script lang="ts">
-    import { 
-        investigationStats,
-		entityStats,
-    } from '$lib/stores/cacheStore';
+	import { investigationStats, entityStats } from '$lib/stores/cacheStore';
 </script>
 
+<div class="stats-row">
+	<div class="stat-card total">
+		<span class="stat-value">{$investigationStats.total}</span>
+		<span class="stat-label">Total Items</span>
+	</div>
 
+	<div class="stat-card events">
+		<span class="stat-value">{$investigationStats.events}</span>
+		<span class="stat-label">Events</span>
+	</div>
 
-<div class="stat-card success">
-	<span class="stat-label">Total</span>
-	<span class="stat-value">{$investigationStats.total || 0}</span>
-</div>
-<div class="divider"> | </div>
-<div class="stat-card info">
-	<span class="stat-label">Events</span>
-	<span class="stat-value">{$investigationStats.events || 0}</span>
-</div>
-<div class="stat-card info">
-	<span class="stat-label">Actions</span>
-	<span class="stat-value">{$investigationStats.actions || 0}</span>
-</div>
-<div class="divider"> | </div>
-<div class="stat-card info">
-	<span class="stat-label">Entities</span>
-	<span class="stat-value">{$entityStats.total || 0}</span>
+	<div class="stat-card actions">
+		<span class="stat-value">{$investigationStats.actions}</span>
+		<span class="stat-label">Actions</span>
+	</div>
+
+	<div class="stat-card entities">
+		<span class="stat-value">{$entityStats.total}</span>
+		<span class="stat-label">Entities</span>
+	</div>
 </div>
 
 <style>
-    .stat-card {
+	.stats-row {
 		display: flex;
-		flex-direction: row;
-		background: var(--color-bg-secondary);
-		border: 1px solid var(--color-border-medium);
-		border-radius: var(--border-radius-md);
-		padding-left: var(--spacing-md);
-		padding-right: var(--spacing-md);
+		gap: var(--space-3);
+		flex-wrap: wrap;
 	}
 
-	.stat-label {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+	.stat-card {
+		display: flex;
+		flex-direction: row;
+		align-items: baseline;
+		background: hsl(var(--bg-surface-100));
+		border: 1px solid hsl(var(--border-default));
+		border-radius: var(--radius-lg);
+		padding: var(--space-3) var(--space-4);
 	}
 
 	.stat-value {
-		font-size: var(--font-size-xs);
-		font-weight: var(--font-weight-semibold);
-		padding-left: var(--spacing-sm);
-		color: var(--color-text-primary);
+		font-family: var(--font-mono);
+		font-weight: var(--font-semibold);
+		font-size: var(--text-lg);
+		line-height: var(--leading-tight);
+		color: hsl(var(--fg-default));
 	}
 
-	.stat-card.critical .stat-value { color: var(--color-accent-error); }
-	.stat-card.warning .stat-value { color: var(--color-accent-warning); }
-	.stat-card.success .stat-value { color: var(--color-accent-success); }
-	.stat-card.info .stat-value { color: var(--color-accent-primary); }
+	.stat-label {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		font-weight: var(--font-medium);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+		color: hsl(var(--fg-light));
+		margin-left: var(--space-2);
+	}
+
+	/* Card-specific value colors */
+	.stat-card.total .stat-value {
+		color: hsl(var(--fg-default));
+	}
+
+	.stat-card.events .stat-value {
+		color: hsl(var(--info-default));
+	}
+
+	.stat-card.actions .stat-value {
+		color: hsl(var(--brand-default));
+	}
+
+	.stat-card.entities .stat-value {
+		color: hsl(var(--warning-default));
+	}
 </style>

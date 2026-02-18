@@ -50,25 +50,26 @@
     });
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     class="resize-divider"
     class:dragging={isDragging}
     onmousedown={onDividerMouseDown}
+    role="separator"
+    aria-orientation="vertical"
 ></div>
 
 <style>
     .resize-divider {
-        width: 4px;
-        background: var(--color-border-medium);
+        width: var(--space-1);
+        background: hsl(var(--border-default));
         cursor: col-resize;
-        transition: background 0.15s ease;
+        transition: var(--transition-colors);
         user-select: none;
-        margin: 0 calc(var(--spacing-sm) / 2);
     }
 
     .resize-divider:hover,
     .resize-divider.dragging {
-        background: var(--color-accent-primary);
+        background: hsl(var(--brand-default));
     }
 </style>
