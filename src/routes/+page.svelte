@@ -4,7 +4,7 @@
 			<rect width="28" height="28" rx="6" fill="hsl(36, 100%, 50%)" />
 		</svg>
 		<h1 class="landing-title">TimmyLine</h1>
-		<p class="landing-subtitle">Cybersecurity Incident Response Timeline</p>
+		<p class="landing-subtitle">Timeline for Incident Responders - The better excel</p>
 		<a href="/login" class="btn-primary landing-cta">Sign In</a>
 	</div>
 </div>

@@ -11,6 +11,8 @@
 import type { Plugin } from 'vite';
 import { spawn, type ChildProcess } from 'child_process';
 import { resolve } from 'path';
+import { setMcpRunning, setMcpStopped } from './state';
+import { mcpLogger as logger } from '../logging';
 
 let mcpProcess: ChildProcess | null = null;
 
@@ -22,7 +24,7 @@ export function mcpPlugin(): Plugin {
 			setTimeout(() => {
 				const serverPath = resolve('src/lib/server/mcp/server.ts');
 
-				console.log('[MCP] 🔌 Starting MCP stdio server...');
+				logger.info('Starting MCP stdio server', { serverPath });
 
 				mcpProcess = spawn('npx', ['tsx', serverPath], {
 					stdio: ['pipe', 'pipe', 'inherit'], // stdin/stdout piped for MCP, stderr to console
@@ -31,24 +33,30 @@ export function mcpPlugin(): Plugin {
 				});
 
 				mcpProcess.on('error', (err) => {
-					console.error('[MCP] ❌ Failed to start MCP server:', err.message);
+					logger.error('Failed to start MCP server', { error: err instanceof Error ? err.message : 'Unknown error' });
+					setMcpStopped(err.message);
 				});
 
 				mcpProcess.on('exit', (code, signal) => {
 					if (signal !== 'SIGTERM') {
-						console.log(`[MCP] Process exited (code=${code}, signal=${signal})`);
+						logger.warn('MCP server process exited', { code, signal });
 					}
+					setMcpStopped();
 					mcpProcess = null;
 				});
 
-				console.log(`[MCP] ✅ MCP server spawned (PID: ${mcpProcess.pid})`);
+				logger.info('MCP server process started', { pid: mcpProcess.pid });
+				if (mcpProcess.pid) {
+					setMcpRunning(mcpProcess.pid);
+				}
 			}, 2000);
 
 			// Clean up on server close
 			server.httpServer?.on('close', () => {
 				if (mcpProcess) {
-					console.log('[MCP] 🛑 Shutting down MCP server...');
+					logger.info('Shutting down MCP server');
 					mcpProcess.kill('SIGTERM');
+					setMcpStopped();
 					mcpProcess = null;
 				}
 			});

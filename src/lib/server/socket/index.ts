@@ -17,6 +17,9 @@ const globalForSocket = globalThis as unknown as {
 // Store for tracking users in incident rooms (single source of truth for presence)
 const allActiveIncidentUsers = new Map<IncidentUUID, UsersInIncident>(); 
 
+// Store for tracking users in the lobby (not in any incident)
+const allLobbyUsers = new Map<AnalystUUID, { analystUUID: string; analystName: string; socketIds: SocketId[] }>;
+
 // Reverse lookup: socket.id -> analyst UUID for quick lookups in event handlers
 const socketToAnalystMap = new Map<SocketId, AnalystUUID>(); 
 
@@ -184,9 +187,29 @@ function registerLobbyEvents(socket: Socket) {
     socket.on('inform-join-lobby', () => {
         socket.join('lobby');
 
-        // Derive all online users from existing incident tracking
+        const analystUUID = socket.data.analystUUID;
+        const analystName = socket.data.analystName;
+
+        // Add/update user in lobby tracking
+        const existingLobbyUser = allLobbyUsers.get(analystUUID);
+        if (existingLobbyUser) {
+            // User already in lobby, just add this socket
+            if (!existingLobbyUser.socketIds.includes(socket.id)) {
+                existingLobbyUser.socketIds.push(socket.id);
+            }
+        } else {
+            // New user in lobby
+            allLobbyUsers.set(analystUUID, {
+                analystUUID,
+                analystName,
+                socketIds: [socket.id]
+            });
+        }
+
+        // Derive all online users from BOTH lobby AND incident tracking
         const onlineUsers = new Map<AnalystUUID, { analystUUID: string; analystName: string }>();
 
+        // Include users currently in incidents
         for (const [_, incident] of allActiveIncidentUsers) {
             for (const [analystUUID, userState] of incident) {
                 onlineUsers.set(analystUUID, {
@@ -196,24 +219,49 @@ function registerLobbyEvents(socket: Socket) {
             }
         }
 
+        // Include users in lobby (not in incidents)
+        for (const [analystUUID, lobbyUser] of allLobbyUsers) {
+            if (!onlineUsers.has(analystUUID)) {
+                onlineUsers.set(analystUUID, {
+                    analystUUID: lobbyUser.analystUUID,
+                    analystName: lobbyUser.analystName
+                });
+            }
+        }
+
         // Send current lobby state to new joiner
         socket.emit('lobby-users-list', Object.fromEntries(onlineUsers));
         socket.emit('incident-user-counts', getIncidentCounts());
 
-        // Notify all lobby users about the new joiner
-        globalForSocket.io!.to('lobby').emit('user-joined-lobby', socket.data.analystUUID, {
-            analystUUID: socket.data.analystUUID,
-            analystName: socket.data.analystName
+        // Notify OTHER lobby users about the new joiner (broadcast excludes sender)
+        socket.broadcast.to('lobby').emit('user-joined-lobby', analystUUID, {
+            analystUUID,
+            analystName
         });
 
-        logger.debug(`Client ${socket.id} joined lobby`);
+        logger.debug(`Client ${socket.id} (${analystName}) joined lobby`);
     });
 
     socket.on('inform-leave-lobby', () => {
         socket.leave('lobby');
 
-        // Notify all lobby users about the departure
-        globalForSocket.io!.to('lobby').emit('user-left-lobby', socket.data.analystUUID);
+        const analystUUID = socket.data.analystUUID;
+
+        // Remove this socket from lobby tracking
+        const lobbyUser = allLobbyUsers.get(analystUUID);
+        if (lobbyUser) {
+            lobbyUser.socketIds = lobbyUser.socketIds.filter(id => id !== socket.id);
+
+            // If user has no more sockets in lobby, remove them completely
+            if (lobbyUser.socketIds.length === 0) {
+                allLobbyUsers.delete(analystUUID);
+
+                // Notify all lobby users about the departure
+                globalForSocket.io!.to('lobby').emit('user-left-lobby', analystUUID);
+
+                logger.debug(`Analyst ${analystUUID} fully left lobby`);
+            }
+        }
 
         logger.debug(`Client ${socket.id} left lobby`);
     });
@@ -231,6 +279,18 @@ function registerJoinRoomEvent(socket: Socket) {
             // Leave lobby room when entering an incident
             if (socket.rooms.has('lobby')) {
                 socket.leave('lobby');
+
+                // Remove from lobby tracking
+                const lobbyUser = allLobbyUsers.get(analystUUID);
+                if (lobbyUser) {
+                    lobbyUser.socketIds = lobbyUser.socketIds.filter(id => id !== socket.id);
+                    if (lobbyUser.socketIds.length === 0) {
+                        allLobbyUsers.delete(analystUUID);
+                        // Notify lobby that user left (they're now in an incident)
+                        globalForSocket.io!.to('lobby').emit('user-left-lobby', analystUUID);
+                    }
+                }
+
                 logger.debug(`Client ${socket.id} left lobby to join incident`);
             }
 
@@ -312,6 +372,7 @@ function registerDisconnectEvent(socket: Socket) {
             return;
         }
 
+        // Handle incident cleanup
         for (const [incidentUUID, incident] of allActiveIncidentUsers.entries()) {
             // Skip if incident doesn't have this analyst
             const userInfo = incident.get(analystUUID);
@@ -335,6 +396,22 @@ function registerDisconnectEvent(socket: Socket) {
                 if (incident.size === 0) {
                     allActiveIncidentUsers.delete(incidentUUID);
                 }
+            }
+        }
+
+        // Handle lobby cleanup
+        const lobbyUser = allLobbyUsers.get(analystUUID);
+        if (lobbyUser) {
+            lobbyUser.socketIds = lobbyUser.socketIds.filter(id => id !== socket.id);
+
+            // If user has no more sockets in lobby, remove them completely
+            if (lobbyUser.socketIds.length === 0) {
+                allLobbyUsers.delete(analystUUID);
+
+                // Notify lobby users about the departure
+                globalForSocket.io!.to('lobby').emit('user-left-lobby', analystUUID);
+
+                logger.debug(`Removed analyst ${analystUUID} from lobby (no more sockets)`);
             }
         }
 

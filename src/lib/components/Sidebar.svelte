@@ -1,14 +1,26 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { currentSelectedIncident } from '$lib/stores/cacheStore';
-	import { get } from 'svelte/store';
+	import { onMount, onDestroy } from 'svelte';
 
 	const STORAGE_KEY = 'timmyline-sidebar-expanded';
 
 	let expanded = $state(browser ? localStorage.getItem(STORAGE_KEY) !== 'false' : true);
 
-	let currentPath = $derived($page.url.pathname);
+	type HealthStatus = {
+		status: 'healthy' | 'degraded' | 'unhealthy';
+		database: string;
+		mcp: string;
+		mcpPid: number | null;
+		mcpError?: string | null;
+		error?: string;
+	};
+
+	let health = $state<HealthStatus | null>(null);
+	let healthInterval: ReturnType<typeof setInterval> | undefined;
+
+	let currentPath = $derived(page.url.pathname);
 	let selectedIncident = $derived($currentSelectedIncident);
 	let incidentPath = $derived(selectedIncident ? `/incident/${selectedIncident.uuid}` : null);
 
@@ -54,6 +66,36 @@
 			});
 		}
 		return items;
+	});
+
+	async function fetchHealth() {
+		if (!browser) return;
+		try {
+			const response = await fetch('/api/health');
+			const data = await response.json();
+			health = data;
+		} catch (error) {
+			console.error('Failed to fetch health status:', error);
+			health = {
+				status: 'unhealthy',
+				database: 'error',
+				mcp: 'unknown',
+				mcpPid: null,
+				error: 'Failed to connect'
+			};
+		}
+	}
+
+	onMount(() => {
+		fetchHealth();
+		// Refresh health status every 30 seconds
+		healthInterval = setInterval(fetchHealth, 30000);
+	});
+
+	onDestroy(() => {
+		if (healthInterval) {
+			clearInterval(healthInterval);
+		}
 	});
 </script>
 
@@ -170,8 +212,60 @@
 		{/if}
 	</nav>
 
-	<!-- Footer: Settings + Toggle -->
+	<!-- Footer: Health Status, Settings + Toggle -->
 	<div class="sidebar-footer">
+		<!-- Health Status -->
+		{#if health}
+			<div class="sidebar-health" title={expanded ? undefined : `DB: ${health.database} | MCP: ${health.mcp}`}>
+				<!-- Database Status -->
+				<div class="sidebar-health-row">
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="sidebar-health-icon"
+						class:health-icon-healthy={health.database === 'connected'}
+						class:health-icon-unhealthy={health.database !== 'connected'}
+						aria-hidden="true"
+					>
+						<ellipse cx="12" cy="5" rx="9" ry="3" />
+						<path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+						<path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+					</svg>
+					<span class="sidebar-item-label sidebar-health-text">
+						<span class="sidebar-health-label">DB:</span>
+						<span class="sidebar-health-value mono">{health.database}</span>
+					</span>
+				</div>
+				
+				<!-- MCP Status -->
+				<div class="sidebar-health-row">
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="sidebar-health-icon"
+						class:health-icon-healthy={health.mcp === 'running'}
+						class:health-icon-unhealthy={health.mcp === 'stopped' || health.mcp === 'unknown'}
+						aria-hidden="true"
+					>
+						<polyline points="16 18 22 12 16 6" />
+						<polyline points="8 6 2 12 8 18" />
+					</svg>
+					<span class="sidebar-item-label sidebar-health-text">
+						<span class="sidebar-health-label">MCP:</span>
+						<span class="sidebar-health-value mono">{health.mcp}</span>
+					</span>
+				</div>
+			</div>
+		{/if}
+
 		<a
 			href="/settings"
 			class="sidebar-item"
@@ -401,8 +495,8 @@
 	}
 
 	.sidebar-item-icon {
-		width: var(--icon-xl);
-		height: var(--icon-xl);
+		width: var(--icon-sm);
+		height: var(--icon-sm);
 		flex-shrink: 0;
 	}
 
@@ -448,5 +542,65 @@
 	.sidebar-toggle:focus-visible {
 		outline: var(--border-width-thick) solid hsl(var(--border-focus));
 		outline-offset: 2px;
+	}
+
+	/* ===== Health Status ===== */
+	.sidebar-health {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1\.5);
+		padding: var(--space-2);
+		border-radius: var(--radius-md);
+		background: hsl(var(--bg-surface-100));
+		border: var(--border-width) solid hsl(var(--border-default));
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	.sidebar-health-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		min-height: 20px;
+	}
+
+	.sidebar-health-icon {
+		width: 14px;
+		height: 14px;
+		flex-shrink: 0;
+	}
+
+	.sidebar-health-text {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1\.5);
+		font-size: var(--text-xs);
+	}
+
+	.sidebar-health-label {
+		font-family: var(--font-family);
+		font-weight: var(--font-medium);
+		color: hsl(var(--fg-lighter));
+	}
+
+	.sidebar-health-value {
+		font-family: var(--font-mono);
+		color: hsl(var(--fg-data));
+	}
+
+	.health-icon-healthy {
+		color: hsl(var(--status-success));
+	}
+
+	.health-icon-degraded {
+		color: hsl(var(--severity-medium));
+	}
+
+	.health-icon-unhealthy {
+		color: hsl(var(--severity-critical));
+	}
+
+	.mono {
+		font-family: var(--font-mono);
 	}
 </style>

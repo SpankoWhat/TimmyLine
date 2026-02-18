@@ -190,56 +190,30 @@
 		</div>
 	</section>
 
-	<!-- Two-Column Grid: System Health + Lobby -->
-	<div class="card-grid two-col">
-		<!-- System Health Card -->
-		<div class="card">
-			<div class="card-header">
-				<span class="card-title">System Health</span>
-			</div>
-			<div class="card-body">
-				<div class="info-row">
-					<span class="info-label">Database</span>
-					<span class="info-value mono">{data.health.database}</span>
-				</div>
-				<div class="info-row">
-					<span class="info-label">Status</span>
-					<span class="info-value status-success">{data.health.status}</span>
-				</div>
-				{#if data.health.error}
-					<div class="info-row">
-						<span class="info-label">Error</span>
-						<span class="info-value status-error">{data.health.error}</span>
-					</div>
-				{/if}
-			</div>
+	<!-- Users in Lobby Card -->
+	<div class="card">
+		<div class="card-header">
+			<span class="card-title">Users in Lobby</span>
+			<span class="card-count">{$usersInLobby.size}</span>
 		</div>
-
-		<!-- Users in Lobby Card -->
-		<div class="card">
-			<div class="card-header">
-				<span class="card-title">Users in Lobby</span>
-				<span class="card-count">{$usersInLobby.size}</span>
-			</div>
-			<div class="card-body">
-				{#if $usersInLobby.size > 0}
-					{#each $usersInLobby as user (user[0])}
-						<div class="info-row">
-							<span class="info-label mono">{user[1].analystUUID.substring(0, 8)}</span>
-							<span class="info-value">
-								<span class="presence-indicator">
-									<span class="status-dot status-dot-live"></span>
-									{user[1].analystName}
-								</span>
+		<div class="card-body">
+			{#if $usersInLobby.size > 0}
+				{#each $usersInLobby as user (user[0])}
+					<div class="info-row">
+						<span class="info-label mono">{user[1].analystUUID.substring(0, 8)}</span>
+						<span class="info-value">
+							<span class="presence-indicator">
+								<span class="status-dot status-dot-live"></span>
+								{user[1].analystName}
 							</span>
-						</div>
-					{/each}
-				{:else}
-					<div class="empty-lobby">
-						<span class="fg-muted">No users currently in the lobby.</span>
+						</span>
 					</div>
-				{/if}
-			</div>
+				{/each}
+			{:else}
+				<div class="empty-lobby">
+					<span class="fg-muted">No users currently in the lobby.</span>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
