@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 import { db } from '$lib/server';
-import { apiKeys, analysts } from '$lib/server/database';
+import { apiKeys, analysts, authUsers } from '$lib/server/database';
 import { eq, and, isNull, or, gt } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 
@@ -13,6 +13,7 @@ const KEY_BYTES = 32; // 32 bytes = 64 hex chars
  */
 export async function generateApiKey(opts: {
 	name: string;
+	user_id: string;
 	analyst_uuid: string;
 	role?: 'read-only' | 'analyst' | 'on-point lead';
 	expires_at?: number;
@@ -28,6 +29,7 @@ export async function generateApiKey(opts: {
 			key_prefix: keyPrefixDisplay,
 			key_hash: keyHash,
 			name: opts.name,
+			user_id: opts.user_id,
 			analyst_uuid: opts.analyst_uuid,
 			role: opts.role ?? 'analyst',
 			expires_at: opts.expires_at ?? null
@@ -61,6 +63,7 @@ export async function validateApiKey(plaintextKey: string) {
 			id: apiKeys.id,
 			name: apiKeys.name,
 			role: apiKeys.role,
+			user_id: apiKeys.user_id,
 			analyst_uuid: apiKeys.analyst_uuid,
 			expires_at: apiKeys.expires_at,
 			revoked_at: apiKeys.revoked_at,
@@ -107,6 +110,7 @@ export async function validateApiKey(plaintextKey: string) {
 		keyId: key.id,
 		keyName: key.name,
 		keyRole: key.role,
+		userId: key.user_id,
 		analystUUID: key.analyst_uuid,
 		analystUsername: key.analystUsername,
 		analystRole: key.analystRole,
@@ -116,15 +120,16 @@ export async function validateApiKey(plaintextKey: string) {
 }
 
 /**
- * List all API keys for an analyst (without sensitive hash data).
+ * List all API keys for a user (without sensitive hash data).
  */
-export async function listApiKeys(analystUUID: string) {
+export async function listApiKeys(userId: string) {
 	return db
 		.select({
 			id: apiKeys.id,
 			key_prefix: apiKeys.key_prefix,
 			name: apiKeys.name,
 			role: apiKeys.role,
+			user_id: apiKeys.user_id,
 			analyst_uuid: apiKeys.analyst_uuid,
 			last_used_at: apiKeys.last_used_at,
 			expires_at: apiKeys.expires_at,
@@ -132,13 +137,14 @@ export async function listApiKeys(analystUUID: string) {
 			revoked_at: apiKeys.revoked_at
 		})
 		.from(apiKeys)
-		.where(eq(apiKeys.analyst_uuid, analystUUID));
+		.where(eq(apiKeys.user_id, userId));
 }
 
 /**
  * Revoke an API key by setting revoked_at.
+ * Only the owning user can revoke their own keys.
  */
-export async function revokeApiKey(keyId: string, analystUUID: string) {
+export async function revokeApiKey(keyId: string, userId: string) {
 	const now = Math.floor(Date.now() / 1000);
 	const result = await db
 		.update(apiKeys)
@@ -146,7 +152,7 @@ export async function revokeApiKey(keyId: string, analystUUID: string) {
 		.where(
 			and(
 				eq(apiKeys.id, keyId),
-				eq(apiKeys.analyst_uuid, analystUUID),
+				eq(apiKeys.user_id, userId),
 				isNull(apiKeys.revoked_at)
 			)
 		)

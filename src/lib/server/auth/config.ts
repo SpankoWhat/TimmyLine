@@ -123,6 +123,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 
 					// Attach analyst info to session
 					if (analyst.length > 0) {
+						session.user.id = user.id;
 						session.user.analystUUID = analyst[0].uuid;
 						session.user.analystRole = analyst[0].role;
 						session.user.analystUsername = analyst[0].username;

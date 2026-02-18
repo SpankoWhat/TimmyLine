@@ -14,8 +14,12 @@ import { validateApiKey } from '$lib/server/auth/apiKeys';
 const apiKeyHandle: Handle = async ({ event, resolve }) => {
     const authHeader = event.request.headers.get('authorization');
 
-    if (authHeader?.startsWith('Bearer tml_')) {
-        const token = authHeader.slice('Bearer '.length);
+    // Extract tml_ token from Authorization header
+    const token = authHeader?.includes('tml_')
+        ? 'tml_' + authHeader.split('tml_')[1]
+        : null;
+
+    if (token) {
         const keyInfo = await validateApiKey(token);
 
         if (!keyInfo) {
@@ -32,6 +36,7 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
         event.locals.apiKey = {
             id: keyInfo.keyId,
             name: keyInfo.keyName,
+            userId: keyInfo.userId,
             analystUUID: keyInfo.analystUUID,
             analystUsername: keyInfo.analystUsername,
             analystRole: effectiveRole
@@ -40,6 +45,7 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
         // Synthesize a session so requireAuth/requireWriteAccess/etc. work unchanged
         const syntheticSession = {
             user: {
+                id: keyInfo.userId,
                 name: keyInfo.analystFullName,
                 email: keyInfo.analystEmail,
                 analystUUID: keyInfo.analystUUID,
@@ -90,7 +96,8 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
     const session = await event.locals.auth();
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/login', '/auth', '/api/health'];
+    // /api/mcp is listed here to prevent redirect; it enforces its own API key auth
+    const publicRoutes = ['/login', '/auth', '/api/health', '/api/mcp'];
     const isPublicRoute = publicRoutes.some((route) => event.url.pathname.startsWith(route)) || event.url.pathname === '/';
 
     // Redirect unauthenticated users to login

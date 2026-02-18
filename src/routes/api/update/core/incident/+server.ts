@@ -1,63 +1,31 @@
 import type { RequestHandler } from './$types';
-import type { NewIncident } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
-import { db } from '$lib/server';
-import * as schema from '$lib/server/database';
-import { getSocketIO } from '$lib/server/socket';
-import { eq } from 'drizzle-orm';
 import { requireWriteAccess } from '$lib/server/auth/authorization';
+import { updateIncident, ServiceError, type ServiceRole } from '$lib/server/services';
 
 export const POST: RequestHandler = async (event) => {
 	await requireWriteAccess(event);
-	const { request } = event;
 
 	let body;
 	try {
-		body = await request.json();
+		body = await event.request.json();
 	} catch {
 		throw error(400, 'Invalid JSON in request body');
 	}
 
-	if (!body.uuid) {
-		throw error(400, 'Missing required field: uuid');
-	}
-
-	if (body.status && !['In Progress', 'Post-Mortem', 'Closed'].includes(body.status)) {
-		throw error(400, `Invalid status value: ${body.status}`);
-	}
-
-	if (body.priority && !['critical', 'high', 'medium', 'low'].includes(body.priority)) {
-		throw error(400, `Invalid priority value: ${body.priority}`);
-	}
-
-	const incidentData: Partial<NewIncident> = {
-		title: body.title,
-		status: body.status,
-		priority: body.priority,
-		soar_ticket_id: body.soar_ticket_id,
-		updated_at: Math.floor(Date.now() / 1000)
+	const session = event.locals.session;
+	const ctx = {
+		actorUUID: session?.user?.analystUUID || 'unknown',
+		actorRole: (session?.user?.analystRole || 'observer') as ServiceRole
 	};
 
-	const cleanedData = Object.fromEntries(
-		Object.entries(incidentData).filter(([_, v]) => v !== undefined)
-	);
-
 	try {
-		const [updatedIncident] = await db
-		.update(schema.incidents)
-		.set(cleanedData)
-		.where(eq(schema.incidents.uuid, body.uuid))
-		.returning();
-
-		// Broadcast to all connected clients
-		const io = getSocketIO();
-		io.emit('entity-updated', 'incident', updatedIncident);
-
-		return json(updatedIncident);
+		const result = await updateIncident(body, ctx);
+		return json(result);
 	} catch (err) {
-		if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-            throw error(409, 'An incident with this SOAR ticket ID already exists');
-        }
-        throw error(500, `Database update error: ${(err as Error).message}`);
+		if (err instanceof ServiceError) {
+			return json({ error: err.message }, { status: err.status });
+		}
+		throw error(500, `Unexpected error: ${(err as Error).message}`);
 	}
 };

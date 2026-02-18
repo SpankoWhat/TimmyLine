@@ -2,11 +2,12 @@ import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { analysts } from './02_00_core_analysts';
+import { authUsers } from './01_06_auth_users';
 
 /**
  * API Keys Table
  * Stores hashed API keys for programmatic access (MCP servers, CI/CD, scripts).
- * Each key is linked to an analyst and acts on their behalf.
+ * Each key is owned by an auth user and linked to their analyst profile.
  *
  * Key format: `tml_<64-random-hex-chars>`
  * Only the SHA-256 hash is stored — the plaintext key is shown once at creation.
@@ -24,6 +25,11 @@ export const apiKeys = sqliteTable('api_keys', {
 
 	/** Human-friendly label (e.g. "Copilot MCP", "CI/CD Pipeline") */
 	name: text('name', { length: 100 }).notNull(),
+
+	/** The auth user who owns this API key */
+	user_id: text('user_id')
+		.notNull()
+		.references(() => authUsers.id, { onDelete: 'cascade' }),
 
 	/** The analyst this key acts on behalf of */
 	analyst_uuid: text('analyst_uuid')

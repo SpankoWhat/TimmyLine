@@ -12,10 +12,11 @@ import { generateApiKey } from '$lib/server/auth/apiKeys';
  */
 export const POST: RequestHandler = async (event) => {
 	const session = await requireAuth(event);
+	const userId = session.user?.id;
 	const analystUUID = session.user?.analystUUID;
 
-	if (!analystUUID) {
-		throw error(400, 'No analyst profile linked to this account');
+	if (!userId || !analystUUID) {
+		throw error(400, 'No user account or analyst profile linked to this session');
 	}
 
 	let body: Record<string, unknown>;
@@ -60,6 +61,7 @@ export const POST: RequestHandler = async (event) => {
 
 	const { plaintextKey, record } = await generateApiKey({
 		name: name.trim(),
+		user_id: userId,
 		analyst_uuid: analystUUID,
 		role: keyRole,
 		expires_at: expires_at

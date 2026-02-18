@@ -1,39 +1,24 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server';
-import * as schema from '$lib/server/database';
 import { requireReadAccess } from '$lib/server/auth/authorization';
+import { listLookups, ServiceError } from '$lib/server/services';
 
 export const GET: RequestHandler = async (event) => {
 	await requireReadAccess(event);
 	const { url } = event;
 
-	const userTableInput = url.searchParams.get('table');
-
-	if (!userTableInput) {
-		throw error(400, 'Missing "table" query parameter');
+	const table = url.searchParams.get('table');
+	if (!table) {
+		return json({ error: 'Missing "table" query parameter' }, { status: 400 });
 	}
 
-	// Map valid table names to their schema
-	const tableMap = {
-		event_type: schema.event_type,
-		action_type: schema.action_type,
-		relation_type: schema.relation_type,
-		annotation_type: schema.annotation_type,
-		entity_type: schema.entity_type
-	} as const;
-
-	type TableName = keyof typeof tableMap;
-
-	if (!(userTableInput in tableMap)) {
-		throw error(
-			400,
-			`Invalid table name. Must be one of: ${Object.keys(tableMap).join(', ')}`
-		);
+	try {
+		const results = await listLookups({ table });
+		return json(results);
+	} catch (err) {
+		if (err instanceof ServiceError) {
+			return json({ error: err.message }, { status: err.status });
+		}
+		return json({ error: 'Internal server error' }, { status: 500 });
 	}
-
-	const table = tableMap[userTableInput as TableName];
-	const results = await db.select().from(table)
-
-	return json(results);
 };

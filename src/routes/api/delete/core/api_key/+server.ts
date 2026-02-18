@@ -11,10 +11,10 @@ import { revokeApiKey } from '$lib/server/auth/apiKeys';
  */
 export const POST: RequestHandler = async (event) => {
 	const session = await requireAuth(event);
-	const analystUUID = session.user?.analystUUID;
+	const userId = session.user?.id;
 
-	if (!analystUUID) {
-		throw error(400, 'No analyst profile linked to this account');
+	if (!userId) {
+		throw error(400, 'No user account linked to this session');
 	}
 
 	let body: Record<string, unknown>;
@@ -29,7 +29,7 @@ export const POST: RequestHandler = async (event) => {
 		throw error(400, 'Field "id" is required');
 	}
 
-	const revoked = await revokeApiKey(id, analystUUID);
+	const revoked = await revokeApiKey(id, userId);
 	if (!revoked) {
 		throw error(404, 'API key not found, already revoked, or does not belong to you');
 	}

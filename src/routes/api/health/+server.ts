@@ -2,24 +2,23 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server';
 import { sql } from 'drizzle-orm';
-import { getMcpStatus } from '$lib/server/mcp/state';
+import { getActiveSessionCount } from '$lib/server/mcp/session';
 
 export const GET: RequestHandler = async () => {
     try {
         // Check database connection
         const result = await db.get<{ result: number }>(sql`SELECT 1 as result`);
-        
-        // Check MCP server status
-        const mcpStatus = getMcpStatus();
+
+        // Check MCP session count
+        const mcpSessions = getActiveSessionCount();
 
         // Check if we got a valid database response
         if (result?.result === 1) {
             return json({
                 status: 'healthy',
                 database: 'connected',
-                mcp: mcpStatus.running ? 'running' : 'stopped',
-                mcpPid: mcpStatus.pid,
-                mcpError: mcpStatus.lastError,
+                mcp: 'streamable-http',
+                mcpActiveSessions: mcpSessions,
                 timestamp: new Date().toISOString()
             });
         }
@@ -29,21 +28,19 @@ export const GET: RequestHandler = async () => {
             {
                 status: 'degraded',
                 database: 'unexpected_response',
-                mcp: mcpStatus.running ? 'running' : 'stopped',
-                mcpPid: mcpStatus.pid,
+                mcp: 'streamable-http',
+                mcpActiveSessions: mcpSessions,
                 timestamp: new Date().toISOString()
             },
             { status: 503 }
         );
     } catch (err) {
         // Database connection failed
-        const mcpStatus = getMcpStatus();
         return json(
             {
                 status: 'unhealthy',
                 database: 'disconnected',
-                mcp: mcpStatus.running ? 'running' : 'stopped',
-                mcpPid: mcpStatus.pid,
+                mcp: 'streamable-http',
                 error: err instanceof Error ? err.message : 'Unknown error',
                 timestamp: new Date().toISOString()
             },

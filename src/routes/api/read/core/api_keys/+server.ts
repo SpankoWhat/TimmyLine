@@ -10,12 +10,12 @@ import { listApiKeys } from '$lib/server/auth/apiKeys';
  */
 export const GET: RequestHandler = async (event) => {
 	const session = await requireAuth(event);
-	const analystUUID = session.user?.analystUUID;
+	const userId = session.user?.id;
 
-	if (!analystUUID) {
-		throw error(400, 'No analyst profile linked to this account');
+	if (!userId) {
+		throw error(400, 'No user account linked to this session');
 	}
 
-	const keys = await listApiKeys(analystUUID);
+	const keys = await listApiKeys(userId);
 	return json(keys);
 };

@@ -1,38 +1,31 @@
-import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server';
-import { incidents } from '$lib/server/database';
-import { getSocketIO } from '$lib/server/socket';
-import { eq } from 'drizzle-orm';
+import { error, json } from '@sveltejs/kit';
 import { requireAdminAccess } from '$lib/server/auth/authorization';
+import { deleteIncident, ServiceError, type ServiceRole } from '$lib/server/services';
 
 export const POST: RequestHandler = async (event) => {
 	await requireAdminAccess(event);
-	const { request } = event;
 
-	const body = await request.json();
-
-	if (!body.uuid) {
-		throw error(400, 'Missing required field: uuid');
+	let body;
+	try {
+		body = await event.request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
 	}
+
+	const session = event.locals.session;
+	const ctx = {
+		actorUUID: session?.user?.analystUUID || 'unknown',
+		actorRole: (session?.user?.analystRole || 'observer') as ServiceRole
+	};
 
 	try {
-		await db
-			.update(incidents)
-			.set({
-				deleted_at: Math.floor(Date.now() / 1000),
-				updated_at: Math.floor(Date.now() / 1000)
-			})
-			.where(eq(incidents.uuid, body.uuid))
-			.returning();
-
-		// Broadcast to all connected clients
-		const io = getSocketIO();
-		io.emit('entity-deleted', 'incident', body.uuid);
-
+		await deleteIncident(body, ctx);
+		return json(true);
 	} catch (err) {
-		throw error(500, `Database deletion error: ${(err as Error).message}`);
+		if (err instanceof ServiceError) {
+			return json({ error: err.message }, { status: err.status });
+		}
+		throw error(500, `Unexpected error: ${(err as Error).message}`);
 	}
-
-	return json(true);
 };

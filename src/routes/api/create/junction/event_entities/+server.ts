@@ -1,43 +1,31 @@
 import type { RequestHandler } from './$types';
-import type { NewEventEntity } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
-import { db } from '$lib/server';
-import * as schema from '$lib/server/database';
-import { getSocketIO } from '$lib/server/socket';
 import { requireWriteAccess } from '$lib/server/auth/authorization';
+import { createEventEntity, ServiceError, type ServiceRole } from '$lib/server/services';
 
 export const POST: RequestHandler = async (event) => {
 	await requireWriteAccess(event);
-	const { request } = event;
 
-	const body = await request.json();
-	
-	const eventEntityData: NewEventEntity = {
-		event_id: body.event_uuid,
-		entity_id: body.entity_uuid,
-		role: body.role || null,
-		context: body.context || null
-	};
-
-	if (!eventEntityData.event_id || !eventEntityData.entity_id) {
-		throw error(400, 'Missing required fields: event_uuid and entity_uuid');
+	let body;
+	try {
+		body = await event.request.json();
+	} catch {
+		throw error(400, 'Invalid JSON in request body');
 	}
 
+	const session = event.locals.session;
+	const ctx = {
+		actorUUID: session?.user?.analystUUID || 'unknown',
+		actorRole: (session?.user?.analystRole || 'observer') as ServiceRole
+	};
+
 	try {
-		const [createdRelation] = await db
-			.insert(schema.event_entities)
-			.values(eventEntityData)
-			.returning();
-
-		// Broadcast to all users in the incident room
-		const io = getSocketIO();
-		if (body.incident_id) {
-			io.to(`incident:${body.incident_id}`).emit('entity-created', 'event_entities', createdRelation);
-		}
-
-		return json(createdRelation);
-
+		const result = await createEventEntity(body, ctx);
+		return json(result);
 	} catch (err) {
-		throw error(500, `Database insertion error: ${(err as Error).message}`);
+		if (err instanceof ServiceError) {
+			return json({ error: err.message }, { status: err.status });
+		}
+		throw error(500, `Unexpected error: ${(err as Error).message}`);
 	}
 };

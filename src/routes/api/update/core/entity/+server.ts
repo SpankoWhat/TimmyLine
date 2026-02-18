@@ -1,67 +1,31 @@
 import type { RequestHandler } from './$types';
-import type { NewEntity } from '$lib/server/database';
 import { error, json } from '@sveltejs/kit';
-import { db } from '$lib/server';
-import * as schema from '$lib/server/database';
-import { getSocketIO } from '$lib/server/socket';
-import { eq } from 'drizzle-orm';
 import { requireWriteAccess } from '$lib/server/auth/authorization';
+import { updateEntity, ServiceError, type ServiceRole } from '$lib/server/services';
 
 export const POST: RequestHandler = async (event) => {
 	await requireWriteAccess(event);
-	const { request } = event;
 
 	let body;
 	try {
-		body = await request.json();
+		body = await event.request.json();
 	} catch {
 		throw error(400, 'Invalid JSON in request body');
 	}
 
-	if (!body.uuid) {
-		throw error(400, 'Missing required field: uuid');
-	}
-
-	if (body.status && !['active', 'inactive', 'unknown'].includes(body.status)) {
-		throw error(400, `Invalid status value: ${body.status}`);
-	}
-
-	if (body.criticality && !['critical', 'high', 'medium', 'low', 'unknown'].includes(body.criticality)) {
-		throw error(400, `Invalid criticality value: ${body.criticality}`);
-	}
-
-	const entityData: Partial<NewEntity> = {
-		incident_id: body.incident_id,
-		entered_by: body.entered_by,
-		entity_type: body.entity_type,
-		identifier: body.identifier,
-		status: body.status,
-		first_seen: body.first_seen,
-		last_seen: body.last_seen,
-		display_name: body.display_name,
-		attributes: body.attributes,
-		criticality: body.criticality,
-		tags: body.tags,
-		updated_at: Math.floor(Date.now() / 1000)
+	const session = event.locals.session;
+	const ctx = {
+		actorUUID: session?.user?.analystUUID || 'unknown',
+		actorRole: (session?.user?.analystRole || 'observer') as ServiceRole
 	};
 
-	const cleanedData = Object.fromEntries(
-		Object.entries(entityData).filter(([_, v]) => v !== undefined)
-	);
-
 	try {
-		const [updatedEntity] = await db
-		.update(schema.entities)
-		.set(cleanedData)
-		.where(eq(schema.entities.uuid, body.uuid))
-		.returning();
-
-		// Broadcast to all users in the incident room
-		const io = getSocketIO();
-		io.to(`incident:${body.incident_id}`).emit('entity-updated', 'entity', updatedEntity);
-
-		return json(updatedEntity);
+		const result = await updateEntity(body, ctx);
+		return json(result);
 	} catch (err) {
-        throw error(500, `Database update error: ${(err as Error).message}`);
+		if (err instanceof ServiceError) {
+			return json({ error: err.message }, { status: err.status });
+		}
+		throw error(500, `Unexpected error: ${(err as Error).message}`);
 	}
 };

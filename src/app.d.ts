@@ -11,6 +11,7 @@ declare global {
 			apiKey?: {
 				id: string;
 				name: string;
+				userId: string;
 				analystUUID: string;
 				analystUsername: string;
 				analystRole: string;
@@ -25,6 +26,7 @@ declare global {
 declare module '@auth/sveltekit' {
 	interface Session {
 		user?: {
+			id?: string;
 			name?: string | null;
 			email?: string | null;
 			image?: string | null;
