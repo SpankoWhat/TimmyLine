@@ -94,7 +94,7 @@ export function validateEnum(
 	value: unknown,
 	allowed: readonly string[]
 ): void {
-	if (value !== undefined && value !== null && !allowed.includes(value as string)) {
+	if (value !== undefined && value !== null && value !== '' && !allowed.includes(value as string)) {
 		throw new ServiceError(
 			400,
 			'INVALID_ENUM',

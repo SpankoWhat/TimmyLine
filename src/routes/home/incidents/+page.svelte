@@ -1,22 +1,47 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
 	import { currentCachedIncidents } from '$lib/stores/cacheStore';
 	import type { Incident } from '$lib/server/database';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
-	import DashboardStats from '$lib/components/DashboardStats.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
-	import { joinLobbySocket, leaveLobbySocket, usersInLobby, usersInEachIncident, initializeSocket } from '$lib/stores/collabStore';
+	import { joinLobbySocket, leaveLobbySocket, usersInEachIncident, initializeSocket } from '$lib/stores/collabStore';
 
-	const RECENT_LIMIT = 10;
+	let filterText = $state('');
+	let sortField = $state<'created_at' | 'title' | 'priority' | 'status'>('created_at');
+	let sortDirection = $state<'asc' | 'desc'>('desc');
 
-	let { data }: PageProps = $props();
+	let filteredIncidents = $derived.by(() => {
+		let list = [...$currentCachedIncidents];
 
-	let recentIncidents = $derived(
-		[...$currentCachedIncidents]
-			.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
-			.slice(0, RECENT_LIMIT)
-	);
+		// Filter
+		if (filterText.trim()) {
+			const q = filterText.toLowerCase();
+			list = list.filter(
+				(inc) =>
+					inc.title.toLowerCase().includes(q) ||
+					(inc.status ?? '').toLowerCase().includes(q) ||
+					(inc.priority ?? '').toLowerCase().includes(q)
+			);
+		}
+
+		// Sort
+		list.sort((a, b) => {
+			let cmp = 0;
+			if (sortField === 'created_at') {
+				cmp = (a.created_at ?? 0) - (b.created_at ?? 0);
+			} else if (sortField === 'title') {
+				cmp = a.title.localeCompare(b.title);
+			} else if (sortField === 'priority') {
+				const order = { critical: 4, high: 3, medium: 2, low: 1 };
+				cmp = (order[a.priority as keyof typeof order] ?? 0) - (order[b.priority as keyof typeof order] ?? 0);
+			} else if (sortField === 'status') {
+				cmp = (a.status ?? '').localeCompare(b.status ?? '');
+			}
+			return sortDirection === 'desc' ? -cmp : cmp;
+		});
+
+		return list;
+	});
 
 	function userSelectedIncident(incident: Incident) {
 		goto(`/incident/${incident.uuid}`);
@@ -64,8 +89,22 @@
 		return date.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
 	}
 
+	function toggleSort(field: typeof sortField) {
+		if (sortField === field) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortField = field;
+			sortDirection = field === 'created_at' ? 'desc' : 'asc';
+		}
+	}
+
+	function sortIndicator(field: typeof sortField): string {
+		if (sortField !== field) return '';
+		return sortDirection === 'asc' ? ' ▲' : ' ▼';
+	}
+
 	onMount(() => {
-		document.title = `Dashboard - TimmyLine`;
+		document.title = `Incidents - TimmyLine`;
 		initializeSocket();
 		joinLobbySocket();
 	});
@@ -77,7 +116,7 @@
 
 <!-- Page Header -->
 <header class="page-header">
-	<h1 class="page-title">Dashboard</h1>
+	<h1 class="page-title">Incidents</h1>
 	<div class="page-actions">
 		<button class="btn-primary" onclick={openNewIncidentModal}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
@@ -91,33 +130,50 @@
 
 <!-- Page Content -->
 <div class="page-content">
-	<!-- Stat Cards Grid -->
-	<DashboardStats />
-
-	<!-- Recent Incidents Table -->
+	<!-- Incidents Table -->
 	<section>
 		<div class="toolbar">
-			<span class="toolbar-title">Recent Incidents</span>
+			<span class="toolbar-title">All Incidents</span>
 			<div class="toolbar-spacer"></div>
-			<span class="toolbar-count">{recentIncidents.length} of {$currentCachedIncidents.length}</span>
-			<a href="/home/incidents" class="toolbar-link">View All</a>
+			<div class="toolbar-filter">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="filter-icon" aria-hidden="true">
+					<circle cx="11" cy="11" r="8" />
+					<line x1="21" y1="21" x2="16.65" y2="16.65" />
+				</svg>
+				<input
+					type="text"
+					class="filter-input"
+					placeholder="Filter incidents…"
+					bind:value={filterText}
+					aria-label="Filter incidents"
+				/>
+			</div>
+			<span class="toolbar-count">{filteredIncidents.length} of {$currentCachedIncidents.length}</span>
 		</div>
 		<div class="table-container">
-			{#if recentIncidents.length > 0}
+			{#if filteredIncidents.length > 0}
 				<table class="table">
 					<thead>
 						<tr>
 							<th>#</th>
-							<th>TITLE</th>
-							<th>PRIORITY</th>
-							<th>STATUS</th>
-							<th>CREATED</th>
+							<th class="sortable" onclick={() => toggleSort('title')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSort('title')}>
+								TITLE{sortIndicator('title')}
+							</th>
+							<th class="sortable" onclick={() => toggleSort('priority')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSort('priority')}>
+								PRIORITY{sortIndicator('priority')}
+							</th>
+							<th class="sortable" onclick={() => toggleSort('status')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSort('status')}>
+								STATUS{sortIndicator('status')}
+							</th>
+							<th class="sortable" onclick={() => toggleSort('created_at')} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && toggleSort('created_at')}>
+								CREATED{sortIndicator('created_at')}
+							</th>
 							<th>ANALYSTS</th>
 							<th>ACTIONS</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each recentIncidents as incident, i (incident.uuid)}
+						{#each filteredIncidents as incident, i (incident.uuid)}
 							{@const activeCount = $usersInEachIncident.get(incident.uuid) ?? 0}
 							<tr
 								class="table-row-interactive severity-row-{incident.priority}"
@@ -189,42 +245,21 @@
 						{/each}
 					</tbody>
 				</table>
+			{:else if filterText.trim()}
+				<div class="empty-state">
+					<div class="empty-state-icon">🔍</div>
+					<div class="empty-state-title">No matching incidents</div>
+					<div class="empty-state-description">No incidents match "{filterText}". Try a different search term.</div>
+				</div>
 			{:else}
 				<div class="empty-state">
 					<div class="empty-state-icon">📋</div>
-					<div class="empty-state-title">No recent incidents</div>
+					<div class="empty-state-title">No incidents</div>
 					<div class="empty-state-description">Create your first incident to get started with timeline tracking.</div>
 				</div>
 			{/if}
 		</div>
 	</section>
-
-	<!-- Users in Lobby Card -->
-	<div class="card">
-		<div class="card-header">
-			<span class="card-title">Users in Lobby</span>
-			<span class="card-count">{$usersInLobby.size}</span>
-		</div>
-		<div class="card-body">
-			{#if $usersInLobby.size > 0}
-				{#each $usersInLobby as user (user[0])}
-					<div class="info-row">
-						<span class="info-label mono">{user[1].analystUUID.substring(0, 8)}</span>
-						<span class="info-value">
-							<span class="presence-indicator">
-								<span class="status-dot status-dot-live"></span>
-								{user[1].analystName}
-							</span>
-						</span>
-					</div>
-				{/each}
-			{:else}
-				<div class="empty-lobby">
-					<span class="fg-muted">No users currently in the lobby.</span>
-				</div>
-			{/if}
-		</div>
-	</div>
 </div>
 
 <style>
@@ -326,23 +361,41 @@
 		font-size: var(--text-xs);
 		color: hsl(var(--fg-lighter));
 	}
-	.toolbar-link {
-		font-family: var(--font-family);
-		font-size: var(--text-xs);
-		font-weight: var(--font-medium);
-		color: hsl(var(--brand-link));
-		text-decoration: none;
+
+	/* ============================================================
+	   Filter Input
+	   ============================================================ */
+	.toolbar-filter {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1\.5);
 		padding: var(--space-1) var(--space-2);
-		border-radius: var(--radius-sm);
+		background: hsl(var(--bg-control));
+		border: var(--border-width) solid hsl(var(--border-control));
+		border-radius: var(--radius-md);
 		transition: var(--transition-colors);
 	}
-	.toolbar-link:hover {
-		background: hsl(var(--bg-surface-300));
-		color: hsl(var(--brand-600));
+	.toolbar-filter:focus-within {
+		border-color: hsl(var(--border-focus));
+		box-shadow: 0 0 0 1px hsl(var(--border-focus));
 	}
-	.toolbar-link:focus-visible {
-		outline: var(--border-width-thick) solid hsl(var(--border-focus));
-		outline-offset: 2px;
+	.filter-icon {
+		width: var(--icon-sm);
+		height: var(--icon-sm);
+		color: hsl(var(--fg-lighter));
+		flex-shrink: 0;
+	}
+	.filter-input {
+		background: transparent;
+		border: none;
+		outline: none;
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-default));
+		width: 160px;
+	}
+	.filter-input::placeholder {
+		color: hsl(var(--fg-lighter));
 	}
 
 	/* ============================================================
@@ -376,6 +429,14 @@
 		border-bottom: var(--border-width) solid hsl(var(--border-default));
 		white-space: nowrap;
 		user-select: none;
+	}
+	.table th.sortable {
+		cursor: pointer;
+		transition: var(--transition-colors);
+	}
+	.table th.sortable:hover {
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-surface-400));
 	}
 	.table td {
 		padding: var(--space-2) var(--space-3);
@@ -575,86 +636,6 @@
 	}
 
 	/* ============================================================
-	   Card Grid — SOP §11.2
-	   ============================================================ */
-	.card-grid {
-		display: grid;
-		gap: var(--space-4);
-	}
-	.card-grid.two-col {
-		grid-template-columns: 1fr 1fr;
-	}
-
-	/* ============================================================
-	   Card — SOP §10.2
-	   ============================================================ */
-	.card {
-		background: hsl(var(--bg-surface-100));
-		border: var(--border-width) solid hsl(var(--border-default));
-		border-radius: var(--radius-lg);
-		display: flex;
-		flex-direction: column;
-	}
-	.card-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: var(--space-3) var(--space-4);
-		border-bottom: var(--border-width) solid hsl(var(--border-muted));
-	}
-	.card-title {
-		font-family: var(--font-family);
-		font-size: var(--text-sm);
-		font-weight: var(--font-semibold);
-		color: hsl(var(--fg-light));
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wide);
-	}
-	.card-count {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: hsl(var(--fg-lighter));
-		background: hsl(var(--bg-surface-300));
-		padding: var(--space-0\.5) var(--space-1\.5);
-		border-radius: var(--radius-sm);
-	}
-	.card-body {
-		padding: var(--space-4);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-0\.5);
-	}
-
-	/* ============================================================
-	   Info Rows (inside cards)
-	   ============================================================ */
-	.info-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: var(--space-2) 0;
-		font-size: var(--text-sm);
-	}
-	.info-row:not(:last-child) {
-		border-bottom: var(--border-width) solid hsl(var(--border-muted));
-	}
-	.info-label {
-		color: hsl(var(--fg-lighter));
-		font-family: var(--font-family);
-		font-weight: var(--font-medium);
-	}
-	.info-value {
-		color: hsl(var(--fg-default));
-		font-weight: var(--font-medium);
-	}
-	.info-value.status-success {
-		color: hsl(var(--success-default));
-	}
-	.info-value.status-error {
-		color: hsl(var(--destructive-default));
-	}
-
-	/* ============================================================
 	   Empty States — SOP §10.12
 	   ============================================================ */
 	.empty-state {
@@ -682,10 +663,6 @@
 		color: hsl(var(--fg-lighter));
 		max-width: 400px;
 		line-height: var(--leading-normal);
-	}
-	.empty-lobby {
-		padding: var(--space-4) 0;
-		text-align: center;
 	}
 
 	/* ============================================================

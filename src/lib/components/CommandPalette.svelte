@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { get } from 'svelte/store';
-	import { currentCachedIncidents, currentSelectedIncident } from '$lib/stores/cacheStore';
-	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
-	import type { EntityType } from '$lib/modals/types';
+	import { goto } from "$app/navigation";
+	import { get } from "svelte/store";
+	import {
+		currentCachedIncidents,
+		currentSelectedIncident,
+	} from "$lib/stores/cacheStore";
+	import { modalStore, createModalConfig } from "$lib/modals/ModalRegistry";
 
 	// ---------------------------------------------------------------------------
 	// Types
@@ -26,94 +28,217 @@
 	// ---------------------------------------------------------------------------
 
 	let isOpen = $state(false);
-	let query = $state('');
+	let query = $state("");
 	let highlightedIndex = $state(0);
 	let inputEl: HTMLInputElement | undefined = $state(undefined);
 
+	function handleExportActions() {
+		const incident = get(currentSelectedIncident);
+		if (incident) {
+			fetch(`/api/read/core/export?incident_id=${incident.uuid}`)
+				.then((res) => res.blob())
+				.then((blob) => {
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = `${incident.title.replace(/\s+/g, "_")}_dynamic.html`;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+					URL.revokeObjectURL(url);
+				})
+				.catch((err) => {
+					console.error("Export failed", err);
+					alert("Failed to export incident. Please try again.");
+				});
+		}
+	}
 	// ---------------------------------------------------------------------------
 	// Static command definitions
 	// ---------------------------------------------------------------------------
 
 	const navigationItems: CommandItem[] = [
 		{
-			id: 'nav-dashboard',
-			label: 'Go to Dashboard',
-			description: 'View the main dashboard',
-			category: 'Navigation',
-			shortcut: '',
-			action: () => { close(); goto('/home'); }
+			id: "nav-dashboard",
+			label: "Go to Dashboard",
+			description: "View the main dashboard",
+			category: "Navigation",
+			shortcut: "",
+			action: () => {
+				close();
+				goto("/home");
+			},
 		},
 		{
-			id: 'nav-incidents',
-			label: 'Go to Incidents',
-			description: 'Browse all incidents',
-			category: 'Navigation',
-			action: () => { close(); goto('/home'); }
+			id: "nav-incidents",
+			label: "Go to Incidents",
+			description: "Browse all incidents",
+			category: "Navigation",
+			action: () => {
+				close();
+				goto("/home");
+			},
 		},
 		{
-			id: 'nav-settings',
-			label: 'Go to Settings',
-			description: 'Application settings',
-			category: 'Navigation',
-			action: () => { close(); goto('/settings'); }
-		}
+			id: "nav-settings",
+			label: "Go to Settings",
+			description: "Application settings",
+			category: "Navigation",
+			action: () => {
+				close();
+				goto("/settings");
+			},
+		},
 	];
 
 	const actionItems: CommandItem[] = [
 		{
-			id: 'action-new-incident',
-			label: 'Create New Incident',
-			description: 'Open the incident creation form',
-			category: 'Actions',
+			id: "action-new-incident",
+			label: "Create New Incident",
+			description: "Open the incident creation form",
+			category: "Actions",
 			action: () => {
 				close();
-				modalStore.open(createModalConfig('incident', 'create'));
-			}
+				modalStore.open(createModalConfig("incident", "create"));
+			},
 		},
 		{
-			id: 'action-new-event',
-			label: 'Create New Event',
-			description: 'Add a timeline event to the current incident',
-			category: 'Actions',
+			id: "action-new-event",
+			label: "Create New Event",
+			description: "Add a timeline event to the current incident",
+			category: "Actions",
 			requiresIncident: true,
 			action: () => {
 				close();
-				modalStore.open(createModalConfig('timeline_event', 'create'));
-			}
+				modalStore.open(createModalConfig("timeline_event", "create"));
+			},
 		},
 		{
-			id: 'action-new-action',
-			label: 'Create New Action',
-			description: 'Add an investigation action',
-			category: 'Actions',
+			id: "action-new-action",
+			label: "Create New Action",
+			description: "Add an investigation action",
+			category: "Actions",
 			requiresIncident: true,
 			action: () => {
 				close();
-				modalStore.open(createModalConfig('investigation_action', 'create'));
-			}
+				modalStore.open(
+					createModalConfig("investigation_action", "create"),
+				);
+			},
 		},
 		{
-			id: 'action-new-entity',
-			label: 'Create New Entity',
-			description: 'Add an entity to the current incident',
-			category: 'Actions',
+			id: "action-new-entity",
+			label: "Create New Entity",
+			description: "Add an entity to the current incident",
+			category: "Actions",
 			requiresIncident: true,
 			action: () => {
 				close();
-				modalStore.open(createModalConfig('entity', 'create'));
-			}
+				modalStore.open(createModalConfig("entity", "create"));
+			},
 		},
 		{
-			id: 'action-new-annotation',
-			label: 'Create New Annotation',
-			description: 'Add an annotation',
-			category: 'Actions',
+			id: "action-new-annotation",
+			label: "Create New Annotation",
+			description: "Add an annotation",
+			category: "Actions",
 			requiresIncident: true,
 			action: () => {
 				close();
-				modalStore.open(createModalConfig('annotation', 'create'));
-			}
-		}
+				modalStore.open(createModalConfig("annotation", "create"));
+			},
+		},
+		{
+			id: "action-new-relationship",
+			label: "Relate Action/Entity",
+			description: "Link an action to an entity",
+			category: "Actions",
+			requiresIncident: true,
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("action_entities", "create"));
+			},
+		},
+		{
+			id: "action-new-entity-relationship",
+			label: "Relate Action/Event",
+			description: "Link an action to an event",
+			category: "Actions",
+			requiresIncident: true,
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("action_events", "create"));
+			},
+		},
+		{
+			id: "action-new-annotation-relationship",
+			label: "Relate Event/Entity",
+			description: "Link an event to an entity",
+			category: "Actions",
+			requiresIncident: true,
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("event_entities", "create"));
+			},
+		},
+	];
+
+	const configureItems: CommandItem[] = [
+		{
+			id: "configure-event-types",
+			label: "Configure Event Types",
+			description: "Manage event types for better organization",
+			category: "Configuration",
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("event_type", "create"));
+			},
+		},
+		{
+			id: "configure-entity-types",
+			label: "Configure Entity Types",
+			description: "Manage entity types for better organization",
+			category: "Configuration",
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("entity_type", "create"));
+			},
+		},
+		{
+			id: "configure-action-types",
+			label: "Configure Action Types",
+			description: "Manage action types for better organization",
+			category: "Configuration",
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("action_type", "create"));
+			},
+		},
+		{
+			id: "configure-annotation-types",
+			label: "Configure Annotation Types",
+			description: "Manage annotation types for better organization",
+			category: "Configuration",
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("annotation_type", "create"));
+			},
+		},
+	];
+
+	const otherItems: CommandItem[] = [
+		{
+			id: "other-export-incident",
+			label: "Export Dynamic Incident",
+			description:
+				"Export the current incident in a dynamic format - one html file with embedded data for sharing",
+			category: "Other",
+			requiresIncident: true,
+			action: () => {
+				close();
+				handleExportActions();
+			},
+		},
 	];
 
 	// ---------------------------------------------------------------------------
@@ -125,11 +250,11 @@
 		return incidents.slice(0, 5).map((inc) => ({
 			id: `incident-${inc.uuid}`,
 			label: inc.title,
-			category: 'Recent Incidents',
+			category: "Recent Incidents",
 			action: () => {
 				close();
 				goto(`/incident/${inc.uuid}`);
-			}
+			},
 		}));
 	}
 
@@ -139,8 +264,22 @@
 
 	function getAllItems(): CommandItem[] {
 		const hasIncident = get(currentSelectedIncident) !== null;
-		const actions = actionItems.filter((item) => !item.requiresIncident || hasIncident);
-		return [...navigationItems, ...actions, ...getRecentIncidentItems()];
+		const actions = actionItems.filter(
+			(item) => !item.requiresIncident || hasIncident,
+		);
+		const others = otherItems.filter(
+			(item) => !item.requiresIncident || hasIncident,
+		);
+		const configure = configureItems.filter(
+			(item) => !item.requiresIncident || hasIncident,
+		);
+		return [
+			...navigationItems,
+			...actions,
+			...others,
+			...configure,
+			...getRecentIncidentItems(),
+		];
 	}
 
 	// ---------------------------------------------------------------------------
@@ -174,13 +313,13 @@
 
 	function open() {
 		isOpen = true;
-		query = '';
+		query = "";
 		highlightedIndex = 0;
 	}
 
 	function close() {
 		isOpen = false;
-		query = '';
+		query = "";
 		highlightedIndex = 0;
 	}
 
@@ -195,21 +334,24 @@
 
 	function handlePaletteKeydown(e: KeyboardEvent) {
 		switch (e.key) {
-			case 'ArrowDown':
+			case "ArrowDown":
 				e.preventDefault();
-				highlightedIndex = (highlightedIndex + 1) % filteredItems.length;
+				highlightedIndex =
+					(highlightedIndex + 1) % filteredItems.length;
 				scrollToHighlighted();
 				break;
-			case 'ArrowUp':
+			case "ArrowUp":
 				e.preventDefault();
-				highlightedIndex = (highlightedIndex - 1 + filteredItems.length) % filteredItems.length;
+				highlightedIndex =
+					(highlightedIndex - 1 + filteredItems.length) %
+					filteredItems.length;
 				scrollToHighlighted();
 				break;
-			case 'Enter':
+			case "Enter":
 				e.preventDefault();
 				selectHighlighted();
 				break;
-			case 'Escape':
+			case "Escape":
 				e.preventDefault();
 				close();
 				break;
@@ -219,8 +361,8 @@
 	function scrollToHighlighted() {
 		// Tick to let DOM update, then scroll into view
 		requestAnimationFrame(() => {
-			const el = document.querySelector('.command-item.highlighted');
-			if (el) el.scrollIntoView({ block: 'nearest' });
+			const el = document.querySelector(".command-item.highlighted");
+			if (el) el.scrollIntoView({ block: "nearest" });
 		});
 	}
 
@@ -229,7 +371,7 @@
 	// ---------------------------------------------------------------------------
 
 	function handleBackdropClick(e: MouseEvent) {
-		if ((e.target as HTMLElement).classList.contains('command-backdrop')) {
+		if ((e.target as HTMLElement).classList.contains("command-backdrop")) {
 			close();
 		}
 	}
@@ -240,7 +382,7 @@
 
 	$effect(() => {
 		function handleGlobalKeydown(e: KeyboardEvent) {
-			if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+			if ((e.ctrlKey || e.metaKey) && e.key === "k") {
 				e.preventDefault();
 				if (isOpen) {
 					close();
@@ -254,12 +396,15 @@
 			if (!isOpen) open();
 		}
 
-		document.addEventListener('keydown', handleGlobalKeydown);
-		document.addEventListener('open-command-palette', handleCustomOpen);
+		document.addEventListener("keydown", handleGlobalKeydown);
+		document.addEventListener("open-command-palette", handleCustomOpen);
 
 		return () => {
-			document.removeEventListener('keydown', handleGlobalKeydown);
-			document.removeEventListener('open-command-palette', handleCustomOpen);
+			document.removeEventListener("keydown", handleGlobalKeydown);
+			document.removeEventListener(
+				"open-command-palette",
+				handleCustomOpen,
+			);
 		};
 	});
 
@@ -298,7 +443,15 @@
 		<div class="command-palette" role="dialog" aria-label="Command palette">
 			<!-- Search input -->
 			<div class="command-input-wrapper">
-				<svg class="command-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg
+					class="command-search-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
 					<circle cx="11" cy="11" r="8" />
 					<line x1="21" y1="21" x2="16.65" y2="16.65" />
 				</svg>
@@ -331,16 +484,22 @@
 								type="button"
 							>
 								{#if item.icon}
-									<span class="command-item-icon">{@html item.icon}</span>
+									<span class="command-item-icon"
+										>{@html item.icon}</span
+									>
 								{/if}
 								<span class="command-item-label">
 									{item.label}
 									{#if item.description}
-										<span class="command-item-desc">{item.description}</span>
+										<span class="command-item-desc"
+											>{item.description}</span
+										>
 									{/if}
 								</span>
 								{#if item.shortcut}
-									<kbd class="command-item-shortcut">{item.shortcut}</kbd>
+									<kbd class="command-item-shortcut"
+										>{item.shortcut}</kbd
+									>
 								{/if}
 							</button>
 						{/each}

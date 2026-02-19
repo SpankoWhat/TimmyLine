@@ -41,6 +41,9 @@
 		if (path === '/home') {
 			return currentPath === '/home' || currentPath === '/';
 		}
+		if (path === '/home/incidents') {
+			return currentPath === '/home/incidents';
+		}
 		return currentPath.startsWith(path);
 	}
 
@@ -53,7 +56,11 @@
 
 	let mainItems: NavItem[] = [
 		{ label: 'Dashboard', path: '/home', icon: 'grid' },
-		{ label: 'Incidents', path: '/home', icon: 'alert-triangle' }
+		{ label: 'Incidents', path: '/home/incidents', icon: 'alert-triangle' }
+	];
+
+	let configItems: NavItem[] = [
+		{ label: 'Lookup Tables', path: '/settings/lookups', icon: 'database' }
 	];
 
 	let investigationItems = $derived.by(() => {
@@ -210,6 +217,36 @@
 				</a>
 			{/each}
 		{/if}
+
+		<!-- Configuration Section -->
+		<span class="sidebar-section-label">Configuration</span>
+		{#each configItems as item (item.label)}
+			<a
+				href={item.path}
+				class="sidebar-item"
+				class:active={isActive(item.path)}
+				title={expanded ? undefined : item.label}
+				aria-current={isActive(item.path) ? 'page' : undefined}
+			>
+				{#if item.icon === 'database'}
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="sidebar-item-icon"
+						aria-hidden="true"
+					>
+						<ellipse cx="12" cy="5" rx="9" ry="3" />
+						<path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+						<path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+					</svg>
+				{/if}
+				<span class="sidebar-item-label">{item.label}</span>
+			</a>
+		{/each}
 	</nav>
 
 	<!-- Footer: Health Status, Settings + Toggle -->

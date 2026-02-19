@@ -12,8 +12,10 @@ export const GET: RequestHandler = async (event) => {
 		return json({ error: 'Missing "table" query parameter' }, { status: 400 });
 	}
 
+	const include_deleted = url.searchParams.get('include_deleted') === 'true';
+
 	try {
-		const results = await listLookups({ table });
+		const results = await listLookups({ table, include_deleted });
 		return json(results);
 	} catch (err) {
 		if (err instanceof ServiceError) {

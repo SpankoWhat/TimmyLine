@@ -1,6 +1,6 @@
 import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, isNotNull } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, type ServiceContext, type LookupTableName } from './types';
 
@@ -31,12 +31,15 @@ function getTable(name: string) {
 // List
 // ============================================================================
 
-export async function listLookups(params: { table: string }) {
+export async function listLookups(params: { table: string; include_deleted?: boolean }) {
 	validateRequired(params as Record<string, unknown>, ['table']);
 	const tableObj = getTable(params.table);
 
-	const results = db.select().from(tableObj).all();
-	return results;
+	if (params.include_deleted) {
+		return db.select().from(tableObj).all();
+	}
+
+	return db.select().from(tableObj).where(isNull(tableObj.deleted_at)).all();
 }
 
 // ============================================================================
@@ -59,7 +62,7 @@ export async function createLookup(
 		throw err;
 	}
 
-	const allLookups = db.select().from(tableObj).all();
+	const allLookups = db.select().from(tableObj).where(isNull(tableObj.deleted_at)).all();
 
 	try {
 		const io = getSocketIO();
@@ -92,7 +95,60 @@ export async function updateLookup(
 		throw err;
 	}
 
-	const allLookups = db.select().from(tableObj).all();
+	const allLookups = db.select().from(tableObj).where(isNull(tableObj.deleted_at)).all();
+
+	try {
+		const io = getSocketIO();
+		io.emit('lookup-updated', data.table, allLookups);
+	} catch { /* Socket.IO not available */ }
+
+	return { lookupData: allLookups };
+}
+
+// ============================================================================
+// Soft Delete
+// ============================================================================
+
+export async function softDeleteLookup(
+	data: { table: string; name: string },
+	ctx: ServiceContext
+) {
+	validateRequired(data as Record<string, unknown>, ['table', 'name']);
+	const tableObj = getTable(data.table);
+
+	const now = Math.floor(Date.now() / 1000);
+	db.update(tableObj)
+		.set({ deleted_at: now })
+		.where(eq(tableObj.name, data.name))
+		.run();
+
+	const allLookups = db.select().from(tableObj).where(isNull(tableObj.deleted_at)).all();
+
+	try {
+		const io = getSocketIO();
+		io.emit('lookup-updated', data.table, allLookups);
+	} catch { /* Socket.IO not available */ }
+
+	return { lookupData: allLookups };
+}
+
+// ============================================================================
+// Restore (undo soft delete)
+// ============================================================================
+
+export async function restoreLookup(
+	data: { table: string; name: string },
+	ctx: ServiceContext
+) {
+	validateRequired(data as Record<string, unknown>, ['table', 'name']);
+	const tableObj = getTable(data.table);
+
+	db.update(tableObj)
+		.set({ deleted_at: null })
+		.where(eq(tableObj.name, data.name))
+		.run();
+
+	const allLookups = db.select().from(tableObj).where(isNull(tableObj.deleted_at)).all();
 
 	try {
 		const io = getSocketIO();
