@@ -484,14 +484,16 @@
 		text-transform: uppercase;
 		letter-spacing: var(--tracking-wide);
 		color: hsl(var(--fg-muted));
-		padding: var(--space-2) var(--space-2) var(--space-1);
 		white-space: nowrap;
 		opacity: 0;
 		transition: opacity var(--duration-normal) var(--ease-default);
+		height: 0px;
 	}
 
 	.sidebar.expanded .sidebar-section-label {
+		height: auto;
 		opacity: 1;
+		padding: var(--space-2) var(--space-2) var(--space-1);
 	}
 
 	/* ===== Nav Items ===== */
@@ -521,9 +523,7 @@
 	}
 
 	.sidebar-item.active {
-		background: hsl(var(--bg-selection));
 		color: hsl(var(--brand-default));
-		border-left: var(--border-width-thick) solid hsl(var(--brand-default));
 	}
 
 	.sidebar-item:focus-visible {
