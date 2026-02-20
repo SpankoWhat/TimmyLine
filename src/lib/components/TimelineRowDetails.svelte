@@ -135,12 +135,6 @@
         padding: var(--space-3);
     }
 
-    .details-container * {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
     .details-column,
     .graph-column {
         display: flex;
@@ -185,11 +179,16 @@
         text-transform: uppercase;
         font-size: var(--text-2xs);
         font-weight: var(--font-medium);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .detail-value {
         color: hsl(var(--fg-data));
-        word-break: break-all;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     /* JSON Viewer Slot */
@@ -234,6 +233,7 @@
         gap: var(--space-1);
         padding: var(--space-0\.5) var(--space-1);
         transition: var(--transition-colors);
+        flex-wrap: wrap;
     }
 
     .tree-node:hover {
@@ -262,6 +262,9 @@
         color: hsl(var(--fg-data));
         font-family: var(--font-mono);
         font-size: var(--text-xs);
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     .node-meta {

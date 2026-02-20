@@ -41,17 +41,12 @@ The application will be available at **http://localhost:5173** (or the port show
 
 ---
 
-### 4. Link up mcp config
+### 4. Link up mcp config in vscode example
 ```json
     "timmyline": {
-      "command": "npx",
-      "args": [
-        "tsx",
-        "<<PATH TO PROJECT FILE>>\\TimmyLine\\src\\lib\\server\\mcp\\server.ts"
-      ],
-      "env": {
-        "ORIGIN": "http://localhost:5173",
-        "MCP_API_TOKEN": "<TOKEN U CREATED>"
-      }
-    }
+			"url": "http://localhost:5173/api/mcp",
+			"headers": {
+				"Authorization": "tml_036ffe5b5e37ae2ee093c3faa9a4ed168b4306733d266f2a86d97ce0bd98faaf"
+			}
+		}
 ``` 
