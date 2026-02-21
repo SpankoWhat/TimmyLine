@@ -1,8 +1,12 @@
+<html lang="en" data-theme="dark">
+	<head>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+	</head>
+</html>
+
 <div class="landing-container">
 	<div class="landing-card">
-		<svg class="landing-logo" viewBox="0 0 28 28" fill="none">
-			<rect width="28" height="28" rx="6" fill="hsl(36, 100%, 50%)" />
-		</svg>
+		<img src="/favicon.svg" alt="TimmyLine Logo" class="landing-logo" />
 		<h1 class="landing-title">TimmyLine</h1>
 		<p class="landing-subtitle">Timeline for Incident Responders - The better excel</p>
 		<a href="/login" class="btn-primary landing-cta">Sign In</a>

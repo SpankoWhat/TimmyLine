@@ -18,9 +18,7 @@
 <div class="login-container">
 	<div class="login-card">
 		<div class="login-logo">
-			<svg viewBox="0 0 28 28" fill="none" width="28" height="28">
-				<rect width="28" height="28" rx="6" fill="hsl(36, 100%, 50%)" />
-			</svg>
+			<img src="/favicon.svg" alt="TimmyLine Logo" class="landing-logo" />
 			<span class="login-brand">TimmyLine</span>
 		</div>
 

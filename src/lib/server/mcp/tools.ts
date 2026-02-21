@@ -50,8 +50,8 @@ import {
 	ServiceError,
 	type ServiceContext
 } from '$lib/server/services';
-import { aggregateIncidentData } from '$lib/server/data/exportIncident';
-import { renderExportHtml } from '$lib/server/data/exportTemplate';
+import { aggregateIncidentData } from '$lib/server/export/exportIncident';
+import { renderExportHtml } from '$lib/server/export/exportTemplate';
 
 // ============================================================================
 // Helpers

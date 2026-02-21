@@ -201,11 +201,6 @@
 <!-- Page Header -->
 <header class="page-header">
 	<div class="page-header-left">
-		<a href="/settings" class="back-link" aria-label="Back to settings">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
-				<polyline points="15 18 9 12 15 6" />
-			</svg>
-		</a>
 		<h1 class="page-title">Lookup Tables</h1>
 	</div>
 </header>
@@ -458,7 +453,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--space-3) var(--space-6);
+		padding: var(--space-2) var(--space-6);
 		border-bottom: var(--border-width) solid hsl(var(--border-default));
 		background: hsl(var(--bg-surface-100));
 		min-height: 48px;
@@ -468,31 +463,6 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
-	}
-
-	.back-link {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		color: hsl(var(--fg-lighter));
-		background: transparent;
-		border: var(--border-width) solid transparent;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: var(--transition-colors);
-		text-decoration: none;
-	}
-
-	.back-link:hover {
-		background: hsl(var(--bg-surface-300));
-		color: hsl(var(--fg-default));
-	}
-
-	.back-link:focus-visible {
-		outline: var(--border-width-thick) solid hsl(var(--border-focus));
-		outline-offset: 1px;
 	}
 
 	.page-title {

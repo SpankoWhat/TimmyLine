@@ -1,7 +1,7 @@
 import { type RequestEvent } from '@sveltejs/kit';
 import { requireReadAccess } from '$lib/server/auth/authorization';
-import { aggregateIncidentData } from '$lib/server/data/exportIncident';
-import { renderExportHtml } from '$lib/server/data/exportTemplate';
+import { aggregateIncidentData } from '$lib/server/export/exportIncident';
+import { renderExportHtml } from '$lib/server/export/exportTemplate';
 
 /**
  * GET /api/read/core/export?incident_id=<uuid>
