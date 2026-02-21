@@ -41,6 +41,25 @@
 
 	let showFieldSelector = $state(false);
 	let showEntitiesPanel = $state(false);
+	let searchQuery = $state('');
+
+	// Local filtered timeline — filters $currentCachedTimeline without touching the store
+	const filteredTimeline = $derived.by(() => {
+		const query = searchQuery.trim().toLowerCase();
+		const items = $currentCachedTimeline;
+		if (!query) return items;
+
+		return items.filter((item) => {
+			const data = item.data;
+			// Search all string values on the data object
+			return Object.values(data).some((val) => {
+				if (val == null) return false;
+				if (typeof val === 'string') return val.toLowerCase().includes(query);
+				if (typeof val === 'number') return String(val).includes(query);
+				return false;
+			});
+		});
+	});
 
 	// Compute filtered field configs based on field states (for passing to TimelineRow)
 	const filteredDisplayFieldsConfig = $derived({
@@ -167,6 +186,23 @@
 			<button class="btn-secondary btn-sm" onclick={createAnnotation}>+ Annotation</button>
 		</div>
 		<div class="toolbar-separator"></div>
+		<div class="toolbar-group search-group">
+			<input
+				class="search-input"
+				type="text"
+				placeholder="Search timeline..."
+				bind:value={searchQuery}
+			/>
+			{#if searchQuery}
+				<button class="btn-icon search-clear" onclick={() => (searchQuery = '')} title="Clear search">
+					<svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					</svg>
+				</button>
+				<span class="search-count">{filteredTimeline.length}/{$currentCachedTimeline.length}</span>
+			{/if}
+		</div>
+		<div class="toolbar-separator"></div>
 		<div class="toolbar-group">
 			<button class="btn-ghost btn-sm" onclick={toggleShowDeleted}>
 				{$showDeletedItems ? 'Hide' : 'Show'} Deleted
@@ -209,6 +245,14 @@
 					<div class="empty-state-title">No incident selected</div>
 					<div class="empty-state-description">Select an active incident to view timeline events.</div>
 				</div>
+			{:else if filteredTimeline.length === 0 && searchQuery.trim()}
+				<div class="empty-state">
+					<span class="empty-state-icon">🔍</span>
+					<div class="empty-state-title">No results for "{searchQuery.trim()}"</div>
+					<div class="empty-state-description">
+						No timeline items matched your search. Try a different query or <button class="btn-ghost btn-sm" onclick={() => (searchQuery = '')}>clear the search</button>.
+					</div>
+				</div>
 			{:else if $currentCachedTimeline.length === 0}
 				<div class="empty-state">
 					<span class="empty-state-icon">📊</span>
@@ -219,7 +263,7 @@
 				</div>
 			{:else}
 				<div class="timeline-list">
-					{#each $currentCachedTimeline as item (item.uuid)}
+					{#each filteredTimeline as item (item.uuid)}
 						<TimeLineRow {item} displayFieldsConfig={filteredDisplayFieldsConfig} />
 					{/each}
 				</div>
@@ -412,6 +456,57 @@
 
 	.toolbar-spacer {
 		flex: 1;
+	}
+
+	/* ===== Search (toolbar inline) ===== */
+	.search-group {
+		flex: 1;
+		max-width: 360px;
+		position: relative;
+		gap: var(--space-1\.5);
+	}
+
+	.search-icon {
+		color: hsl(var(--fg-lighter));
+		flex-shrink: 0;
+	}
+
+	.search-input {
+		flex: 1;
+		min-width: 0;
+		padding: var(--space-1) var(--space-2);
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-control));
+		border: var(--border-width) solid hsl(var(--border-control));
+		border-radius: var(--radius-md);
+		transition: var(--transition-colors);
+		height: 26px;
+	}
+
+	.search-input::placeholder {
+		color: hsl(var(--fg-lighter));
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: hsl(var(--border-focus));
+		box-shadow: 0 0 0 1px hsl(var(--border-focus));
+	}
+
+	.search-clear {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
+	}
+
+	.search-count {
+		font-family: var(--font-mono);
+		font-size: var(--text-2xs);
+		color: hsl(var(--fg-lighter));
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	/* ===== Button Styles (SOP §10.1) ===== */
