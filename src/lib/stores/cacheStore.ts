@@ -357,6 +357,7 @@ export function setupIncidentWatcher() {
  * Called when receiving socket events for real-time updates
  */
 export function upsertEntity(entityType: string, entity: any) {
+	console.log(`%c[CACHE-UPSERT] entityType=${entityType} | uuid=${entity?.uuid ?? 'N/A'}`, 'color: #00ccff; font-weight: bold', entity);
 	switch (entityType) {
 		case 'timeline_event':
 			currentCachedTimeline.update((items) => {
@@ -457,6 +458,7 @@ export function upsertEntity(entityType: string, entity: any) {
  * Called when receiving socket events for deletions
  */
 export function removeEntity(entityType: string, uuid: string) {
+	console.log(`%c[CACHE-REMOVE] entityType=${entityType} | uuid=${uuid}`, 'color: #ff6666; font-weight: bold');
 	switch (entityType) {
 		case 'timeline_event':
 			currentCachedTimeline.update((items) => items.filter((i) => !(i.type === 'event' && i.uuid === uuid)));

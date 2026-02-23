@@ -142,7 +142,7 @@ export function disconnectSocket() {
 
 function registerEventListeners(socket: Socket) {
     socket.onAny((event, ...args) => {
-        console.debug(`Socket event received: ${event}`, args);
+        console.log(`%c[SOCKET-RX] ${event}`, 'color: #00ff88; font-weight: bold', ...args);
     });
 
     // Lobby presence events
@@ -229,18 +229,22 @@ function registerEventListeners(socket: Socket) {
 
     // Data synchronization events
     socket.on('entity-created', (entityType: string, entity: any) => {
+        console.log(`%c[SOCKET-SYNC] entity-created | type=${entityType} | uuid=${entity?.uuid}`, 'color: #00ffcc; font-weight: bold', entity);
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-updated', (entityType: string, entity: any) => {
+        console.log(`%c[SOCKET-SYNC] entity-updated | type=${entityType} | uuid=${entity?.uuid}`, 'color: #ffcc00; font-weight: bold', entity);
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-deleted', (entityType: string, uuid: string) => {
+        console.log(`%c[SOCKET-SYNC] entity-deleted | type=${entityType} | uuid=${uuid}`, 'color: #ff6666; font-weight: bold');
         removeEntity(entityType, uuid);
     });
 
     socket.on('lookup-updated', (lookupType: string, data: any[]) => {
+        console.log(`%c[SOCKET-SYNC] lookup-updated | type=${lookupType} | count=${data?.length}`, 'color: #cc99ff; font-weight: bold');
         updateLookupTable(lookupType, data);
     });
 }
