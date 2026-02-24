@@ -368,13 +368,10 @@ export function upsertEntity(entityType: string, entity: any) {
 					timestamp: entity.occurred_at || entity.discovered_at || 0,
 					data: entity
 				};
-				if (index >= 0) {
-					items[index] = newItem;
-				} else {
-					items.push(newItem);
-				}
-				items.sort((a, b) => a.timestamp - b.timestamp);
-				return items;
+				const newItems = index >= 0
+					? items.map((item, i) => (i === index ? newItem : item))
+					: [...items, newItem];
+				return newItems.sort((a, b) => a.timestamp - b.timestamp);
 			});
 			break;
 
@@ -387,49 +384,37 @@ export function upsertEntity(entityType: string, entity: any) {
 					timestamp: entity.performed_at || 0,
 					data: entity
 				};
-				if (index >= 0) {
-					items[index] = newItem;
-				} else {
-					items.push(newItem);
-				}
-				items.sort((a, b) => a.timestamp - b.timestamp);
-				return items;
+				const newItems = index >= 0
+					? items.map((item, i) => (i === index ? newItem : item))
+					: [...items, newItem];
+				return newItems.sort((a, b) => a.timestamp - b.timestamp);
 			});
 			break;
 
 		case 'annotation':
 			currentCachedAnnotations.update((annotations) => {
 				const index = annotations.findIndex((a) => a.uuid === entity.uuid);
-				if (index >= 0) {
-					annotations[index] = entity;
-				} else {
-					annotations.push(entity);
-				}
-				return annotations;
+				return index >= 0
+					? annotations.map((item, i) => (i === index ? entity : item))
+					: [...annotations, entity];
 			});
 			break;
 
 		case 'entity':
 			currentCachedEntities.update((entities) => {
 				const index = entities.findIndex((e) => e.uuid === entity.uuid);
-				if (index >= 0) {
-					entities[index] = entity;
-				} else {
-					entities.push(entity);
-				}
-				return entities;
+				return index >= 0
+					? entities.map((item, i) => (i === index ? entity : item))
+					: [...entities, entity];
 			});
 			break;
 
 		case 'incident':
 			currentCachedIncidents.update((incidents) => {
 				const index = incidents.findIndex((i) => i.uuid === entity.uuid);
-				if (index >= 0) {
-					incidents[index] = entity;
-				} else {
-					incidents.push(entity);
-				}
-				return incidents;
+				return index >= 0
+					? incidents.map((item, i) => (i === index ? entity : item))
+					: [...incidents, entity];
 			});
 			break;
 
