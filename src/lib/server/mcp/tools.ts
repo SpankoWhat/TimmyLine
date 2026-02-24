@@ -401,7 +401,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.number()
 					.describe('When the event was discovered (Unix epoch seconds)'),
 				event_data: z.string().describe('JSON string of structured event data'),
-				note: z.string().optional().describe('Free-text notes about the event'),
+				notes: z.string().describe('Free-text notes about the event'),
 				occurred_at: z
 					.number()
 					.optional()

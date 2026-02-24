@@ -200,14 +200,16 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 		const includeDeleted = get(showDeletedItems);
 		const deletedParam = includeDeleted ? '&include_deleted=true' : '';
 
-		const [timelineRes, annotationsRes] = await Promise.all([
+		const [timelineRes, annotationsRes, entityRes] = await Promise.all([
 			fetch(`/api/read/core/timeline_enriched?incident_id=${incident.uuid}${deletedParam}`),
-			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}${deletedParam}`)
+			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}${deletedParam}`),
+			fetch(`/api/read/core/entities?incident_id=${incident.uuid}`)
 		]);
 
-		const [timelineData, annotations] = await Promise.all([
+		const [timelineData, annotations, entities] = await Promise.all([
 			timelineRes.json(),
-			annotationsRes.json()
+			annotationsRes.json(),
+			entityRes.json()
 		]);
 
 		// Extract events and actions from enriched response
@@ -231,21 +233,7 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 		timelineItems.sort((a, b) => a.timestamp - b.timestamp);
 		currentCachedTimeline.set(timelineItems);
 		currentCachedAnnotations.set(annotations as Annotation[]);
-
-		// Extract unique entities from nested data for backwards compatibility
-		// This allows existing code to continue using currentCachedEntities
-		// Doing this instead of requesting another api call for entities
-		const entitiesFromEvents = events.flatMap((e: any) =>
-			(e.eventEntities || []).map((ee: any) => ee.entity)
-		);
-		const entitiesFromActions = actions.flatMap((a: any) =>
-			(a.actionEntities || []).map((ae: any) => ae.entity)
-		);
-		const allEntities = [...entitiesFromEvents, ...entitiesFromActions];
-
-		// Deduplicate entities by uuid
-		const uniqueEntities = [...new Map(allEntities.map((e: Entity) => [e.uuid, e])).values()];
-		currentCachedEntities.set(uniqueEntities);
+		currentCachedEntities.set(entities as Entity[]);
 	} catch (error) {
 		console.error('Failed to update incident cache:', error);
 		// Reset stores on error
