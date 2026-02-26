@@ -317,13 +317,32 @@
 			{/if}
 		</div>
 
-		<!-- Side panel (entities/annotations) — docked mode -->
-		{#if showEntitiesPanel && !entitiesPanelFloating}
-			<aside class="side-panel">
-				<EntitiesAnnotationsPanel ondetach={detachEntitiesPanel} />
-			</aside>
-		{/if}
 	</div>
+
+	<!-- Entities/Annotations overlay — docked/dropdown mode -->
+	{#if showEntitiesPanel && !entitiesPanelFloating}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="entities-overlay" onclick={() => { showEntitiesPanel = false; clearHighlights(); }} onkeydown={(e) => e.key === 'Escape' && (showEntitiesPanel = false)}>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="entities-dropdown" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
+				<div class="entities-dropdown-header">
+					<span class="entities-dropdown-title">Entities & Annotations</span>
+					<button
+						class="btn-icon"
+						onclick={detachEntitiesPanel}
+						title="Detach into floating panel"
+						aria-label="Detach into floating panel"
+					>
+						<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+							<rect x="1" y="4" width="10" height="10" rx="2" />
+							<path d="M6 4V3a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" />
+						</svg>
+					</button>
+				</div>
+				<EntitiesAnnotationsPanel />
+			</div>
+		</div>
+	{/if}
 
 	<!-- Floating entities/annotations panel -->
 	{#if entitiesPanelFloating}
@@ -337,7 +356,9 @@
 			ondock={dockEntitiesPanel}
 			onclose={closeEntitiesPanel}
 		>
-			<EntitiesAnnotationsPanel />
+			<div class="floating-entities-content">
+				<EntitiesAnnotationsPanel />
+			</div>
 		</FloatingPanel>
 	{/if}
 
@@ -761,12 +782,51 @@
 		gap: var(--space-1);
 	}
 
-	/* ===== Side Panel ===== */
-	.side-panel {
-		width: 360px;
-		border-left: var(--border-width) solid hsl(var(--border-default));
+	/* ===== Entities Overlay (same pattern as field selector) ===== */
+	.entities-overlay {
+		position: absolute;
+		inset: 40px 0 0 0;
+		z-index: var(--z-dropdown);
+		background: hsl(0 0% 0% / 0.3);
+		display: flex;
+		justify-content: flex-end;
+		padding: var(--space-2) var(--space-3);
+	}
+
+	.entities-dropdown {
+		background: hsl(var(--bg-overlay));
+		border: var(--border-width) solid hsl(var(--border-overlay));
+		border-radius: var(--radius-lg);
+		padding: var(--space-3);
+		box-shadow: var(--shadow-lg);
+		min-width: 360px;
+		max-width: 440px;
+		max-height: 80vh;
 		overflow-y: auto;
-		flex-shrink: 0;
+		align-self: flex-start;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.entities-dropdown-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.entities-dropdown-title {
+		font-size: var(--text-sm);
+		font-weight: var(--font-semibold);
+		color: hsl(var(--fg-default));
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
+	/* Floating entities content */
+	.floating-entities-content {
+		padding: var(--space-2);
+		height: 100%;
 	}
 
 	/* ===== Empty State (SOP §10.12) ===== */
