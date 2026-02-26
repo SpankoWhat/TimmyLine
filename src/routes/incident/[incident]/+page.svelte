@@ -19,6 +19,7 @@
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
+	import FloatingPanel from '$lib/components/FloatingPanel.svelte';
 
 	// Config & Utils
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
@@ -41,6 +42,8 @@
 
 	let showFieldSelector = $state(false);
 	let showEntitiesPanel = $state(false);
+	let entitiesPanelFloating = $state(false);
+	let fieldSelectorFloating = $state(false);
 	let searchQuery = $state('');
 
 	// Local filtered timeline — filters $currentCachedTimeline without touching the store
@@ -93,10 +96,48 @@
 	}
 
 	function toggleEntitiesPanel() {
-		showEntitiesPanel = !showEntitiesPanel;
-		if (!showEntitiesPanel) {
+		if (entitiesPanelFloating) {
+			// If floating, close it entirely
+			entitiesPanelFloating = false;
+			showEntitiesPanel = false;
 			clearHighlights();
+		} else {
+			showEntitiesPanel = !showEntitiesPanel;
+			if (!showEntitiesPanel) {
+				clearHighlights();
+			}
 		}
+	}
+
+	function detachEntitiesPanel() {
+		entitiesPanelFloating = true;
+		showEntitiesPanel = false;
+	}
+
+	function dockEntitiesPanel() {
+		entitiesPanelFloating = false;
+		showEntitiesPanel = true;
+	}
+
+	function closeEntitiesPanel() {
+		entitiesPanelFloating = false;
+		showEntitiesPanel = false;
+		clearHighlights();
+	}
+
+	function detachFieldSelector() {
+		fieldSelectorFloating = true;
+		showFieldSelector = false;
+	}
+
+	function dockFieldSelector() {
+		fieldSelectorFloating = false;
+		showFieldSelector = true;
+	}
+
+	function closeFieldSelector() {
+		fieldSelectorFloating = false;
+		showFieldSelector = false;
 	}
 
 	// Severity badge class helper
@@ -212,7 +253,7 @@
 		<div class="toolbar-group">
 			<button
 				class="btn-icon"
-				class:active={showEntitiesPanel}
+				class:active={showEntitiesPanel || entitiesPanelFloating}
 				onclick={toggleEntitiesPanel}
 				title="Entities & Annotations Panel"
 			>
@@ -222,8 +263,14 @@
 			</button>
 			<button
 				class="btn-icon"
-				class:active={showFieldSelector}
-				onclick={() => (showFieldSelector = !showFieldSelector)}
+				class:active={showFieldSelector || fieldSelectorFloating}
+				onclick={() => {
+					if (fieldSelectorFloating) {
+						closeFieldSelector();
+					} else {
+						showFieldSelector = !showFieldSelector;
+					}
+				}}
 				title="Configure visible fields"
 			>
 				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -270,20 +317,50 @@
 			{/if}
 		</div>
 
-		<!-- Side panel (entities/annotations) -->
-		{#if showEntitiesPanel}
+		<!-- Side panel (entities/annotations) — docked mode -->
+		{#if showEntitiesPanel && !entitiesPanelFloating}
 			<aside class="side-panel">
-				<EntitiesAnnotationsPanel />
+				<EntitiesAnnotationsPanel ondetach={detachEntitiesPanel} />
 			</aside>
 		{/if}
 	</div>
 
-	<!-- Field selector overlay -->
-	{#if showFieldSelector}
+	<!-- Floating entities/annotations panel -->
+	{#if entitiesPanelFloating}
+		<FloatingPanel
+			title="Entities & Annotations"
+			panelId="entities-annotations"
+			defaultPosition={{ x: window.innerWidth - 440, y: 120 }}
+			defaultSize={{ width: 380, height: 500 }}
+			minWidth={320}
+			minHeight={250}
+			ondock={dockEntitiesPanel}
+			onclose={closeEntitiesPanel}
+		>
+			<EntitiesAnnotationsPanel />
+		</FloatingPanel>
+	{/if}
+
+	<!-- Field selector overlay — docked/dropdown mode -->
+	{#if showFieldSelector && !fieldSelectorFloating}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div class="field-selector-overlay" onclick={() => (showFieldSelector = false)} onkeydown={(e) => e.key === 'Escape' && (showFieldSelector = false)}>
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="field-selector-dropdown" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
+				<div class="field-selector-header">
+					<span class="field-selector-title">Field Configuration</span>
+					<button
+						class="btn-icon"
+						onclick={detachFieldSelector}
+						title="Detach into floating panel"
+						aria-label="Detach into floating panel"
+					>
+						<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+							<rect x="1" y="4" width="10" height="10" rx="2" />
+							<path d="M6 4V3a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" />
+						</svg>
+					</button>
+				</div>
 				<div class="field-selector-panels">
 					<FieldSelectorPanel
 						title="Event Fields"
@@ -303,6 +380,40 @@
 				</button>
 			</div>
 		</div>
+	{/if}
+
+	<!-- Floating field selector panel -->
+	{#if fieldSelectorFloating}
+		<FloatingPanel
+			title="Field Configuration"
+			panelId="field-selector"
+			defaultPosition={{ x: window.innerWidth - 720, y: 80 }}
+			defaultSize={{ width: 680, height: 520 }}
+			minWidth={500}
+			minHeight={300}
+			ondock={dockFieldSelector}
+			onclose={closeFieldSelector}
+		>
+			<div class="floating-field-selector-content">
+				<div class="field-selector-panels">
+					<FieldSelectorPanel
+						title="Event Fields"
+						type="event"
+						timelineItems={$currentCachedTimeline}
+						bind:fields={fieldStates.event}
+					/>
+					<FieldSelectorPanel
+						title="Action Fields"
+						type="action"
+						timelineItems={$currentCachedTimeline}
+						bind:fields={fieldStates.action}
+					/>
+				</div>
+				<button class="btn-secondary btn-sm reset-btn" onclick={resetFieldSelection}>
+					Reset to Default
+				</button>
+			</div>
+		</FloatingPanel>
 	{/if}
 </div>
 
@@ -713,6 +824,21 @@
 		align-self: flex-start;
 	}
 
+	.field-selector-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: var(--space-3);
+	}
+
+	.field-selector-title {
+		font-size: var(--text-sm);
+		font-weight: var(--font-semibold);
+		color: hsl(var(--fg-default));
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
 	.field-selector-panels {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -722,5 +848,19 @@
 
 	.reset-btn {
 		width: 100%;
+	}
+
+	/* Floating field selector content */
+	.floating-field-selector-content {
+		padding: var(--space-4);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		height: 100%;
+	}
+
+	.floating-field-selector-content .field-selector-panels {
+		flex: 1;
+		min-height: 0;
 	}
 </style>

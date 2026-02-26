@@ -12,6 +12,12 @@
 	import { fade, slide } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
 
+	let {
+		ondetach,
+	}: {
+		ondetach?: () => void;
+	} = $props();
+
 	let activeTab: 'entities' | 'annotations' = $state('entities');
 	let expandedTypes = $state(new SvelteSet<string>());
 
@@ -171,6 +177,19 @@
 			Annotations
 			<span class="tab-count">{$currentCachedAnnotations.length}</span>
 		</button>
+		{#if ondetach}
+			<button
+				class="detach-btn"
+				onclick={ondetach}
+				title="Detach into floating panel"
+				aria-label="Detach into floating panel"
+			>
+				<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+					<rect x="1" y="4" width="10" height="10" rx="2" />
+					<path d="M6 4V3a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1" />
+				</svg>
+			</button>
+		{/if}
 	</div>
 
 	<!-- Tab Content -->
@@ -347,6 +366,35 @@
 	.tab-btn.active .tab-count {
 		background: hsl(var(--brand-default));
 		color: hsl(var(--fg-contrast));
+	}
+
+	/* Detach button */
+	.detach-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		color: hsl(var(--fg-lighter));
+		background: transparent;
+		border: var(--border-width) solid transparent;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: var(--transition-colors);
+		flex-shrink: 0;
+		margin-left: auto;
+		margin-right: var(--space-1);
+	}
+
+	.detach-btn:hover {
+		background: hsl(var(--bg-surface-300));
+		color: hsl(var(--brand-default));
+	}
+
+	.detach-btn:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 1px;
 	}
 
 	/* Tab Content */
