@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
+	import { api, ApiError } from '$lib/client';
 	import { eventTypes, currentSelectedIncident, currentSelectedAnalyst, knownJsonKeys, currentCachedEntities, relationTypes } from '$lib/stores/cacheStore';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
 	import JsonKeyValueEditor from '$lib/components/JsonKeyValueEditor.svelte';
@@ -154,21 +155,17 @@
 	 * Batch-submit relationship creates and deletes after the main form is saved.
 	 */
 	async function submitRelationshipChanges(eventUuid: string, incidentId: string): Promise<void> {
-		const promises: Promise<Response>[] = [];
+		const promises: Promise<unknown>[] = [];
 
 		// Create new entity links
 		for (const link of pendingEntityLinks) {
 			promises.push(
-				fetch('/api/create/junction/event_entities', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						event_uuid: eventUuid,
-						entity_uuid: link.targetUuid,
-						role: link.relation,
-						context: link.context || null,
-						incident_id: incidentId
-					})
+				api.eventEntities.create({
+					event_uuid: eventUuid,
+					entity_uuid: link.targetUuid,
+					role: link.relation,
+					context: link.context || undefined,
+					incident_id: incidentId
 				})
 			);
 		}
@@ -176,15 +173,7 @@
 		// Delete removed entity links
 		for (const link of removedEntityLinks) {
 			promises.push(
-				fetch('/api/delete/junction', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						table: 'event_entities',
-						event_id: eventUuid,
-						entity_id: link.targetUuid
-					})
-				})
+				api.eventEntities.delete(eventUuid, link.targetUuid)
 			);
 		}
 
@@ -237,29 +226,15 @@
 				payload.occurred_at = toEpoch(formData.occurred_at);
 			}
 
-			// Include uuid for edit mode
-			if (mode === 'edit' && initialUuid) {
-				payload.uuid = initialUuid;
-			}
+			let result: any;
 
-			const endpoint =
-				mode === 'create'
-					? '/api/create/core/timeline_event'
-					: '/api/update/core/timeline_event';
-
-			const response = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({}));
-				throw new Error(errorData.message || `Request failed with status ${response.status}`);
+			if (mode === 'create') {
+				result = await api.events.create(payload as any);
+			} else {
+				result = await api.events.update(initialUuid!, payload as any);
 			}
 
 			// Get the UUID of the created/updated item
-			const result = await response.json();
 			const itemUuid = result?.uuid ?? initialUuid;
 			const incidentId = get(currentSelectedIncident)?.uuid ?? '';
 
@@ -274,7 +249,7 @@
 			onsave();
 		} catch (error) {
 			console.error('EventModal submission error:', error);
-			errors.form = error instanceof Error ? error.message : 'An unexpected error occurred.';
+			errors.form = error instanceof ApiError || error instanceof Error ? error.message : 'An unexpected error occurred.';
 		} finally {
 			isSubmitting = false;
 		}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import { api, ApiError } from '$lib/client';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -90,24 +91,10 @@
 				status
 			};
 
-			let url: string;
-
 			if (mode === 'create') {
-				url = '/api/create/core/incident';
+				await api.incidents.create(payload as any);
 			} else {
-				url = '/api/update/core/incident';
-				payload.uuid = rowUuid;
-			}
-
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => null);
-				throw new Error(errorData?.message ?? `Request failed with status ${response.status}`);
+				await api.incidents.update(rowUuid!, payload as any);
 			}
 
 			if (rowUuid) {

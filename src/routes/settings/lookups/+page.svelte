@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { api } from '$lib/client';
+	import type { LookupTableName } from '$lib/types';
 
 	// ============================================================================
 	// Types
@@ -66,9 +68,7 @@
 		loading = true;
 		error = '';
 		try {
-			const res = await fetch(`/api/read/lookup?table=${selectedTable}&include_deleted=true`);
-			if (!res.ok) throw new Error(await res.text());
-			entries = await res.json();
+			entries = await api.lookups.list(selectedTable as LookupTableName, { include_deleted: true });
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {
@@ -81,19 +81,10 @@
 		creating = true;
 		error = '';
 		try {
-			const res = await fetch('/api/create/lookup', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					table: selectedTable,
-					name: newName.trim(),
-					description: newDescription.trim()
-				})
+			await api.lookups.create(selectedTable as LookupTableName, {
+				name: newName.trim(),
+				description: newDescription.trim()
 			});
-			if (!res.ok) {
-				const data = await res.json();
-				throw new Error(data.error || 'Failed to create entry');
-			}
 			newName = '';
 			newDescription = '';
 			await fetchEntries();
@@ -109,20 +100,11 @@
 		saving = true;
 		error = '';
 		try {
-			const res = await fetch('/api/update/lookup', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					table: selectedTable,
-					old_name: originalName,
-					name: editName.trim(),
-					description: editDescription.trim()
-				})
+			await api.lookups.update(selectedTable as LookupTableName, {
+				old_name: originalName,
+				name: editName.trim(),
+				description: editDescription.trim()
 			});
-			if (!res.ok) {
-				const data = await res.json();
-				throw new Error(data.error || 'Failed to update entry');
-			}
 			editingEntry = null;
 			await fetchEntries();
 		} catch (err) {
@@ -135,15 +117,7 @@
 	async function softDelete(name: string) {
 		error = '';
 		try {
-			const res = await fetch('/api/update/lookup/soft-delete', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ table: selectedTable, name })
-			});
-			if (!res.ok) {
-				const data = await res.json();
-				throw new Error(data.error || 'Failed to delete entry');
-			}
+			await api.lookups.softDelete(selectedTable as LookupTableName, name);
 			await fetchEntries();
 		} catch (err) {
 			error = (err as Error).message;
@@ -153,15 +127,7 @@
 	async function restoreEntry(name: string) {
 		error = '';
 		try {
-			const res = await fetch('/api/update/lookup/restore', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ table: selectedTable, name })
-			});
-			if (!res.ok) {
-				const data = await res.json();
-				throw new Error(data.error || 'Failed to restore entry');
-			}
+			await api.lookups.restore(selectedTable as LookupTableName, name);
 			await fetchEntries();
 		} catch (err) {
 			error = (err as Error).message;

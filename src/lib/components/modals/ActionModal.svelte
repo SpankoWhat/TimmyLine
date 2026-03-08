@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
+	import { api, ApiError } from '$lib/client';
 	import {
 		actionTypes,
 		currentSelectedIncident,
@@ -136,20 +137,16 @@
 	 * Batch-submit relationship creates and deletes after the main form is saved.
 	 */
 	async function submitRelationshipChanges(actionUuid: string, incidentId: string): Promise<void> {
-		const promises: Promise<Response>[] = [];
+		const promises: Promise<unknown>[] = [];
 
 		// Create new entity links
 		for (const link of pendingEntityLinks) {
 			promises.push(
-				fetch('/api/create/junction/action_entities', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action_uuid: actionUuid,
-						entity_uuid: link.targetUuid,
-						relation_type: link.relation,
-						incident_id: incidentId
-					})
+				api.actionEntities.create({
+					action_uuid: actionUuid,
+					entity_uuid: link.targetUuid,
+					relation_type: link.relation,
+					incident_id: incidentId
 				})
 			);
 		}
@@ -157,15 +154,11 @@
 		// Create new event links
 		for (const link of pendingEventLinks) {
 			promises.push(
-				fetch('/api/create/junction/action_events', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action_uuid: actionUuid,
-						event_uuid: link.targetUuid,
-						relation_type: link.relation,
-						incident_id: incidentId
-					})
+				api.actionEvents.create({
+					action_uuid: actionUuid,
+					event_uuid: link.targetUuid,
+					relation_type: link.relation,
+					incident_id: incidentId
 				})
 			);
 		}
@@ -173,30 +166,14 @@
 		// Delete removed entity links
 		for (const link of removedEntityLinks) {
 			promises.push(
-				fetch('/api/delete/junction', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						table: 'action_entities',
-						action_id: actionUuid,
-						entity_id: link.targetUuid
-					})
-				})
+				api.actionEntities.delete(actionUuid, link.targetUuid)
 			);
 		}
 
 		// Delete removed event links
 		for (const link of removedEventLinks) {
 			promises.push(
-				fetch('/api/delete/junction', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						table: 'action_events',
-						action_id: actionUuid,
-						event_id: link.targetUuid
-					})
-				})
+				api.actionEvents.delete(actionUuid, link.targetUuid)
 			);
 		}
 
@@ -240,28 +217,15 @@
 				actioned_by: analyst?.uuid ?? null
 			};
 
-			let url: string;
+			let result: any;
 
 			if (mode === 'edit') {
-				payload.uuid = rowUuid;
-				url = '/api/update/core/investigation_action';
+				result = await api.actions.update(rowUuid!, payload as any);
 			} else {
-				url = '/api/create/core/investigation_action';
-			}
-
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!response.ok) {
-				const errBody = await response.json().catch(() => null);
-				throw new Error(errBody?.error ?? `Request failed with status ${response.status}`);
+				result = await api.actions.create(payload as any);
 			}
 
 			// Get the UUID of the created/updated item
-			const result = await response.json();
 			const itemUuid = result?.uuid ?? rowUuid;
 			const incidentId = get(currentSelectedIncident)?.uuid ?? '';
 
@@ -276,7 +240,7 @@
 			onsave();
 		} catch (error) {
 			console.error('Action modal submit error:', error);
-			errors = { _form: (error as Error).message };
+			errors = { _form: error instanceof ApiError ? error.message : (error as Error).message };
 		} finally {
 			isSubmitting = false;
 		}

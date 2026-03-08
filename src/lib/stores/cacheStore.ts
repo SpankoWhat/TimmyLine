@@ -1,5 +1,6 @@
 import { writable, derived, get, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
+import { api } from '$lib/client';
 import type {
 	Incident,
 	TimelineEvent,
@@ -198,22 +199,15 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 	if (!browser) return;
 	try {
 		const includeDeleted = get(showDeletedItems);
-		const deletedParam = includeDeleted ? '&include_deleted=true' : '';
 
-		const [timelineRes, annotationsRes, entityRes] = await Promise.all([
-			fetch(`/api/read/core/timeline_enriched?incident_id=${incident.uuid}${deletedParam}`),
-			fetch(`/api/read/core/annotations?incident_id=${incident.uuid}${deletedParam}`),
-			fetch(`/api/read/core/entities?incident_id=${incident.uuid}`)
-		]);
-
-		const [timelineData, annotations, entities] = await Promise.all([
-			timelineRes.json(),
-			annotationsRes.json(),
-			entityRes.json()
+		const [timelineData, annotationsData, entitiesData] = await Promise.all([
+			api.timeline.getEnriched({ incident_id: incident.uuid, include_deleted: includeDeleted || undefined }),
+			api.annotations.list({ incident_id: incident.uuid, include_deleted: includeDeleted || undefined }),
+			api.entities.list({ incident_id: incident.uuid, include_deleted: includeDeleted || undefined })
 		]);
 
 		// Extract events and actions from enriched response
-		const { events, actions } = timelineData;
+		const { events, actions } = timelineData as { events: any[], actions: any[] };
 
 		// Build unified timeline
 		const timelineItems: TimelineItem[] = [
@@ -232,8 +226,8 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 		];
 		timelineItems.sort((a, b) => a.timestamp - b.timestamp);
 		currentCachedTimeline.set(timelineItems);
-		currentCachedAnnotations.set(annotations as Annotation[]);
-		currentCachedEntities.set(entities as Entity[]);
+		currentCachedAnnotations.set(annotationsData as unknown as Annotation[]);
+		currentCachedEntities.set(entitiesData as unknown as Entity[]);
 	} catch (error) {
 		console.error('Failed to update incident cache:', error);
 		// Reset stores on error
@@ -252,25 +246,6 @@ export async function updateLookupCache(): Promise<void> {
 	if (!browser) return;
 	try {
 		const includeDeleted = get(showDeletedItems);
-		const deletedParam = includeDeleted ? '?include_deleted=true' : '';
-
-		const [
-			eventTypesRes,
-			actionTypesRes,
-			entityTypesRes,
-			annotationTypesRes,
-			relationTypesRes,
-			analystsRes,
-			incidentsRes
-		] = await Promise.all([
-			fetch('/api/read/lookup?table=event_type'),
-			fetch('/api/read/lookup?table=action_type'),
-			fetch('/api/read/lookup?table=entity_type'),
-			fetch('/api/read/lookup?table=annotation_type'),
-			fetch('/api/read/lookup?table=relation_type'),
-			fetch(`/api/read/core/analysts${deletedParam}`),
-			fetch(`/api/read/core/incidents${deletedParam}`),
-		]);
 
 		const [
 			eventTypesData,
@@ -281,13 +256,13 @@ export async function updateLookupCache(): Promise<void> {
 			analystsData,
 			incidentsData
 		] = await Promise.all([
-			eventTypesRes.json(),
-			actionTypesRes.json(),
-			entityTypesRes.json(),
-			annotationTypesRes.json(),
-			relationTypesRes.json(),
-			analystsRes.json(),
-			incidentsRes.json()
+			api.lookups.list('event_type'),
+			api.lookups.list('action_type'),
+			api.lookups.list('entity_type'),
+			api.lookups.list('annotation_type'),
+			api.lookups.list('relation_type'),
+			api.analysts.list({ include_deleted: includeDeleted || undefined }),
+			api.incidents.list({ include_deleted: includeDeleted || undefined })
 		]);
 
 		eventTypes.set(eventTypesData as EventType[]);

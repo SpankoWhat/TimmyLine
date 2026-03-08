@@ -7,6 +7,7 @@
 		currentSelectedAnalyst
 	} from '$lib/stores/cacheStore';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import { api, ApiError } from '$lib/client';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -94,27 +95,11 @@
 			noted_by: analyst?.uuid ?? null
 		};
 
-		if (mode === 'edit' && rowUuid) {
-			payload.uuid = rowUuid;
-		}
-
-		const endpoint =
-			mode === 'create'
-				? '/api/create/core/annotation'
-				: '/api/update/core/annotation';
-
 		try {
-			const res = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!res.ok) {
-				const body = await res.json().catch(() => null);
-				const msg = body?.message ?? `Server error (${res.status})`;
-				errors = { _form: msg };
-				return;
+			if (mode === 'create') {
+				await api.annotations.create(payload as any);
+			} else {
+				await api.annotations.update(rowUuid!, payload as any);
 			}
 
 			// Success – emit idle and notify parent
@@ -125,7 +110,7 @@
 			onsave();
 		} catch (err) {
 			console.error('Annotation submit error:', err);
-			errors = { _form: 'Network error — please try again' };
+			errors = { _form: err instanceof ApiError ? err.message : 'Network error — please try again' };
 		} finally {
 			isSubmitting = false;
 		}

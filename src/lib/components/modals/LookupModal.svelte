@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { api, ApiError } from '$lib/client';
+
 	type LookupType = 'action_type' | 'entity_type' | 'event_type' | 'annotation_type';
 
 	interface Props {
@@ -80,40 +82,25 @@
 
 		isSubmitting = true;
 
-		const formData = {
-			name: name.trim(),
-			description: description.trim(),
-			table: lookupType
-		};
-
-		// Include original name for edit mode (primary key lookup)
-		if (mode === 'edit' && data?.name) {
-			(formData as any).originalName = data.name;
-		}
-
-		const endpoint = mode === 'create'
-			? '/api/create/lookup'
-			: '/api/update/lookup';
-
 		try {
-			const res = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(formData)
-			});
-
-			if (!res.ok) {
-				const body = await res.json().catch(() => null);
-				const message = body?.error ?? `Request failed (${res.status})`;
-				errors = { name: message };
-				return;
+			if (mode === 'create') {
+				await api.lookups.create(lookupType, {
+					name: name.trim(),
+					description: description.trim()
+				});
+			} else {
+				await api.lookups.update(lookupType, {
+					old_name: data.name,
+					name: name.trim(),
+					description: description.trim()
+				});
 			}
 
 			onsave();
 			onclose();
 		} catch (err) {
 			console.error('Lookup submit error:', err);
-			errors = { name: 'An unexpected error occurred' };
+			errors = { name: err instanceof ApiError ? err.message : 'An unexpected error occurred' };
 		} finally {
 			isSubmitting = false;
 		}

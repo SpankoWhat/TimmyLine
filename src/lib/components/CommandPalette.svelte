@@ -6,6 +6,7 @@
 		currentSelectedIncident,
 	} from "$lib/stores/cacheStore";
 	import { modalStore, createModalConfig } from "$lib/modals/ModalRegistry";
+	import { api } from '$lib/client';
 
 	// ---------------------------------------------------------------------------
 	// Types
@@ -32,25 +33,24 @@
 	let highlightedIndex = $state(0);
 	let inputEl: HTMLInputElement | undefined = $state(undefined);
 
-	function handleExportActions() {
+	async function handleExportActions() {
 		const incident = get(currentSelectedIncident);
 		if (incident) {
-			fetch(`/api/read/core/export?incident_id=${incident.uuid}`)
-				.then((res) => res.blob())
-				.then((blob) => {
-					const url = URL.createObjectURL(blob);
-					const a = document.createElement("a");
-					a.href = url;
-					a.download = `${incident.title.replace(/\s+/g, "_")}_dynamic.html`;
-					document.body.appendChild(a);
-					a.click();
-					a.remove();
-					URL.revokeObjectURL(url);
-				})
-				.catch((err) => {
-					console.error("Export failed", err);
-					alert("Failed to export incident. Please try again.");
-				});
+			try {
+				const response = await api.export.download(incident.uuid);
+				const blob = await response.blob();
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = `${incident.title.replace(/\s+/g, "_")}_dynamic.html`;
+				document.body.appendChild(a);
+				a.click();
+				a.remove();
+				URL.revokeObjectURL(url);
+			} catch (err) {
+				console.error("Export failed", err);
+				alert("Failed to export incident. Please try again.");
+			}
 		}
 	}
 	// ---------------------------------------------------------------------------
