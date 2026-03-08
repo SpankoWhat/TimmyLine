@@ -627,10 +627,6 @@
 		color: hsl(var(--status-success));
 	}
 
-	.health-icon-degraded {
-		color: hsl(var(--severity-medium));
-	}
-
 	.health-icon-unhealthy {
 		color: hsl(var(--severity-critical));
 	}
