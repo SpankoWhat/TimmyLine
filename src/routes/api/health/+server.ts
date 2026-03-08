@@ -6,13 +6,9 @@ import { getActiveSessionCount } from '$lib/server/mcp/session';
 
 export const GET: RequestHandler = async () => {
     try {
-        // Check database connection
         const result = await db.get<{ result: number }>(sql`SELECT 1 as result`);
-
-        // Check MCP session count
         const mcpSessions = getActiveSessionCount();
 
-        // Check if we got a valid database response
         if (result?.result === 1) {
             return json({
                 status: 'healthy',
@@ -23,7 +19,6 @@ export const GET: RequestHandler = async () => {
             });
         }
 
-        // Unexpected response format
         return json(
             {
                 status: 'degraded',
@@ -35,7 +30,6 @@ export const GET: RequestHandler = async () => {
             { status: 503 }
         );
     } catch (err) {
-        // Database connection failed
         return json(
             {
                 status: 'unhealthy',

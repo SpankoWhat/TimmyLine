@@ -3,21 +3,14 @@
 	import { browser } from '$app/environment';
 	import { currentSelectedIncident } from '$lib/stores/cacheStore';
 	import { onMount, onDestroy } from 'svelte';
+	import { api } from '$lib/client';
+	import type { HealthResponse } from '$lib/client';
 
 	const STORAGE_KEY = 'timmyline-sidebar-expanded';
 
 	let expanded = $state(browser ? localStorage.getItem(STORAGE_KEY) !== 'false' : true);
 
-	type HealthStatus = {
-		status: 'healthy' | 'degraded' | 'unhealthy';
-		database: string;
-		mcp: string;
-		mcpPid: number | null;
-		mcpError?: string | null;
-		error?: string;
-	};
-
-	let health = $state<HealthStatus | null>(null);
+	let health = $state<HealthResponse | null>(null);
 	let healthInterval: ReturnType<typeof setInterval> | undefined;
 
 	let currentPath = $derived(page.url.pathname);
@@ -78,17 +71,15 @@
 	async function fetchHealth() {
 		if (!browser) return;
 		try {
-			const response = await fetch('/api/health');
-			const data = await response.json();
-			health = data;
+			health = await api.health.check();
 		} catch (error) {
 			console.error('Failed to fetch health status:', error);
 			health = {
 				status: 'unhealthy',
 				database: 'error',
 				mcp: 'unknown',
-				mcpPid: null,
-				error: 'Failed to connect'
+				mcpActiveSessions: 0,
+				timestamp: 0
 			};
 		}
 	}

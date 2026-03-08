@@ -7,6 +7,7 @@
 	import DashboardStats from '$lib/components/DashboardStats.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import { joinLobbySocket, leaveLobbySocket, usersInLobby, usersInEachIncident, initializeSocket } from '$lib/stores/collabStore';
+	import { api } from '$lib/client';
 
 	const RECENT_LIMIT = 10;
 
@@ -34,19 +35,7 @@
 		}
 
 		try {
-			const response = await fetch('/api/delete/core/incidents', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ uuid: incident.uuid })
-			});
-
-			if (!response.ok) {
-				const error = await response.text();
-				throw new Error(`Failed to delete: ${error}`);
-			}
-
+			await api.incidents.delete(incident.uuid);
 			console.log(`Successfully deleted incident with uuid: ${incident.uuid}`);
 		} catch (error) {
 			console.error('Error deleting incident:', error);

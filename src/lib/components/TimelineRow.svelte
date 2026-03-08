@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import { currentSelectedIncident, highlightedItemUuids } from '$lib/stores/cacheStore';
+    import { api, ApiError } from '$lib/client';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
@@ -82,27 +83,13 @@
             return;
         }
 
-        const endpoint = item.type === 'event' 
-            ? '/api/delete/core/timeline_events'
-            : item.type === 'action'
-            ? '/api/delete/core/investigation_actions'
-            : '/api/delete/core/annotations';
-
         try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    uuid,
-                    incident_id: $currentSelectedIncident?.uuid
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`Failed to delete: ${error}`);
+            if (item.type === 'event') {
+                await api.events.delete(uuid);
+            } else if (item.type === 'action') {
+                await api.actions.delete(uuid);
+            } else {
+                await api.annotations.delete(uuid);
             }
 
             console.log(`Successfully deleted ${item.type} with uuid: ${uuid}`);
@@ -135,7 +122,6 @@
         <div class="data-row">
             <!-- Timestamp -->
             <div class="data-field timestamp-field" title="Occurred or Performed At">
-                <span class="field-prefix">│</span>
                 <span class="field-label">TIME</span>
                 <span class="field-value">{formatTimestamp(item.timestamp)}</span>
             </div>
@@ -166,7 +152,6 @@
                         class="note-field"
                         transition:fade={{ duration: 180 }}
                     >
-                        <span class="note-prefix">└─</span>
                         <span class="note-value">{getDisplayValue(field)}</span>
                     </div>
                 {/if}

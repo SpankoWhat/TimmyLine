@@ -3,6 +3,7 @@
 	import { get } from 'svelte/store';
 	import { entityTypes, currentSelectedIncident, currentSelectedAnalyst } from '$lib/stores/cacheStore';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import { api, ApiError } from '$lib/client';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -112,24 +113,10 @@
 				entered_by: analyst?.uuid ?? null
 			};
 
-			let url: string;
-
 			if (mode === 'create') {
-				url = '/api/create/core/entity';
+				await api.entities.create(payload as any);
 			} else {
-				url = '/api/update/core/entity';
-				payload.uuid = rowUuid;
-			}
-
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json().catch(() => null);
-				throw new Error(errorData?.message ?? `Request failed with status ${response.status}`);
+				await api.entities.update(rowUuid!, payload as any);
 			}
 
 			if (rowUuid) {

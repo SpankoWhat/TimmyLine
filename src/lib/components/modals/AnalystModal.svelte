@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import { api, ApiError } from '$lib/client';
 
 	interface Props {
 		mode: 'create' | 'edit';
@@ -77,26 +78,10 @@
 				active
 			};
 
-			if (mode === 'edit' && rowUuid) {
-				payload.uuid = rowUuid;
-			}
-
-			const endpoint =
-				mode === 'create'
-					? '/api/create/core/analyst'
-					: '/api/update/core/analyst';
-
-			const res = await fetch(endpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-
-			if (!res.ok) {
-				const body = await res.json().catch(() => null);
-				const message = body?.message ?? body?.error ?? `Server error (${res.status})`;
-				errors = { _form: message };
-				return;
+			if (mode === 'create') {
+				await api.analysts.create(payload as any);
+			} else {
+				await api.analysts.update(rowUuid!, payload as any);
 			}
 
 			// Emit idle on successful submission
@@ -107,7 +92,7 @@
 			onsave();
 		} catch (err) {
 			console.error('Analyst modal submit error:', err);
-			errors = { _form: 'An unexpected error occurred' };
+			errors = { _form: err instanceof ApiError ? err.message : 'An unexpected error occurred' };
 		} finally {
 			isSubmitting = false;
 		}

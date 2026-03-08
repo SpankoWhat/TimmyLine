@@ -1,22 +1,12 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { onMount } from 'svelte';
+	import { api } from '$lib/client';
+	import type { ApiKeyRow } from '$lib/client';
 
 	let { data }: PageProps = $props();
 
-	type ApiKeyRecord = {
-		id: string;
-		key_prefix: string;
-		name: string;
-		role: string;
-		analyst_uuid: string;
-		last_used_at: number | null;
-		expires_at: number | null;
-		created_at: number | null;
-		revoked_at: number | null;
-	};
-
-	let apiKeys = $state<ApiKeyRecord[]>([]);
+	let apiKeys = $state<ApiKeyRow[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 
@@ -34,9 +24,7 @@
 		loading = true;
 		error = '';
 		try {
-			const res = await fetch('/api/read/core/api_keys');
-			if (!res.ok) throw new Error(await res.text());
-			apiKeys = await res.json();
+			apiKeys = await api.apiKeys.list();
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {
@@ -56,17 +44,11 @@
 		else if (newKeyExpiry === '1y') expires_at = now + 365 * 86400;
 
 		try {
-			const res = await fetch('/api/create/core/api_key', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					name: newKeyName.trim(),
-					role: newKeyRole,
-					expires_at
-				})
+			const result = await api.apiKeys.create({
+				name: newKeyName.trim(),
+				role: newKeyRole,
+				expires_at
 			});
-			if (!res.ok) throw new Error(await res.text());
-			const result = await res.json();
 			newlyCreatedKey = { key: result.key, name: result.name };
 			newKeyName = '';
 			newKeyRole = 'analyst';
@@ -83,12 +65,7 @@
 		if (!confirm(`Revoke API key "${name}"? This cannot be undone.`)) return;
 		error = '';
 		try {
-			const res = await fetch('/api/delete/core/api_key', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id })
-			});
-			if (!res.ok) throw new Error(await res.text());
+			await api.apiKeys.revoke(id);
 			await fetchKeys();
 		} catch (err) {
 			error = (err as Error).message;
@@ -117,13 +94,13 @@
 		return `${Math.floor(diff / 86400)}d ago`;
 	}
 
-	function isExpired(key: ApiKeyRecord): boolean {
+	function isExpired(key: ApiKeyRow): boolean {
 		if (!key.expires_at) return false;
 		return key.expires_at < Math.floor(Date.now() / 1000);
 	}
 
-	let activeKeys = $derived(apiKeys.filter((k) => !k.revoked_at && !isExpired(k)));
-	let inactiveKeys = $derived(apiKeys.filter((k) => k.revoked_at || isExpired(k)));
+	let activeKeys = $derived(apiKeys.filter((k: ApiKeyRow) => !k.revoked_at && !isExpired(k)));
+	let inactiveKeys = $derived(apiKeys.filter((k: ApiKeyRow) => k.revoked_at || isExpired(k)));
 
 	onMount(() => {
 		document.title = 'Settings — TimmyLine';

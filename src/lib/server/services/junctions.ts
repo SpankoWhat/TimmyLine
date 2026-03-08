@@ -3,13 +3,14 @@ import * as schema from '$lib/server/database';
 import { eq, and } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, type ServiceContext, type JunctionTableName } from './types';
+import type { CreateEventEntityData, CreateActionEventData, CreateActionEntityData, UpdateEventEntityData, UpdateActionEventData, UpdateActionEntityData, DeleteJunctionData } from '$lib/types/junctions';
 
 // ============================================================================
 // Create — Event Entities
 // ============================================================================
 
 export async function createEventEntity(
-	data: { event_uuid: string; entity_uuid: string; role?: string; context?: string; incident_id?: string },
+	data: CreateEventEntityData,
 	ctx: ServiceContext
 ) {
 	const event_id = data.event_uuid;
@@ -43,7 +44,7 @@ export async function createEventEntity(
 // ============================================================================
 
 export async function createActionEvent(
-	data: { action_uuid: string; event_uuid: string; relation_type: string; incident_id?: string },
+	data: CreateActionEventData,
 	ctx: ServiceContext
 ) {
 	const action_id = data.action_uuid;
@@ -79,7 +80,7 @@ export async function createActionEvent(
 // ============================================================================
 
 export async function createActionEntity(
-	data: { action_uuid: string; entity_uuid: string; relation_type: string; incident_id: string },
+	data: CreateActionEntityData,
 	ctx: ServiceContext
 ) {
 	const action_id = data.action_uuid;
@@ -113,10 +114,10 @@ export async function createActionEntity(
 // ============================================================================
 
 export async function updateEventEntity(
-	data: { event_id: string; entity_id: string; role?: string },
+	data: UpdateEventEntityData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['event_id', 'entity_id']);
+	validateRequired(data as unknown as Record<string, unknown>, ['event_id', 'entity_id']);
 
 	const updated = db
 		.update(schema.event_entities)
@@ -147,10 +148,10 @@ export async function updateEventEntity(
 // ============================================================================
 
 export async function updateActionEvent(
-	data: { action_id: string; event_id: string; relation_type?: string },
+	data: UpdateActionEventData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['action_id', 'event_id']);
+	validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'event_id']);
 
 	const updated = db
 		.update(schema.action_events)
@@ -181,10 +182,10 @@ export async function updateActionEvent(
 // ============================================================================
 
 export async function updateActionEntity(
-	data: { action_id: string; entity_id: string; relation_type?: string },
+	data: UpdateActionEntityData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['action_id', 'entity_id']);
+	validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'entity_id']);
 
 	const updated = db
 		.update(schema.action_entities)
@@ -222,18 +223,10 @@ const VALID_JUNCTION_TABLES: JunctionTableName[] = [
 ];
 
 export async function deleteJunction(
-	data: {
-		table: string;
-		action_id?: string;
-		event_id?: string;
-		entity_id?: string;
-		annotation_id?: string;
-		reference_id?: string;
-		reference_type?: string;
-	},
+	data: DeleteJunctionData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table']);
 
 	if (!VALID_JUNCTION_TABLES.includes(data.table as JunctionTableName)) {
 		throw new ServiceError(
@@ -247,7 +240,7 @@ export async function deleteJunction(
 
 	switch (table) {
 		case 'action_events': {
-			validateRequired(data as Record<string, unknown>, ['action_id', 'event_id']);
+			validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'event_id']);
 			db.delete(schema.action_events)
 				.where(
 					and(
@@ -259,7 +252,7 @@ export async function deleteJunction(
 			break;
 		}
 		case 'event_entities': {
-			validateRequired(data as Record<string, unknown>, ['event_id', 'entity_id']);
+			validateRequired(data as unknown as Record<string, unknown>, ['event_id', 'entity_id']);
 			db.delete(schema.event_entities)
 				.where(
 					and(
@@ -271,7 +264,7 @@ export async function deleteJunction(
 			break;
 		}
 		case 'action_entities': {
-			validateRequired(data as Record<string, unknown>, ['action_id', 'entity_id']);
+			validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'entity_id']);
 			db.delete(schema.action_entities)
 				.where(
 					and(
@@ -283,7 +276,7 @@ export async function deleteJunction(
 			break;
 		}
 		case 'annotation_references': {
-			validateRequired(data as Record<string, unknown>, ['annotation_id', 'reference_id', 'reference_type']);
+			validateRequired(data as unknown as Record<string, unknown>, ['annotation_id', 'reference_id', 'reference_type']);
 			db.delete(schema.annotation_references)
 				.where(
 					and(

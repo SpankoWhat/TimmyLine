@@ -7,15 +7,11 @@
 
 import { db } from '$lib/server';
 import { ServiceError } from './types';
+import type { GetEnrichedTimelineParams } from '$lib/types/enriched';
 
 // ============================================================================
 // Enriched Timeline
 // ============================================================================
-
-export interface GetEnrichedTimelineParams {
-	incident_id: string;
-	include_deleted?: boolean;
-}
 
 export async function getEnrichedTimeline(params: GetEnrichedTimelineParams) {
 	if (!params.incident_id) {

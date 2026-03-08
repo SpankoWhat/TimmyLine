@@ -10,6 +10,7 @@ import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import type { ListInvestigationActionsParams, CreateInvestigationActionData, UpdateInvestigationActionData, DeleteInvestigationActionData } from '$lib/types/actions';
 
 import type { NewInvestigationAction } from '$lib/server/database';
 
@@ -19,20 +20,7 @@ const RESULT_VALUES = ['success', 'failed', 'partial', 'pending'] as const;
 // List
 // ============================================================================
 
-export async function listInvestigationActions(params: {
-	uuid?: string;
-	action_type?: string;
-	incident_id?: string;
-	tags?: string;
-	actioned_by?: string;
-	performed_at?: number;
-	action_data?: string;
-	result?: string;
-	tool_used?: string;
-	notes?: string;
-	next_steps?: string;
-	include_deleted?: boolean;
-}) {
+export async function listInvestigationActions(params: ListInvestigationActionsParams) {
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.investigation_actions.uuid, params.uuid));
@@ -62,18 +50,7 @@ export async function listInvestigationActions(params: {
 // ============================================================================
 
 export async function createInvestigationAction(
-	data: {
-		incident_id: string;
-		actioned_by: string;
-		action_type: string;
-		performed_at: number;
-		action_data?: string;
-		result?: string;
-		tool_used?: string;
-		notes?: string;
-		next_steps?: string;
-		tags?: string;
-	},
+	data: CreateInvestigationActionData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, [
@@ -118,19 +95,7 @@ export async function createInvestigationAction(
 // ============================================================================
 
 export async function updateInvestigationAction(
-	data: {
-		uuid: string;
-		incident_id?: string;
-		actioned_by?: string;
-		action_type?: string;
-		performed_at?: number;
-		action_data?: string;
-		result?: string;
-		tool_used?: string;
-		notes?: string;
-		next_steps?: string;
-		tags?: string;
-	},
+	data: UpdateInvestigationActionData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
@@ -170,7 +135,7 @@ export async function updateInvestigationAction(
 // ============================================================================
 
 export async function deleteInvestigationAction(
-	data: { uuid: string; incident_id?: string },
+	data: DeleteInvestigationActionData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
