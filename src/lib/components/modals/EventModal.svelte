@@ -17,7 +17,6 @@
 
 	let isSubmitting = $state(false);
 	let errors = $state<Record<string, string>>({});
-	let editingRowUuid: string | null = $state(null);
 
 	// Relationship builder state
 	let pendingEntityLinks: PendingLink[] = $state([]);
@@ -39,19 +38,20 @@
 		tags: initial.tags ?? ''
 	});
 
-	// Emit editing presence on mount for edit mode
+	// Capture UUID once at mount — plain const, not reactive
 	const initialUuid = initial.uuid ?? null;
 
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `initialUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
 		if (mode === 'edit' && initialUuid) {
-			editingRowUuid = initialUuid;
-			emitEditingRowStatus(editingRowUuid, true);
+			emitEditingRowStatus(initialUuid, true);
 		}
 
 		return () => {
-			if (editingRowUuid) {
-				emitEditingRowStatus(editingRowUuid, false);
-				editingRowUuid = null;
+			if (initialUuid) {
+				emitEditingRowStatus(initialUuid, false);
 			}
 		};
 	});
@@ -267,9 +267,8 @@
 			await submitRelationshipChanges(itemUuid, incidentId);
 
 			// Emit idle before closing on success
-			if (editingRowUuid) {
+			if (initialUuid) {
 				emitIdle();
-				editingRowUuid = null;
 			}
 
 			onsave();
@@ -282,9 +281,8 @@
 	}
 
 	function handleCancel() {
-		if (editingRowUuid) {
+		if (initialUuid) {
 			emitIdle();
-			editingRowUuid = null;
 		}
 		onclose();
 	}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import {
 		actionTypes,
@@ -24,7 +25,10 @@
 
 	let isSubmitting = $state(false);
 	let errors = $state<Record<string, string>>({});
-	let editingRowUuid: string | null = $state(null);
+
+	// Capture initial data snapshot — modal data does not change after mount
+	const initial = untrack(() => data ?? {});
+	const rowUuid: string | null = initial.uuid ?? null;
 
 	// Relationship builder state — entities
 	let pendingEntityLinks: PendingLink[] = $state([]);
@@ -35,35 +39,29 @@
 	let removedEventLinks: { targetUuid: string; relation: string }[] = $state([]);
 
 	let formData = $state<Record<string, any>>({
-		action_type: '',
-		performed_at: '',
-		result: '',
-		tool_used: '',
-		action_data: '',
-		notes: '',
-		next_steps: '',
-		tags: ''
+		action_type: initial.action_type ?? '',
+		performed_at: initial.performed_at ?? '',
+		result: initial.result ?? '',
+		tool_used: initial.tool_used ?? '',
+		action_data: initial.action_data ?? '',
+		notes: initial.notes ?? '',
+		next_steps: initial.next_steps ?? '',
+		tags: initial.tags ?? ''
 	});
 
-	// Initialize form data from props
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `rowUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
-		if (mode === 'edit' && data) {
-			formData = {
-				action_type: data.action_type ?? '',
-				performed_at: data.performed_at ?? '',
-				result: data.result ?? '',
-				tool_used: data.tool_used ?? '',
-				action_data: data.action_data ?? '',
-				notes: data.notes ?? '',
-				next_steps: data.next_steps ?? '',
-				tags: data.tags ?? ''
-			};
-
-			if (data.uuid) {
-				editingRowUuid = data.uuid;
-				emitEditingRowStatus(editingRowUuid, true);
-			}
+		if (mode === 'edit' && rowUuid) {
+			emitEditingRowStatus(rowUuid, true);
 		}
+
+		return () => {
+			if (rowUuid) {
+				emitEditingRowStatus(rowUuid, false);
+			}
+		};
 	});
 
 	function convertFromEpoch(epochTime: number): string {
@@ -99,8 +97,8 @@
 
 	// Extract existing entity links from enriched data (edit mode)
 	let existingEntityLinks = $derived.by(() => {
-		if (mode !== 'edit' || !data) return [];
-		const actionEntities = (data as any).actionEntities || [];
+		if (mode !== 'edit' || !initial) return [];
+		const actionEntities = (initial as any).actionEntities || [];
 		return actionEntities.map((rel: any) => ({
 			targetUuid: rel.entity?.uuid ?? rel.entity_id ?? '',
 			targetLabel: rel.entity?.identifier ?? rel.entity_id ?? 'Unknown',
@@ -110,8 +108,8 @@
 
 	// Extract existing event links from enriched data (edit mode)
 	let existingEventLinks = $derived.by(() => {
-		if (mode !== 'edit' || !data) return [];
-		const actionEvents = (data as any).actionEvents || [];
+		if (mode !== 'edit' || !initial) return [];
+		const actionEvents = (initial as any).actionEvents || [];
 		return actionEvents.map((rel: any) => ({
 			targetUuid: rel.event?.uuid ?? rel.event_id ?? '',
 			targetLabel: rel.event?.event_type ?? rel.event_id ?? 'Unknown',
@@ -245,7 +243,7 @@
 			let url: string;
 
 			if (mode === 'edit') {
-				payload.uuid = data?.uuid;
+				payload.uuid = rowUuid;
 				url = '/api/update/core/investigation_action';
 			} else {
 				url = '/api/create/core/investigation_action';
@@ -264,16 +262,15 @@
 
 			// Get the UUID of the created/updated item
 			const result = await response.json();
-			const itemUuid = result?.uuid ?? data?.uuid;
+			const itemUuid = result?.uuid ?? rowUuid;
 			const incidentId = get(currentSelectedIncident)?.uuid ?? '';
 
 			// Batch-submit relationship changes
 			await submitRelationshipChanges(itemUuid, incidentId);
 
 			// Emit idle before closing (successful submission)
-			if (editingRowUuid) {
+			if (rowUuid) {
 				emitIdle();
-				editingRowUuid = null;
 			}
 
 			onsave();
@@ -286,9 +283,8 @@
 	}
 
 	function handleCancel() {
-		if (editingRowUuid) {
+		if (rowUuid) {
 			emitIdle();
-			editingRowUuid = null;
 		}
 		onclose();
 	}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { entityTypes, currentSelectedIncident, currentSelectedAnalyst } from '$lib/stores/cacheStore';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
@@ -12,19 +13,22 @@
 
 	let { mode, data, onclose, onsave }: Props = $props();
 
-	let entity_type = $state(mode === 'edit' && data?.entity_type ? data.entity_type : '');
-	let identifier = $state(mode === 'edit' && data?.identifier ? data.identifier : '');
-	let display_name = $state(mode === 'edit' && data?.display_name ? data.display_name : '');
-	let status = $state(mode === 'edit' && data?.status ? data.status : 'active');
-	let criticality = $state(mode === 'edit' && data?.criticality ? data.criticality : 'unknown');
-	let first_seen = $state(mode === 'edit' && data?.first_seen ? convertFromEpoch(data.first_seen) : '');
-	let last_seen = $state(mode === 'edit' && data?.last_seen ? convertFromEpoch(data.last_seen) : '');
-	let attributes = $state(mode === 'edit' && data?.attributes ? data.attributes : '');
-	let tags = $state(mode === 'edit' && data?.tags ? data.tags : '');
+	// Capture initial data snapshot — modal data does not change after mount
+	const initial = untrack(() => data ?? {});
+	const rowUuid: string | null = initial.uuid ?? null;
+
+	let entity_type = $state(initial.entity_type ?? '');
+	let identifier = $state(initial.identifier ?? '');
+	let display_name = $state(initial.display_name ?? '');
+	let status = $state(initial.status ?? 'active');
+	let criticality = $state(initial.criticality ?? 'unknown');
+	let first_seen = $state(initial.first_seen ? convertFromEpoch(initial.first_seen) : '');
+	let last_seen = $state(initial.last_seen ? convertFromEpoch(initial.last_seen) : '');
+	let attributes = $state(initial.attributes ?? '');
+	let tags = $state(initial.tags ?? '');
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
-	let wasEditing = $state(false);
 
 	const statusOptions = [
 		{ value: 'active', label: 'Active' },
@@ -43,16 +47,17 @@
 	let modalTitle = $derived(mode === 'create' ? 'Create Entity' : 'Edit Entity');
 	let submitLabel = $derived(mode === 'create' ? 'Create' : 'Save');
 
-	// Emit editing presence on mount for edit mode
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `rowUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
-		if (mode === 'edit' && data?.uuid) {
-			emitEditingRowStatus(data.uuid, true);
-			wasEditing = true;
+		if (mode === 'edit' && rowUuid) {
+			emitEditingRowStatus(rowUuid, true);
 		}
 
 		return () => {
-			if (wasEditing) {
-				emitIdle();
+			if (rowUuid) {
+				emitEditingRowStatus(rowUuid, false);
 			}
 		};
 	});
@@ -113,7 +118,7 @@
 				url = '/api/create/core/entity';
 			} else {
 				url = '/api/update/core/entity';
-				payload.uuid = data?.uuid;
+				payload.uuid = rowUuid;
 			}
 
 			const response = await fetch(url, {
@@ -127,9 +132,8 @@
 				throw new Error(errorData?.message ?? `Request failed with status ${response.status}`);
 			}
 
-			if (wasEditing) {
+			if (rowUuid) {
 				emitIdle();
-				wasEditing = false;
 			}
 
 			onsave();
@@ -145,9 +149,8 @@
 	}
 
 	function handleCancel() {
-		if (wasEditing) {
+		if (rowUuid) {
 			emitIdle();
-			wasEditing = false;
 		}
 		onclose();
 	}

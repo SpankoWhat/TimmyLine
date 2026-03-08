@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
 
 	interface Props {
@@ -10,14 +11,17 @@
 
 	let { mode, data, onclose, onsave }: Props = $props();
 
-	let title = $state(mode === 'edit' && data?.title ? data.title : '');
-	let soar_ticket_id = $state(mode === 'edit' && data?.soar_ticket_id ? data.soar_ticket_id : '');
-	let priority = $state(mode === 'edit' && data?.priority ? data.priority : 'medium');
-	let status = $state(mode === 'edit' && data?.status ? data.status : 'In Progress');
+	// Capture initial data snapshot — modal data does not change after mount
+	const initial = untrack(() => data ?? {});
+	const rowUuid: string | null = initial.uuid ?? null;
+
+	let title = $state(initial.title ?? '');
+	let soar_ticket_id = $state(initial.soar_ticket_id ?? '');
+	let priority = $state(initial.priority ?? 'medium');
+	let status = $state(initial.status ?? 'In Progress');
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
-	let wasEditing = $state(false);
 
 	const priorityOptions = [
 		{ value: 'critical', label: 'Critical' },
@@ -35,16 +39,17 @@
 	let modalTitle = $derived(mode === 'create' ? 'Create Incident' : 'Edit Incident');
 	let submitLabel = $derived(mode === 'create' ? 'Create' : 'Save');
 
-	// Emit editing presence on mount for edit mode
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `rowUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
-		if (mode === 'edit' && data?.uuid) {
-			emitEditingRowStatus(data.uuid, true);
-			wasEditing = true;
+		if (mode === 'edit' && rowUuid) {
+			emitEditingRowStatus(rowUuid, true);
 		}
 
 		return () => {
-			if (wasEditing) {
-				emitIdle();
+			if (rowUuid) {
+				emitEditingRowStatus(rowUuid, false);
 			}
 		};
 	});
@@ -91,7 +96,7 @@
 				url = '/api/create/core/incident';
 			} else {
 				url = '/api/update/core/incident';
-				payload.uuid = data?.uuid;
+				payload.uuid = rowUuid;
 			}
 
 			const response = await fetch(url, {
@@ -105,9 +110,8 @@
 				throw new Error(errorData?.message ?? `Request failed with status ${response.status}`);
 			}
 
-			if (wasEditing) {
+			if (rowUuid) {
 				emitIdle();
-				wasEditing = false;
 			}
 
 			onsave();
@@ -123,9 +127,8 @@
 	}
 
 	function handleCancel() {
-		if (wasEditing) {
+		if (rowUuid) {
 			emitIdle();
-			wasEditing = false;
 		}
 		onclose();
 	}

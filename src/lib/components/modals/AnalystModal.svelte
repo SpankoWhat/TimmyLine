@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
 
 	interface Props {
@@ -10,11 +11,15 @@
 
 	let { mode, data, onclose, onsave }: Props = $props();
 
-	// ── Form state (initialized from props via $derived for initial values) ──
-	let username = $state('');
-	let full_name = $state('');
-	let role = $state('analyst');
-	let active = $state(true);
+	// Capture initial data snapshot — modal data does not change after mount
+	const initial = untrack(() => data ?? {});
+	const rowUuid: string | null = initial.uuid ?? null;
+
+	// ── Form state (initialized from snapshot) ──
+	let username = $state(initial.username ?? '');
+	let full_name = $state(initial.full_name ?? '');
+	let role = $state(initial.role ?? 'analyst');
+	let active = $state(initial.active !== undefined ? Boolean(initial.active) : true);
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
@@ -26,28 +31,17 @@
 		{ value: 'observer', label: 'Observer' }
 	];
 
-	// ── Derive the editing UUID from props ──
-	let editingRowUuid = $derived(mode === 'edit' && data?.uuid ? data.uuid as string : null);
-
-	// ── Initialize form fields from props ──
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `rowUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
-		if (mode === 'edit' && data) {
-			username = data.username ?? '';
-			full_name = data.full_name ?? '';
-			role = data.role ?? 'analyst';
-			active = data.active !== undefined ? Boolean(data.active) : true;
-		}
-	});
-
-	// ── Edit presence tracking ──
-	$effect(() => {
-		if (editingRowUuid) {
-			emitEditingRowStatus(editingRowUuid, true);
+		if (mode === 'edit' && rowUuid) {
+			emitEditingRowStatus(rowUuid, true);
 		}
 
 		return () => {
-			if (editingRowUuid) {
-				emitEditingRowStatus(editingRowUuid, false);
+			if (rowUuid) {
+				emitEditingRowStatus(rowUuid, false);
 			}
 		};
 	});
@@ -83,8 +77,8 @@
 				active
 			};
 
-			if (mode === 'edit' && data?.uuid) {
-				payload.uuid = data.uuid;
+			if (mode === 'edit' && rowUuid) {
+				payload.uuid = rowUuid;
 			}
 
 			const endpoint =
@@ -106,7 +100,7 @@
 			}
 
 			// Emit idle on successful submission
-			if (editingRowUuid) {
+			if (rowUuid) {
 				emitIdle();
 			}
 
@@ -121,7 +115,7 @@
 
 	// ── Cancel ──
 	function handleCancel() {
-		if (editingRowUuid) {
+		if (rowUuid) {
 			emitIdle();
 		}
 		onclose();

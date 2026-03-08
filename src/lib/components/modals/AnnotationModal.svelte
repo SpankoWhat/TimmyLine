@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import {
 		annotationTypes,
@@ -16,39 +17,32 @@
 
 	let { mode, data, onclose, onsave }: Props = $props();
 
-	// ── Form state ──
-	let annotationType = $state('');
-	let content = $state('');
-	let confidence = $state('');
-	let isHypothesis = $state(false);
-	let refersTo = $state('');
-	let tags = $state('');
+	// Capture initial data snapshot — modal data does not change after mount
+	const initial = untrack(() => data ?? {});
+	const rowUuid: string | null = initial.uuid ?? null;
+
+	// ── Form state (initialized from snapshot) ──
+	let annotationType = $state(initial.annotation_type ?? '');
+	let content = $state(initial.content ?? '');
+	let confidence = $state(initial.confidence ?? '');
+	let isHypothesis = $state(initial.is_hypothesis ?? false);
+	let refersTo = $state(initial.refers_to ?? '');
+	let tags = $state(initial.tags ?? '');
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
 
-	// ── Edit presence tracking ──
-	let editingRowUuid: string | null = null;
-
-	// Sync form state from data prop (handles create vs edit)
+	// Presence tracking: emit on mount, cleanup on destroy.
+	// Uses only the non-reactive `rowUuid` const so the effect has no
+	// $state dependencies that could trigger re-runs.
 	$effect(() => {
-		annotationType = data?.annotation_type ?? '';
-		content = data?.content ?? '';
-		confidence = data?.confidence ?? '';
-		isHypothesis = data?.is_hypothesis ?? false;
-		refersTo = data?.refers_to ?? '';
-		tags = data?.tags ?? '';
-
-		// Emit editing presence if editing an existing row
-		if (mode === 'edit' && data?.uuid) {
-			editingRowUuid = data.uuid;
-			emitEditingRowStatus(editingRowUuid, true);
+		if (mode === 'edit' && rowUuid) {
+			emitEditingRowStatus(rowUuid, true);
 		}
 
 		return () => {
-			if (editingRowUuid) {
-				emitEditingRowStatus(editingRowUuid, false);
-				editingRowUuid = null;
+			if (rowUuid) {
+				emitEditingRowStatus(rowUuid, false);
 			}
 		};
 	});
@@ -100,8 +94,8 @@
 			noted_by: analyst?.uuid ?? null
 		};
 
-		if (mode === 'edit' && data?.uuid) {
-			payload.uuid = data.uuid;
+		if (mode === 'edit' && rowUuid) {
+			payload.uuid = rowUuid;
 		}
 
 		const endpoint =
@@ -124,9 +118,8 @@
 			}
 
 			// Success – emit idle and notify parent
-			if (editingRowUuid) {
+			if (rowUuid) {
 				emitIdle();
-				editingRowUuid = null;
 			}
 
 			onsave();
@@ -139,9 +132,8 @@
 	}
 
 	function handleCancel() {
-		if (editingRowUuid) {
+		if (rowUuid) {
 			emitIdle();
-			editingRowUuid = null;
 		}
 		onclose();
 	}
