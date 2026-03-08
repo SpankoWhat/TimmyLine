@@ -1,34 +1,20 @@
 /**
- * Modal Registry - Central hub for all modal handlers
- * This is the main entry point for the modal system
+ * Modal Registry — Slim store + config factory.
+ *
+ * Individual modal components now own their own fields, validation, and
+ * submission logic. This module only manages the open/close state and
+ * provides `createModalConfig` so callsites don't need to change.
  */
 
 import { writable } from 'svelte/store';
-import type { EntityType, ModalMode, EntityModalHandler, ModalConfig } from './types';
+import type { EntityType, ModalMode, ModalConfig } from './types';
 
-// Entity Modal Handlers
-import { incidentHandler } from './entities/incident';
-import { timelineEventHandler } from './entities/timelineEvent';
-import { investigationActionHandler } from './entities/investigationAction';
-import { entityHandler } from './entities/entity';
-import { annotationHandler } from './entities/annotation';
-import { analystHandler } from './entities/analyst';
-
-// Relation Modal Handlers
-import { actionEntitiesHandler } from './junctions/action_entities';
-import { actionEventsHandler } from './junctions/action_events';
-import { eventEntitiesHandler } from './junctions/event_entities';
-
-// Lookup Modal Handlers
-import { 
-	actionTypeHandler, 
-	entityTypeHandler, 
-	eventTypeHandler, 
-	annotationTypeHandler 
-} from './lookups';
+// ---------------------------------------------------------------------------
+// Modal store (unchanged API — every consumer still does modalStore.open/close)
+// ---------------------------------------------------------------------------
 
 const createModalStore = () => {
-	const { subscribe, set, update } = writable<ModalConfig | null>(null);
+	const { subscribe, set } = writable<ModalConfig | null>(null);
 
 	return {
 		subscribe,
@@ -43,121 +29,16 @@ const createModalStore = () => {
 
 export const modalStore = createModalStore();
 
-/**
- * Central registry of all entity modal handlers
- */
-const handlers: Record<EntityType, EntityModalHandler> = {
-	incident: incidentHandler,
-	timeline_event: timelineEventHandler,
-	investigation_action: investigationActionHandler,
-	entity: entityHandler,
-	annotation: annotationHandler,
-	analyst: analystHandler,
-	action_type: actionTypeHandler,
-	entity_type: entityTypeHandler,
-	event_type: eventTypeHandler,
-	annotation_type: annotationTypeHandler,
-	action_entities: actionEntitiesHandler,
-	action_events: actionEventsHandler,
-	event_entities: eventEntitiesHandler
-};
+// ---------------------------------------------------------------------------
+// Config factory (unchanged — every consumer still calls createModalConfig)
+// ---------------------------------------------------------------------------
 
 /**
- * Get the handler for a specific entity type
- */
-export function getHandler(entityType: EntityType): EntityModalHandler {
-	const handler = handlers[entityType];
-	if (!handler) {
-		throw new Error(`No modal handler registered for entity type: ${entityType}`);
-	}
-	return handler;
-}
-
-/**
- * Validate form data using the handler's validation logic.
- * Combines field-level required/validation checks with custom handler validation.
- * 
- * @param entityType - The type of entity
- * @param formData - The form data to validate
- * @returns Object with field errors, or null if valid
- */
-export function validateFormData(
-	entityType: EntityType,
-	formData: any
-): Record<string, string> | null {
-	const handler = getHandler(entityType);
-	const errors: Record<string, string> = {};
-	
-	// Generic Field-level validation
-	handler.fields.forEach(field => {
-		if (field.required && (!formData[field.key] || formData[field.key] === '')) {
-			errors[field.key] = `${field.label} is required`;
-		}
-
-		// JSON field validation: must be a valid JSON object
-		if (field.type === 'json' && formData[field.key] && formData[field.key] !== '') {
-			try {
-				const parsed = JSON.parse(formData[field.key]);
-				if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-					errors[field.key] = `${field.label} must be a JSON object (not array or primitive)`;
-				}
-			} catch {
-				errors[field.key] = `${field.label} contains invalid JSON`;
-			}
-		}
-
-		if (field.validation && formData[field.key]) {
-			const error = field.validation(formData[field.key]);
-			if (error) {
-				errors[field.key] = error;
-			}
-		}
-	});
-	
-	// Custom handler validation if exists
-	if (handler.validate) {
-		const customErrors = handler.validate(formData);
-		if (customErrors) {
-			Object.assign(errors, customErrors);
-		}
-	}
-	
-	return Object.keys(errors).length > 0 ? errors : null;
-}
-
-/**
- * Submit form data using the handler's submit logic
- * Handles data preparation and API submission
- * 
- * @param entityType - The type of entity
- * @param mode - The modal mode
- * @param formData - The form data to submit
- * @returns The result from the API
- */
-export async function submitFormData(
-	entityType: EntityType,
-	mode: ModalMode,
-	formData: any
-) {
-	const handler = getHandler(entityType);
-	
-	// Prepare data (add context, convert types, etc.)
-	const preparedData = handler.prepareData(formData, mode);
-	
-	// Submit to API
-	const result = await handler.submit(preparedData, mode);
-	
-	return result;
-}
-
-/**
- * Create a complete modal configuration for opening a modal
- * This is the main factory function that components should use
- * 
+ * Create a complete modal configuration for opening a modal.
+ *
  * @param entityType - The type of entity to create/edit
  * @param mode - The modal mode (create, edit, view, delete)
  * @param existingData - Optional existing data for edit/view modes
- * @returns Modal configuration ready to pass to modalStore.open()
  */
 export function createModalConfig(
 	entityType: EntityType,
@@ -171,5 +52,3 @@ export function createModalConfig(
 		data: existingData
 	};
 }
-
-

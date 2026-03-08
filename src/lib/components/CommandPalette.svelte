@@ -105,7 +105,7 @@
 		{
 			id: "action-new-event",
 			label: "Create New Event",
-			description: "Add a timeline event to the current incident",
+			description: "Add a timeline event and link entities inline",
 			category: "Actions",
 			requiresIncident: true,
 			action: () => {
@@ -116,7 +116,7 @@
 		{
 			id: "action-new-action",
 			label: "Create New Action",
-			description: "Add an investigation action",
+			description: "Add an investigation action and link entities/events inline",
 			category: "Actions",
 			requiresIncident: true,
 			action: () => {
@@ -146,39 +146,6 @@
 			action: () => {
 				close();
 				modalStore.open(createModalConfig("annotation", "create"));
-			},
-		},
-		{
-			id: "action-new-relationship",
-			label: "Relate Action/Entity",
-			description: "Link an action to an entity",
-			category: "Actions",
-			requiresIncident: true,
-			action: () => {
-				close();
-				modalStore.open(createModalConfig("action_entities", "create"));
-			},
-		},
-		{
-			id: "action-new-entity-relationship",
-			label: "Relate Action/Event",
-			description: "Link an action to an event",
-			category: "Actions",
-			requiresIncident: true,
-			action: () => {
-				close();
-				modalStore.open(createModalConfig("action_events", "create"));
-			},
-		},
-		{
-			id: "action-new-annotation-relationship",
-			label: "Relate Event/Entity",
-			description: "Link an event to an entity",
-			category: "Actions",
-			requiresIncident: true,
-			action: () => {
-				close();
-				modalStore.open(createModalConfig("event_entities", "create"));
 			},
 		},
 	];

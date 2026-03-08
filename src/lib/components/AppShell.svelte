@@ -3,7 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
-	import GenericModal from '$lib/components/GenericModal.svelte';
+	import ModalRouter from '$lib/components/ModalRouter.svelte';
 
 	let { children }: { children: Snippet } = $props();
 </script>
@@ -15,7 +15,7 @@
 	</main>
 </div>
 
-<GenericModal />
+<ModalRouter />
 <CommandPalette />
 
 <style>
