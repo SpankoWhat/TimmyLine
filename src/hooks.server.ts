@@ -106,8 +106,8 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
         throw redirect(303, '/login');
     }
 
-    const toRouteFrom = ['/login'];
-    // Redirect authenticated users away from login page
+    const toRouteFrom = ['/login', '/'];
+    // Redirect authenticated users away from login/landing pages
     if (session?.user && (toRouteFrom.some((route) => event.url.pathname === route))) {
         throw redirect(303, '/home');
     }
