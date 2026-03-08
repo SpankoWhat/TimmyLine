@@ -122,7 +122,6 @@
         <div class="data-row">
             <!-- Timestamp -->
             <div class="data-field timestamp-field" title="Occurred or Performed At">
-                <span class="field-prefix">│</span>
                 <span class="field-label">TIME</span>
                 <span class="field-value">{formatTimestamp(item.timestamp)}</span>
             </div>
@@ -153,7 +152,6 @@
                         class="note-field"
                         transition:fade={{ duration: 180 }}
                     >
-                        <span class="note-prefix">└─</span>
                         <span class="note-value">{getDisplayValue(field)}</span>
                     </div>
                 {/if}
