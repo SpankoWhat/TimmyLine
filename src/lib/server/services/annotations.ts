@@ -10,6 +10,7 @@ import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import type { ListAnnotationsParams, CreateAnnotationData, UpdateAnnotationData, DeleteAnnotationData } from '$lib/types/annotations';
 
 import type { NewAnnotation } from '$lib/server/database';
 
@@ -19,20 +20,7 @@ const CONFIDENCE_VALUES = ['high', 'medium', 'low', 'guess'] as const;
 // List
 // ============================================================================
 
-export async function listAnnotations(params: {
-	uuid?: string;
-	incident_id?: string;
-	noted_by?: string;
-	annotation_type?: string;
-	created_at?: number;
-	updated_at?: number;
-	content?: string;
-	confidence?: string;
-	refers_to?: string;
-	is_hypothesis?: boolean;
-	tags?: string;
-	include_deleted?: boolean;
-}) {
+export async function listAnnotations(params: ListAnnotationsParams) {
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.annotations.uuid, params.uuid));
@@ -62,16 +50,7 @@ export async function listAnnotations(params: {
 // ============================================================================
 
 export async function createAnnotation(
-	data: {
-		incident_id: string;
-		noted_by: string;
-		annotation_type: string;
-		content: string;
-		confidence?: string;
-		refers_to?: string;
-		is_hypothesis?: boolean;
-		tags?: string;
-	},
+	data: CreateAnnotationData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, [
@@ -114,17 +93,7 @@ export async function createAnnotation(
 // ============================================================================
 
 export async function updateAnnotation(
-	data: {
-		uuid: string;
-		incident_id?: string;
-		noted_by?: string;
-		annotation_type?: string;
-		content?: string;
-		confidence?: string;
-		refers_to?: string;
-		is_hypothesis?: boolean;
-		tags?: string;
-	},
+	data: UpdateAnnotationData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
@@ -164,7 +133,7 @@ export async function updateAnnotation(
 // ============================================================================
 
 export async function deleteAnnotation(
-	data: { uuid: string; incident_id?: string },
+	data: DeleteAnnotationData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);

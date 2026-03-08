@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
+import type { ServiceContext, ServiceRole } from '$lib/server/services/types';
 
 type AnalystRole = 'analyst' | 'on-point lead' | 'observer';
 
@@ -49,4 +50,35 @@ export async function requireWriteAccess(event: RequestEvent) {
  */
 export async function requireAdminAccess(event: RequestEvent) {
     return requireRole(event, ['on-point lead']);
+}
+
+// ============================================================================
+// Service Context Builder
+// ============================================================================
+
+/**
+ * Build a ServiceContext from a RequestEvent.
+ * Checks both API key auth (locals.apiKey) and session auth (locals.session).
+ * API key auth takes precedence when both are present.
+ *
+ * Use this in all API route handlers instead of inline context construction.
+ */
+export function buildServiceContext(event: RequestEvent): ServiceContext {
+    // API key auth populates locals.apiKey
+    const apiKey = event.locals.apiKey;
+    if (apiKey) {
+        return {
+            actorUUID: apiKey.analystUUID,
+            actorRole: apiKey.analystRole as ServiceRole,
+            actorUserId: apiKey.userId
+        };
+    }
+
+    // Fall back to session auth
+    const session = event.locals.session;
+    return {
+        actorUUID: session?.user?.analystUUID || 'unknown',
+        actorRole: (session?.user?.analystRole || 'observer') as ServiceRole,
+        actorUserId: session?.user?.id
+    };
 }

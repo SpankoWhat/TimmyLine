@@ -1,11 +1,11 @@
 import { db } from '$lib/server';
-import * as schema from '$lib/server/database';
 import { analysts } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
 
 import type { NewAnalyst } from '$lib/server/database';
+import type { ListAnalystsParams, CreateAnalystData, UpdateAnalystData, DeleteAnalystData } from '$lib/types/analysts';
 
 const VALID_ROLES = ['analyst', 'on-point lead', 'observer'] as const;
 
@@ -13,16 +13,7 @@ const VALID_ROLES = ['analyst', 'on-point lead', 'observer'] as const;
 // List
 // ============================================================================
 
-export async function listAnalysts(params: {
-	uuid?: string;
-	username?: string;
-	full_name?: string;
-	role?: string;
-	active?: boolean;
-	created_at?: number;
-	updated_at?: number;
-	include_deleted?: boolean;
-} = {}) {
+export async function listAnalysts(params: ListAnalystsParams = {}) {
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(analysts.uuid, params.uuid));
@@ -37,11 +28,10 @@ export async function listAnalysts(params: {
 		conditions.push(isNull(analysts.deleted_at));
 	}
 
-	const results = db
-		.select()
-		.from(analysts)
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.all();
+	const query = db.select().from(analysts);
+	const results = conditions.length > 0
+		? await query.where(and(...conditions))
+		: await query;
 
 	return results;
 }
@@ -51,10 +41,10 @@ export async function listAnalysts(params: {
 // ============================================================================
 
 export async function createAnalyst(
-	data: { username: string; full_name?: string; role?: string; active?: boolean },
+	data: CreateAnalystData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['username']);
+	validateRequired(data as unknown as Record<string, unknown>, ['username']);
 	if (data.role) {
 		validateEnum('role', data.role, VALID_ROLES);
 	}
@@ -67,7 +57,7 @@ export async function createAnalyst(
 	};
 
 	try {
-		const created = db.insert(analysts).values(insert).returning().get();
+		const [created] = await db.insert(analysts).values(insert).returning();
 
 		try {
 			const io = getSocketIO();
@@ -88,10 +78,10 @@ export async function createAnalyst(
 // ============================================================================
 
 export async function updateAnalyst(
-	data: { uuid: string; username?: string; full_name?: string; role?: string; active?: boolean },
+	data: UpdateAnalystData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['uuid']);
+	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	if (data.role !== undefined) {
 		validateEnum('role', data.role, VALID_ROLES);
 	}
@@ -105,12 +95,11 @@ export async function updateAnalyst(
 	});
 
 	try {
-		const updated = db
+		const [updated] = await db
 			.update(analysts)
 			.set(updates)
 			.where(eq(analysts.uuid, data.uuid))
-			.returning()
-			.get();
+			.returning();
 
 		if (!updated) {
 			throw new ServiceError(404, 'NOT_FOUND', `Analyst ${data.uuid} not found`);
@@ -136,17 +125,16 @@ export async function updateAnalyst(
 // ============================================================================
 
 export async function deleteAnalyst(
-	data: { uuid: string },
+	data: DeleteAnalystData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['uuid']);
+	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
-	const deleted = db
+	const [deleted] = await db
 		.update(analysts)
 		.set({ deleted_at: Math.floor(Date.now() / 1000) })
 		.where(eq(analysts.uuid, data.uuid))
-		.returning()
-		.get();
+		.returning();
 
 	if (!deleted) {
 		throw new ServiceError(404, 'NOT_FOUND', `Analyst ${data.uuid} not found`);

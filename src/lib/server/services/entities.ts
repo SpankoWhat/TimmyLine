@@ -10,6 +10,7 @@ import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import type { ListEntitiesParams, CreateEntityData, UpdateEntityData, DeleteEntityData } from '$lib/types/entities';
 
 import type { NewEntity } from '$lib/server/database';
 
@@ -20,23 +21,7 @@ const CRITICALITY_VALUES = ['critical', 'high', 'medium', 'low', 'unknown'] as c
 // List
 // ============================================================================
 
-export async function listEntities(params: {
-	uuid?: string;
-	incident_id?: string;
-	entered_by?: string;
-	entity_type?: string;
-	created_at?: number;
-	updated_at?: number;
-	first_seen?: number;
-	last_seen?: number;
-	identifier?: string;
-	display_name?: string;
-	attributes?: string;
-	status?: string;
-	criticality?: string;
-	tags?: string;
-	include_deleted?: boolean;
-}) {
+export async function listEntities(params: ListEntitiesParams) {
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.entities.uuid, params.uuid));
@@ -69,19 +54,7 @@ export async function listEntities(params: {
 // ============================================================================
 
 export async function createEntity(
-	data: {
-		incident_id: string;
-		entered_by: string;
-		entity_type: string;
-		identifier: string;
-		display_name?: string;
-		status?: string;
-		criticality?: string;
-		first_seen?: number;
-		last_seen?: number;
-		attributes?: string;
-		tags?: string;
-	},
+	data: CreateEntityData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, [
@@ -128,20 +101,7 @@ export async function createEntity(
 // ============================================================================
 
 export async function updateEntity(
-	data: {
-		uuid: string;
-		incident_id?: string;
-		entered_by?: string;
-		entity_type?: string;
-		identifier?: string;
-		display_name?: string;
-		status?: string;
-		criticality?: string;
-		first_seen?: number;
-		last_seen?: number;
-		attributes?: string;
-		tags?: string;
-	},
+	data: UpdateEntityData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
@@ -183,7 +143,7 @@ export async function updateEntity(
 // ============================================================================
 
 export async function deleteEntity(
-	data: { uuid: string; incident_id?: string },
+	data: DeleteEntityData,
 	ctx: ServiceContext
 ) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);

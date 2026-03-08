@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireReadAccess } from '$lib/server/auth/authorization';
 import { listLookups, ServiceError } from '$lib/server/services';
+import type { LookupTableName } from '$lib/types/common';
 
 export const GET: RequestHandler = async (event) => {
 	await requireReadAccess(event);
@@ -15,7 +16,7 @@ export const GET: RequestHandler = async (event) => {
 	const include_deleted = url.searchParams.get('include_deleted') === 'true';
 
 	try {
-		const results = await listLookups({ table, include_deleted });
+		const results = await listLookups({ table: table as LookupTableName, include_deleted });
 		return json(results);
 	} catch (err) {
 		if (err instanceof ServiceError) {

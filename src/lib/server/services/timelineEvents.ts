@@ -11,7 +11,8 @@ import * as schema from '$lib/server/database';
 import { timeline_events } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import { validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import type { ListTimelineEventsParams, CreateTimelineEventData, UpdateTimelineEventData, DeleteTimelineEventData } from '$lib/types/events';
 import type { NewTimelineEvent } from '$lib/server/database';
 
 // ============================================================================
@@ -25,25 +26,6 @@ const SOURCE_RELIABILITY_VALUES = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 // ============================================================================
 // List
 // ============================================================================
-
-export interface ListTimelineEventsParams {
-	uuid?: string;
-	incident_id?: string;
-	discovered_by?: string;
-	event_type?: string;
-	occurred_at?: number;
-	discovered_at?: number;
-	created_at?: number;
-	updated_at?: number;
-	notes?: string;
-	event_data?: string;
-	severity?: string;
-	confidence?: string;
-	source_reliability?: string;
-	source?: string;
-	tags?: string;
-	include_deleted?: boolean;
-}
 
 export async function listTimelineEvents(params: ListTimelineEventsParams) {
 	const conditions: SQL[] = [];
@@ -80,21 +62,6 @@ export async function listTimelineEvents(params: ListTimelineEventsParams) {
 // ============================================================================
 // Create
 // ============================================================================
-
-export interface CreateTimelineEventData {
-	incident_id: string;
-	discovered_by: string;
-	event_type: string;
-	discovered_at: number;
-	event_data: string;
-	occurred_at?: number;
-	notes?: string;
-	severity?: string;
-	confidence?: string;
-	source_reliability?: string;
-	source?: string;
-	tags?: string;
-}
 
 export async function createTimelineEvent(data: CreateTimelineEventData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, [
@@ -140,22 +107,6 @@ export async function createTimelineEvent(data: CreateTimelineEventData, ctx: Se
 // Update
 // ============================================================================
 
-export interface UpdateTimelineEventData {
-	uuid: string;
-	incident_id?: string;
-	discovered_by?: string;
-	event_type?: string;
-	discovered_at?: number;
-	occurred_at?: number;
-	notes?: string;
-	event_data?: string;
-	severity?: string;
-	confidence?: string;
-	source_reliability?: string;
-	source?: string;
-	tags?: string;
-}
-
 export async function updateTimelineEvent(data: UpdateTimelineEventData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
@@ -195,11 +146,6 @@ export async function updateTimelineEvent(data: UpdateTimelineEventData, ctx: Se
 // ============================================================================
 // Delete (soft)
 // ============================================================================
-
-export interface DeleteTimelineEventData {
-	uuid: string;
-	incident_id?: string;
-}
 
 export async function deleteTimelineEvent(data: DeleteTimelineEventData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);

@@ -6,20 +6,8 @@
  * broadcasting. Both API routes and MCP tool handlers call into services.
  */
 
-// ============================================================================
-// Service Context — who is performing the operation
-// ============================================================================
-
-export type ServiceRole = 'analyst' | 'on-point lead' | 'observer' | 'read-only';
-
-export interface ServiceContext {
-	/** UUID of the analyst performing the action */
-	actorUUID: string;
-	/** Effective role (min of API key role and analyst role) */
-	actorRole: ServiceRole;
-	/** Auth user ID who owns the session or API key */
-	actorUserId?: string;
-}
+// Re-export shared types from $lib/types for backward compatibility
+export type { ServiceRole, ServiceContext, LookupTableName, JunctionTableName } from '$lib/types/common';
 
 // ============================================================================
 // Service Error — typed errors that callers map to HTTP/MCP responses
@@ -38,23 +26,6 @@ export class ServiceError extends Error {
 		this.code = code;
 	}
 }
-
-// ============================================================================
-// Lookup table name union — shared across lookup and junction services
-// ============================================================================
-
-export type LookupTableName =
-	| 'event_type'
-	| 'action_type'
-	| 'relation_type'
-	| 'annotation_type'
-	| 'entity_type';
-
-export type JunctionTableName =
-	| 'action_events'
-	| 'event_entities'
-	| 'action_entities'
-	| 'annotation_references';
 
 // ============================================================================
 // Helpers

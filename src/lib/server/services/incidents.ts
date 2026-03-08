@@ -11,6 +11,7 @@ import { incidents } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import type { ListIncidentsParams, CreateIncidentData, UpdateIncidentData, DeleteIncidentData } from '$lib/types/incidents';
 
 import type { NewIncident } from '$lib/server/database';
 
@@ -24,17 +25,6 @@ const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 // ============================================================================
 // List
 // ============================================================================
-
-export interface ListIncidentsParams {
-	uuid?: string;
-	soar_ticket_id?: string;
-	title?: string;
-	status?: string;
-	priority?: string;
-	created_at?: number;
-	updated_at?: number;
-	include_deleted?: boolean;
-}
 
 export async function listIncidents(params: ListIncidentsParams = {}) {
 	const conditions: SQL[] = [];
@@ -65,13 +55,6 @@ export async function listIncidents(params: ListIncidentsParams = {}) {
 // ============================================================================
 // Create
 // ============================================================================
-
-export interface CreateIncidentData {
-	title: string;
-	status: string;
-	priority: string;
-	soar_ticket_id?: string;
-}
 
 export async function createIncident(data: CreateIncidentData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['title', 'status', 'priority']);
@@ -107,14 +90,6 @@ export async function createIncident(data: CreateIncidentData, ctx: ServiceConte
 // ============================================================================
 // Update
 // ============================================================================
-
-export interface UpdateIncidentData {
-	uuid: string;
-	title?: string;
-	status?: string;
-	priority?: string;
-	soar_ticket_id?: string;
-}
 
 export async function updateIncident(data: UpdateIncidentData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
@@ -159,10 +134,6 @@ export async function updateIncident(data: UpdateIncidentData, ctx: ServiceConte
 // ============================================================================
 // Delete (soft)
 // ============================================================================
-
-export interface DeleteIncidentData {
-	uuid: string;
-}
 
 export async function deleteIncident(data: DeleteIncidentData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);

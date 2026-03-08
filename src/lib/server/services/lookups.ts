@@ -3,6 +3,7 @@ import * as schema from '$lib/server/database';
 import { eq, isNull, isNotNull } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import { ServiceError, validateRequired, type ServiceContext, type LookupTableName } from './types';
+import type { ListLookupsParams, CreateLookupData, UpdateLookupData, SoftDeleteLookupData, RestoreLookupData, DeleteLookupData } from '$lib/types/lookups';
 
 // ============================================================================
 // Table Map
@@ -31,8 +32,8 @@ function getTable(name: string) {
 // List
 // ============================================================================
 
-export async function listLookups(params: { table: string; include_deleted?: boolean }) {
-	validateRequired(params as Record<string, unknown>, ['table']);
+export async function listLookups(params: ListLookupsParams) {
+	validateRequired(params as unknown as Record<string, unknown>, ['table']);
 	const tableObj = getTable(params.table);
 
 	if (params.include_deleted) {
@@ -47,10 +48,10 @@ export async function listLookups(params: { table: string; include_deleted?: boo
 // ============================================================================
 
 export async function createLookup(
-	data: { table: string; name: string; description: string },
+	data: CreateLookupData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table', 'name', 'description']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name', 'description']);
 	const tableObj = getTable(data.table);
 
 	try {
@@ -77,10 +78,10 @@ export async function createLookup(
 // ============================================================================
 
 export async function updateLookup(
-	data: { table: string; old_name: string; name: string; description: string },
+	data: UpdateLookupData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table', 'name', 'description', 'old_name']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name', 'description', 'old_name']);
 	const tableObj = getTable(data.table);
 
 	try {
@@ -110,10 +111,10 @@ export async function updateLookup(
 // ============================================================================
 
 export async function softDeleteLookup(
-	data: { table: string; name: string },
+	data: SoftDeleteLookupData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table', 'name']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 
 	const now = Math.floor(Date.now() / 1000);
@@ -137,10 +138,10 @@ export async function softDeleteLookup(
 // ============================================================================
 
 export async function restoreLookup(
-	data: { table: string; name: string },
+	data: RestoreLookupData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table', 'name']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 
 	db.update(tableObj)
@@ -163,10 +164,10 @@ export async function restoreLookup(
 // ============================================================================
 
 export async function deleteLookup(
-	data: { table: string; name: string },
+	data: DeleteLookupData,
 	ctx: ServiceContext
 ) {
-	validateRequired(data as Record<string, unknown>, ['table', 'name']);
+	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 
 	db.delete(tableObj).where(eq(tableObj.name, data.name)).run();
