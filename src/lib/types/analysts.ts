@@ -31,3 +31,15 @@ export interface UpdateAnalystData {
 export interface DeleteAnalystData {
 	uuid: string;
 }
+
+/** Row shape returned by the API (mirrors analysts DB table) */
+export interface Analyst {
+	uuid: string;
+	username: string;
+	full_name: string | null;
+	role: string | null;
+	active: number | null;
+	created_at: number | null;
+	updated_at: number | null;
+	deleted_at: number | null;
+}

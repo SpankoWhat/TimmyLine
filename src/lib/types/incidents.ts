@@ -31,3 +31,15 @@ export interface UpdateIncidentData {
 export interface DeleteIncidentData {
 	uuid: string;
 }
+
+/** Row shape returned by the API (mirrors incidents DB table) */
+export interface Incident {
+	uuid: string;
+	soar_ticket_id: string | null;
+	title: string;
+	status: string;
+	priority: string;
+	created_at: number | null;
+	updated_at: number | null;
+	deleted_at: number | null;
+}

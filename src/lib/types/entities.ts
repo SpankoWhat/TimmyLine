@@ -53,3 +53,22 @@ export interface DeleteEntityData {
 	uuid: string;
 	incident_id?: string;
 }
+
+/** Row shape returned by the API (mirrors entities DB table) */
+export interface Entity {
+	uuid: string;
+	incident_id: string;
+	entered_by: string;
+	entity_type: string;
+	identifier: string;
+	display_name: string | null;
+	status: string | null;
+	criticality: string | null;
+	first_seen: number | null;
+	last_seen: number | null;
+	attributes: string | null;
+	tags: string | null;
+	created_at: number | null;
+	updated_at: number | null;
+	deleted_at: number | null;
+}

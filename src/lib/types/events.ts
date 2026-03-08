@@ -56,3 +56,23 @@ export interface DeleteTimelineEventData {
 	uuid: string;
 	incident_id?: string;
 }
+
+/** Row shape returned by the API (mirrors timeline_events DB table) */
+export interface TimelineEvent {
+	uuid: string;
+	incident_id: string;
+	event_type: string;
+	discovered_by: string;
+	discovered_at: number;
+	occurred_at: number | null;
+	notes: string | null;
+	event_data: string | null;
+	severity: string | null;
+	confidence: string | null;
+	source_reliability: string | null;
+	source: string | null;
+	tags: string | null;
+	created_at: number | null;
+	updated_at: number | null;
+	deleted_at: number | null;
+}

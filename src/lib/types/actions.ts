@@ -48,3 +48,21 @@ export interface DeleteInvestigationActionData {
 	uuid: string;
 	incident_id?: string;
 }
+
+/** Row shape returned by the API (mirrors investigation_actions DB table) */
+export interface InvestigationAction {
+	uuid: string;
+	incident_id: string;
+	action_type: string;
+	actioned_by: string;
+	performed_at: number;
+	action_data: string | null;
+	result: string | null;
+	tool_used: string | null;
+	notes: string | null;
+	next_steps: string | null;
+	tags: string | null;
+	created_at: number | null;
+	updated_at: number | null;
+	deleted_at: number | null;
+}

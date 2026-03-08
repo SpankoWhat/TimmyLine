@@ -36,3 +36,11 @@ export interface DeleteLookupData {
 	table: LookupTableName;
 	name: string;
 }
+
+/** Row shape returned by the API for a lookup table entry */
+export interface LookupRow {
+	id: number;
+	name: string;
+	description: string | null;
+	deleted_at: number | null;
+}

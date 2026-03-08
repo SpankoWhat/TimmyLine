@@ -53,3 +53,29 @@ export interface DeleteJunctionData {
 	reference_id?: string;
 	reference_type?: string;
 }
+
+/** Row shape for event_entities junction */
+export interface EventEntity {
+	event_id: string;
+	entity_id: string;
+	role: string | null;
+	context: string | null;
+	created_at: number | null;
+}
+
+/** Row shape for action_events junction */
+export interface ActionEvent {
+	action_id: string;
+	event_id: string;
+	relation_type: string;
+	created_at: number | null;
+}
+
+/** Row shape for action_entities junction */
+export interface ActionEntity {
+	action_id: string;
+	entity_id: string;
+	relation_type: string;
+	incident_id: string;
+	created_at: number | null;
+}
