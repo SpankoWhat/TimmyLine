@@ -2,8 +2,19 @@
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { api, ApiError } from '$lib/client';
-	import { eventTypes, currentSelectedIncident, currentSelectedAnalyst, knownJsonKeys, currentCachedEntities, relationTypes } from '$lib/stores/cacheStore';
-	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
+	import { 
+		eventTypes,
+		currentSelectedIncident,
+		currentSelectedAnalyst,
+		knownJsonKeys,
+		currentCachedEntities,
+		currentCachedTimeline,
+		relationTypes 
+	} from '$lib/stores/cacheStore';
+	import { 
+		emitEditingRowStatus, 
+		emitIdle 
+	} from '$lib/stores/collabStore';
 	import JsonKeyValueEditor from '$lib/components/JsonKeyValueEditor.svelte';
 	import RelationshipBuilder, { type PendingLink } from '$lib/components/RelationshipBuilder.svelte';
 
@@ -22,6 +33,10 @@
 	// Relationship builder state
 	let pendingEntityLinks: PendingLink[] = $state([]);
 	let removedEntityLinks: { targetUuid: string; relation: string }[] = $state([]);
+
+	// Relationship builder state — actions
+	let pendingActionLinks: PendingLink[] = $state([]);
+	let removedActionLinks: { targetUuid: string; relation: string }[] = $state([]);
 
 	// Capture initial data snapshot — modal data does not change after mount
 	const initial = untrack(() => data ?? {});
@@ -66,10 +81,27 @@
 		}))
 	);
 
+	// Build available actions for relationship builder
+	let availableActions = $derived(
+		$currentCachedTimeline
+			.filter((item) => item.type === 'action')
+			.map((item) => {
+				const d = item.data as any;
+				const parts = [d.tool_used, d.notes].filter(Boolean);
+				const desc = parts.join(' \u2014 ');
+				return {
+					uuid: item.uuid,
+					label: d.action_type ?? 'Action',
+					sublabel: desc ? (desc.length > 60 ? desc.slice(0, 57) + '...' : desc) : undefined
+				};
+			})
+	);
+
 	// Build relation options from lookup store
 	let entityRelationOptions = $derived(
 		$relationTypes.map((rt) => ({ value: rt.name, label: rt.name }))
 	);
+
 
 	// Extract existing entity links from enriched data (edit mode)
 	let existingEntityLinks = $derived.by(() => {
@@ -80,6 +112,17 @@
 			targetLabel: rel.entity?.identifier ?? rel.entity_id ?? 'Unknown',
 			relation: rel.role || rel.relation_type || 'related_to',
 			context: rel.context || ''
+		}));
+	});
+
+	// Extract existing action links from enriched data (edit mode)
+	let existingActionLinks = $derived.by(() => {
+		if (mode !== 'edit' || !initial) return [];
+		const actionEvents = (initial as any).actionEvents || [];
+		return actionEvents.map((rel: any) => ({
+			targetUuid: rel.action?.uuid ?? rel.action_id ?? '',
+			targetLabel: rel.action?.action_type ?? rel.action_id ?? 'Unknown',
+			relation: rel.relation_type || 'related_to'
 		}));
 	});
 
@@ -474,6 +517,22 @@
 						onchange={(pending, removed) => {
 							pendingEntityLinks = pending;
 							removedEntityLinks = removed;
+						}}
+					/>
+				</div>
+
+				<div class="relationships-section">
+					<RelationshipBuilder
+						label="Linked Actions"
+						availableItems={availableActions}
+						relationOptions={entityRelationOptions}
+						existingLinks={existingActionLinks}
+						showContext={true}
+						targetPlaceholder="Select action..."
+						relationPlaceholder="Select role..."
+						onchange={(pending, removed) => {
+							pendingActionLinks = pending;
+							removedActionLinks = removed;
 						}}
 					/>
 				</div>

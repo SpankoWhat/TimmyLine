@@ -84,11 +84,16 @@
 	let availableEvents = $derived(
 		$currentCachedTimeline
 			.filter((item) => item.type === 'event')
-			.map((item) => ({
-				uuid: item.uuid,
-				label: (item.data as any).event_type ?? 'Event',
-				sublabel: (item.data as any).source ?? undefined
-			}))
+			.map((item) => {
+				const d = item.data as any;
+				const parts = [d.source, d.notes].filter(Boolean);
+				const desc = parts.join(' \u2014 ');
+				return {
+					uuid: item.uuid,
+					label: d.event_type ?? 'Event',
+					sublabel: desc ? (desc.length > 60 ? desc.slice(0, 57) + '...' : desc) : undefined
+				};
+			})
 	);
 
 	// Build relation options from lookup store
