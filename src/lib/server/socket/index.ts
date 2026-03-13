@@ -531,7 +531,6 @@ function registerLeaveRoomEvent(socket: Socket) {
 }
 
 export function getSocketIO(): Server {
-    logger.debug('Getting Socket.IO instance');
     if (!globalForSocket.io) {
         logger.fatal('Socket.IO not initialized');
         throw new Error('Socket.IO not initialized');
