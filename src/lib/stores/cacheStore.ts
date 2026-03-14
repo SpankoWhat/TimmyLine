@@ -47,6 +47,19 @@ export const currentSelectedAnalyst: Writable<Analyst | null> = writable(null);
  */
 export const showDeletedItems: Writable<boolean> = writable(false);
 
+/**
+ * Currently active timeline view ID (e.g. 'log', 'vertical', 'graph').
+ * Persisted in localStorage so preference survives page reloads.
+ */
+export const currentTimelineView: Writable<string> = writable('log');
+
+// Hydrate from localStorage on init (browser only)
+if (browser) {
+	const savedView = localStorage.getItem('timmyline:timeline-view');
+	if (savedView) currentTimelineView.set(savedView);
+	currentTimelineView.subscribe((v) => localStorage.setItem('timmyline:timeline-view', v));
+}
+
 // ============================================================================
 // CORE CACHE STORES - Collections
 // ============================================================================

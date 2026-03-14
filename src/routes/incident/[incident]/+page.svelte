@@ -8,18 +8,20 @@
 		currentCachedTimeline,
 		initializeAllCaches,
 		showDeletedItems,
-		clearHighlights
+		clearHighlights,
+		currentTimelineView
 	} from '$lib/stores/cacheStore.js';
+	import { timelineViews } from '$lib/config/timelineViews';
 	import { joinIncidentSocket, leaveIncidentSocket } from '$lib/stores/collabStore.js';
 	import type { Incident } from '$lib/server/database';
 
 	// Component Imports
-	import TimeLineRow from '$lib/components/TimelineRow.svelte';
 	import IncidentStats from '$lib/components/IncidentStats.svelte';
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import FloatingPanel from '$lib/components/FloatingPanel.svelte';
+	import ViewSwitcher from '$lib/components/ViewSwitcher.svelte';
 
 	// Config & Utils
 	import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
@@ -45,6 +47,20 @@
 	let entitiesPanelFloating = $state(false);
 	let fieldSelectorFloating = $state(false);
 	let searchQuery = $state('');
+
+	// Dynamic view component — resolved from view registry
+	let ActiveViewModule = $state<{ default: any } | null>(null);
+
+	// Load the view component whenever the active view changes
+	$effect(() => {
+		const viewId = $currentTimelineView;
+		const view = timelineViews.find((v) => v.id === viewId);
+		if (view) {
+			view.component().then((mod) => {
+				ActiveViewModule = mod;
+			});
+		}
+	});
 
 	// Local filtered timeline — filters $currentCachedTimeline without touching the store
 	const filteredTimeline = $derived.by(() => {
@@ -251,6 +267,10 @@
 		</div>
 		<div class="toolbar-spacer"></div>
 		<div class="toolbar-group">
+			<ViewSwitcher />
+		</div>
+		<div class="toolbar-separator"></div>
+		<div class="toolbar-group">
 			<button
 				class="btn-icon"
 				class:active={showEntitiesPanel || entitiesPanelFloating}
@@ -286,34 +306,15 @@
 	<!-- Main content area -->
 	<div class="timeline-content">
 		<div class="timeline-list-wrapper">
-			{#if !$currentSelectedIncident?.uuid}
-				<div class="empty-state">
-					<span class="empty-state-icon">⚠</span>
-					<div class="empty-state-title">No incident selected</div>
-					<div class="empty-state-description">Select an active incident to view timeline events.</div>
-				</div>
-			{:else if filteredTimeline.length === 0 && searchQuery.trim()}
-				<div class="empty-state">
-					<span class="empty-state-icon">🔍</span>
-					<div class="empty-state-title">No results for "{searchQuery.trim()}"</div>
-					<div class="empty-state-description">
-						No timeline items matched your search. Try a different query or <button class="btn-ghost btn-sm" onclick={() => (searchQuery = '')}>clear the search</button>.
-					</div>
-				</div>
-			{:else if $currentCachedTimeline.length === 0}
-				<div class="empty-state">
-					<span class="empty-state-icon">📊</span>
-					<div class="empty-state-title">No timeline data found</div>
-					<div class="empty-state-description">
-						No timeline events or investigation actions found for this incident. Use the toolbar above to add events, actions, entities, or annotations.
-					</div>
-				</div>
-			{:else}
-				<div class="timeline-list">
-					{#each filteredTimeline as item (item.uuid)}
-						<TimeLineRow {item} displayFieldsConfig={filteredDisplayFieldsConfig} />
-					{/each}
-				</div>
+			{#if ActiveViewModule}
+				<ActiveViewModule.default
+					items={filteredTimeline}
+					displayFieldsConfig={filteredDisplayFieldsConfig}
+					searchQuery={searchQuery}
+					totalItemCount={$currentCachedTimeline.length}
+					hasIncident={!!$currentSelectedIncident?.uuid}
+					onClearSearch={() => (searchQuery = '')}
+				/>
 			{/if}
 		</div>
 
@@ -776,12 +777,6 @@
 		padding: var(--space-3);
 	}
 
-	.timeline-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-1);
-	}
-
 	/* ===== Entities Overlay (same pattern as field selector) ===== */
 	.entities-overlay {
 		position: absolute;
@@ -827,37 +822,6 @@
 	.floating-entities-content {
 		padding: var(--space-2);
 		height: 100%;
-	}
-
-	/* ===== Empty State (SOP §10.12) ===== */
-	.empty-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		text-align: center;
-		padding: var(--space-10) var(--space-6);
-		color: hsl(var(--fg-lighter));
-	}
-
-	.empty-state-icon {
-		font-size: var(--text-3xl);
-		margin-bottom: var(--space-3);
-		opacity: 0.4;
-	}
-
-	.empty-state-title {
-		font-size: var(--text-lg);
-		font-weight: var(--font-semibold);
-		color: hsl(var(--fg-light));
-		margin-bottom: var(--space-2);
-	}
-
-	.empty-state-description {
-		font-size: var(--text-sm);
-		color: hsl(var(--fg-lighter));
-		max-width: 400px;
-		line-height: var(--leading-normal);
 	}
 
 	/* ===== Field Selector Overlay ===== */

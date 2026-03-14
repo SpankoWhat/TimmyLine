@@ -33,6 +33,7 @@ vite.config.ts.timestamp-*
 /.github
 /.bruno
 /package-lock.json
+/plans
 
 # Data
 /drizzle
