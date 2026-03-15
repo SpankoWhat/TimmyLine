@@ -9,7 +9,7 @@
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType } from '$lib/modals/types';
     import { getFieldValue } from '$lib/utils/fieldUtils';
-    import TimelineRowDetails from '$lib/components/TimelineRowDetails.svelte';
+    import TimelineRowDetails from '$lib/components/views/default-log/TimelineRowDetails.svelte';
 
     let {
         item,
@@ -253,7 +253,7 @@
         display: flex;
         flex-direction: column;
         gap: var(--space-1);
-        max-width: 520px;
+        max-width: 70vw;
     }
 
     /* === Card === */

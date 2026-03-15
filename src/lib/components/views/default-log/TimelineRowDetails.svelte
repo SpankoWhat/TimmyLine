@@ -1,14 +1,12 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
-    import ResizableDivider from './ResizableDivider.svelte';
-    import JsonViewer from './JsonViewer.svelte';
+    import ResizableDivider from '../../ResizableDivider.svelte';
+    import JsonViewer from '../../JsonViewer.svelte';
 
     let {
         item,
         type,
-        columnRatio = $bindable(0.30),
-        onEdit,
-        onDelete
+        columnRatio = $bindable(0.30)
     }: {
         item: TimelineItem;
         type: 'event' | 'action';

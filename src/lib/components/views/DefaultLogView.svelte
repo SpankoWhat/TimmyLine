@@ -1,5 +1,5 @@
 <script lang="ts">
-	import TimelineRow from '$lib/components/TimelineRow.svelte';
+	import TimelineRow from '$lib/components/views/default-log/TimelineRow.svelte';
 	import type { TimelineItem } from '$lib/stores/cacheStore';
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
 

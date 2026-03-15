@@ -9,9 +9,6 @@
 		},
 		timeline: {
 			paths: `<line x1="5" y1="1" x2="5" y2="15" /><circle cx="5" cy="4" r="1.5" /><circle cx="5" cy="9" r="1.5" /><circle cx="5" cy="13" r="1.5" /><line x1="6.5" y1="4" x2="13" y2="4" /><line x1="6.5" y1="9" x2="11" y2="9" />`
-		},
-		network: {
-			paths: `<circle cx="4" cy="4" r="2" /><circle cx="12" cy="4" r="2" /><circle cx="8" cy="13" r="2" /><line x1="5.5" y1="5.5" x2="8" y2="11" /><line x1="10.5" y1="5.5" x2="8" y2="11" /><line x1="6" y1="4" x2="10" y2="4" />`
 		}
 	};
 

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
     import { highlightedItemUuids } from '$lib/stores/cacheStore';
-    import { api, ApiError } from '$lib/client';
+    import { api } from '$lib/client';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';

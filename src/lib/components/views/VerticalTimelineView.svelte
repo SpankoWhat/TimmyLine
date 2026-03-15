@@ -243,7 +243,7 @@
 	/* ===== Timeline Node (each row in the timeline) ===== */
 	.timeline-node {
 		display: grid;
-		grid-template-columns: 100px 32px 1fr;
+		grid-template-columns: 50px 32px 1fr;
 		align-items: start;
 		min-height: 0;
 	}

@@ -10,7 +10,7 @@ export interface TimelineViewConfig {
 	/** Short human-readable label for the toolbar button */
 	label: string;
 	/** Icon identifier — corresponds to an inline SVG in ViewSwitcher */
-	icon: 'list' | 'timeline' | 'network';
+	icon: 'list' | 'timeline';
 	/** Tooltip / description text */
 	description: string;
 	/** Lazy-loaded Svelte component */
@@ -27,7 +27,7 @@ export const timelineViews: TimelineViewConfig[] = [
 		label: 'Log',
 		icon: 'list',
 		description: 'Dense log-style rows (default)',
-		component: () => import('$lib/components/views/LogView.svelte')
+		component: () => import('$lib/components/views/DefaultLogView.svelte')
 	},
 	{
 		id: 'vertical',
@@ -36,11 +36,4 @@ export const timelineViews: TimelineViewConfig[] = [
 		description: 'Chronological vertical timeline with cards',
 		component: () => import('$lib/components/views/VerticalTimelineView.svelte')
 	},
-	{
-		id: 'graph',
-		label: 'Graph',
-		icon: 'network',
-		description: 'Entity-relationship graph visualization',
-		component: () => import('$lib/components/views/GraphView.svelte')
-	}
 ];
