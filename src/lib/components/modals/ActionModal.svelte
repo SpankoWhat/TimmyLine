@@ -322,7 +322,12 @@
 						class="input"
 						value={formData.performed_at ? convertFromEpoch(formData.performed_at) : ''}
 						oninput={(e) => {
-							formData.performed_at = e.currentTarget.value;
+							const val = e.currentTarget.value;
+							if (val) {
+								formData.performed_at = Math.floor(new Date(val).getTime() / 1000);
+							} else {
+								formData.performed_at = '';
+							}
 						}}
 						required
 					/>
