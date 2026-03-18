@@ -149,7 +149,7 @@ export async function deleteEntity(
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	try {
-		await db
+		const [deleted] = await db
 			.update(schema.entities)
 			.set({
 				deleted_at: Math.floor(Date.now() / 1000),
@@ -158,9 +158,11 @@ export async function deleteEntity(
 			.where(eq(schema.entities.uuid, data.uuid))
 			.returning();
 
-		const io = getSocketIO();
-		if (data.incident_id) {
-			io.to(`incident:${data.incident_id}`).emit('entity-deleted', 'entity', data.uuid);
+		// Broadcast to all users in the incident room
+		const incidentId = data.incident_id ?? deleted?.incident_id;
+		if (incidentId) {
+			const io = getSocketIO();
+			io.to(`incident:${incidentId}`).emit('entity-deleted', 'entity', data.uuid);
 		}
 
 		return true;

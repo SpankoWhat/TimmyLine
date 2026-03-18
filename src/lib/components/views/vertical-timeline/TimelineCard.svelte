@@ -75,11 +75,14 @@
         if (!confirm('Are you sure you want to delete this item?')) {
             return;
         }
+
+        const incident_id = (item.data as Record<string, unknown>).incident_id as string | undefined;
+
         try {
             if (item.type === 'event') {
-                await api.events.delete(uuid);
+                await api.events.delete(uuid, { incident_id });
             } else if (item.type === 'action') {
-                await api.actions.delete(uuid);
+                await api.actions.delete(uuid, { incident_id });
             }
             console.log(`Successfully deleted ${item.type} with uuid: ${uuid}`);
         } catch (error) {

@@ -150,7 +150,7 @@ export async function updateTimelineEvent(data: UpdateTimelineEventData, ctx: Se
 export async function deleteTimelineEvent(data: DeleteTimelineEventData, ctx: ServiceContext) {
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
-	await db
+	const [deleted] = await db
 		.update(timeline_events)
 		.set({
 			deleted_at: Math.floor(Date.now() / 1000),
@@ -159,10 +159,11 @@ export async function deleteTimelineEvent(data: DeleteTimelineEventData, ctx: Se
 		.where(eq(timeline_events.uuid, data.uuid))
 		.returning();
 
-	// Broadcast to all users in the incident room (if incident_id provided)
-	if (data.incident_id) {
+	// Broadcast to all users in the incident room
+	const incidentId = data.incident_id ?? deleted?.incident_id;
+	if (incidentId) {
 		const io = getSocketIO();
-		io.to(`incident:${data.incident_id}`).emit('entity-deleted', 'timeline_event', data.uuid);
+		io.to(`incident:${incidentId}`).emit('entity-deleted', 'timeline_event', data.uuid);
 	}
 
 	return true;
