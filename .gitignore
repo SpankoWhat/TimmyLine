@@ -35,8 +35,6 @@ vite.config.ts.timestamp-*
 /plans
 
 # Data
-/drizzle
-/drizzle/**/*
 /data
 /data/**/*
 **/timmyLine.db

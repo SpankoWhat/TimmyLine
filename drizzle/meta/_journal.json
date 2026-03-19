@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1768688566309,
+      "tag": "0000_talented_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1771458256833,
+      "tag": "0001_fast_penance",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771465398916,
+      "tag": "0002_perfect_gideon",
+      "breakpoints": true
+    }
+  ]
+}
