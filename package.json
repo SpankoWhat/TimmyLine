@@ -1,7 +1,7 @@
 {
 	"name": "timmyline",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev --open",
@@ -18,12 +18,12 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^6.1.0",
+		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.43.2",
 		"@sveltejs/vite-plugin-svelte": "^6.2.0",
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^22",
 		"drizzle-kit": "^0.31.4",
-		"drizzle-orm": "^0.44.5",
 		"svelte": "^5.39.5",
 		"svelte-check": "^4.3.2",
 		"tsx": "^4.20.6",
@@ -38,6 +38,7 @@
 		"arctic": "^3.7.0",
 		"better-sqlite3": "^12.6.2",
 		"dotenv": "^17.2.3",
+		"drizzle-orm": "^0.44.5",
 		"socket.io": "^4.8.1",
 		"socket.io-client": "^4.8.1"
 	}

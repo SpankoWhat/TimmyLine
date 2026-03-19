@@ -13,16 +13,7 @@ import {
 } from '$lib/server/database';
 import { eq } from 'drizzle-orm';
 import { authLogger as logger } from '$lib/server/logging';
-import {
-	AUTH_SECRET,
-	GITHUB_CLIENT_ID,
-	GITHUB_CLIENT_SECRET,
-	GOOGLE_CLIENT_ID,
-	GOOGLE_CLIENT_SECRET,
-	MICROSOFT_ENTRA_ID_CLIENT_ID,
-	MICROSOFT_ENTRA_ID_CLIENT_SECRET,
-	MICROSOFT_ENTRA_ID_TENANT_ID
-} from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 /**
  * Auth.js Configuration
@@ -48,8 +39,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	}),
 	providers: [
 		Google({
-			clientId: GOOGLE_CLIENT_ID,
-			clientSecret: GOOGLE_CLIENT_SECRET,
+			clientId: env.GOOGLE_CLIENT_ID,
+			clientSecret: env.GOOGLE_CLIENT_SECRET,
 			authorization: {
 				params: {
 					prompt: 'consent',
@@ -59,9 +50,9 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 			}
 		}),
 		MicrosoftEntraID({
-			clientId: MICROSOFT_ENTRA_ID_CLIENT_ID,
-			clientSecret: MICROSOFT_ENTRA_ID_CLIENT_SECRET,
-			issuer: `https://login.microsoftonline.com/${MICROSOFT_ENTRA_ID_TENANT_ID}/v2.0`,
+			clientId: env.MICROSOFT_ENTRA_ID_CLIENT_ID,
+			clientSecret: env.MICROSOFT_ENTRA_ID_CLIENT_SECRET,
+			issuer: `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_ID_TENANT_ID}/v2.0`,
 			authorization: {
 				params: {
 					scope: 'openid profile email User.Read'
@@ -70,8 +61,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 		}),
         // GitHub provider (optional, for developer convenience
         GitHub({
-			clientId: GITHUB_CLIENT_ID,
-			clientSecret: GITHUB_CLIENT_SECRET
+			clientId: env.GITHUB_CLIENT_ID,
+			clientSecret: env.GITHUB_CLIENT_SECRET
         })
 	],
 	callbacks: {
@@ -158,9 +149,9 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 		signIn: '/login',
 		error: '/login'
 	},
-	secret: AUTH_SECRET
+	secret: env.AUTH_SECRET
 });
 
-if (!AUTH_SECRET) {
+if (!env.AUTH_SECRET) {
 	logger.warn('WARNING: AUTH_SECRET is not set. This is insecure and should be fixed.');
 }

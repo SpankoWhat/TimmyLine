@@ -5,6 +5,26 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { authLogger as logger } from '$lib/server/logging';
 import { validateApiKey } from '$lib/server/auth/apiKeys';
+import { initializeSocketIO } from '$lib/server/socket/index';
+
+// ── Production Socket.IO bridge ─────────────────────────────────────
+// In production, server.js stores the HTTP server on globalThis so we
+// can attach Socket.IO from inside the SvelteKit build (where we have
+// access to $lib/server, the DB, auth logic, etc.).
+//
+// In development, the Vite plugin handles this instead, so this block
+// is a no-op — the global won't exist.
+// ─────────────────────────────────────────────────────────────────────
+const globalWithServer = globalThis as typeof globalThis & {
+    __timmyline_server?: import('http').Server;
+    __timmyline_socket_initialized?: boolean;
+};
+
+if (globalWithServer.__timmyline_server && !globalWithServer.__timmyline_socket_initialized) {
+    initializeSocketIO(globalWithServer.__timmyline_server);
+    globalWithServer.__timmyline_socket_initialized = true;
+    logger.info('Socket.IO attached to production HTTP server via globalThis bridge');
+}
 
 /**
  * API Key Authentication Hook

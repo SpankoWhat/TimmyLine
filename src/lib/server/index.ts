@@ -5,11 +5,10 @@ import { logger } from './logging/index';
 
 // Environment variable loading
 import 'dotenv/config';
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || './data/timmyLine.db';
 
-if (!DATABASE_URL) {
-    logger.error('DATABASE_URL is not defined in environment variables.');
-    process.exit(1);
+if (!process.env.DATABASE_URL) {
+    logger.warn(`DATABASE_URL not set — defaulting to ${DATABASE_URL}`);
 }
 
 const client = new Database(DATABASE_URL);
