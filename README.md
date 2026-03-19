@@ -83,6 +83,89 @@ The application will be available at `http://localhost:5173` (or the port shown 
 
 ---
 
+## Production Deployment
+
+### Option 1: Docker (Recommended)
+
+Docker is the easiest way to run TimmyLine in production. The database (SQLite) lives on the **host filesystem** and is bind-mounted into the container, so you have full control over backups, portability, and custom storage locations.
+
+```bash
+# Clone the repository
+git clone https://github.com/SpankoWhat/TimmyLine.git
+cd TimmyLine
+
+# Create your environment file
+cp example.env .env
+# Edit .env — at minimum set AUTH_SECRET and at least one OAuth provider
+
+# Initialize the host data directory (creates ./data with DB and log files)
+chmod +x init-db.sh
+./init-db.sh
+
+# Start with Docker Compose
+docker compose up -d
+```
+
+The app will be available at `http://localhost:3000`. Database migrations run automatically on startup.
+
+To pull a pre-built image instead of building locally:
+
+```bash
+docker pull ghcr.io/spankwhat/timmyline:latest
+./init-db.sh          # ensure ./data exists on the host
+docker run -d -p 3000:3000 \
+  -v ./data:/app/data \
+  --env-file .env \
+  -e ORIGIN=http://localhost:3000 \
+  ghcr.io/spankwhat/timmyline:latest
+```
+
+> **Custom data location:** Pass a path to `init-db.sh` and update the volume mount:
+> ```bash
+> ./init-db.sh /mnt/nas/timmyline
+> # In docker-compose.yml, change ./data:/app/data to /mnt/nas/timmyline:/app/data
+> ```
+
+### Option 2: Manual (Node.js)
+
+Run TimmyLine directly on a server with Node.js 20+.
+
+```bash
+# Download and extract a release tarball (or clone + build)
+git clone https://github.com/SpankoWhat/TimmyLine.git
+cd TimmyLine
+npm ci
+npm run build
+
+# Configure environment
+cp example.env .env
+# Edit .env — set AUTH_SECRET, OAuth credentials, ORIGIN=http://localhost:3000
+
+# Initialize the database (first time only)
+node migrate.js
+
+# Start the production server
+node server.js
+```
+
+The `server.js` entry point creates a Node.js HTTP server that serves the SvelteKit app and attaches Socket.IO for real-time collaboration — all on a single port (default 3000).
+
+### Production Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | HTTP server port |
+| `ORIGIN` | `http://localhost:3000` | Application URL (used for CORS and Socket.IO) |
+| `DATABASE_URL` | `./data/timmyLine.db` | Path to SQLite database file |
+| `LOG_FILEPATH` | `./data/timmyLine.log` | Path to log file |
+| `LOG_WRITETOPATH` | `false` | Set to `true` to enable file logging |
+| `AUTH_SECRET` | *(required)* | Session signing secret. Generate with `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | `true` | Required by Auth.js in production |
+
+Plus the OAuth provider variables listed in the [Environment Variables](#environment-variables) section.
+
+---
+
 ## Environment Variables
 
 Create a `.env` file in the project root. See `example.env` for a template.

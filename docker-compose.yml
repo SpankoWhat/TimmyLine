@@ -1,0 +1,27 @@
+# TimmyLine — Docker Compose
+#
+# Quick start:
+#   1. Copy example.env to .env and fill in your OAuth credentials + AUTH_SECRET
+#   2. Run ./init-db.sh to create the host data directory
+#   3. docker compose up -d
+#   4. Open http://localhost:3000
+#
+# The SQLite database lives on the HOST filesystem (./data by default) and
+# is bind-mounted into the container. This gives you full control over
+# backups, migrations, and portability — the container never owns the data.
+
+services:
+  timmyline:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=/app/data/timmyLine.db
+      - LOG_FILEPATH=/app/data/timmyLine.log
+      - LOG_WRITETOPATH=true
+      - PORT=3000
+    restart: unless-stopped

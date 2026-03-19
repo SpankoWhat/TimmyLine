@@ -1,0 +1,35 @@
+# Dependencies — will be installed fresh inside the container
+node_modules
+
+# Build output — will be generated fresh inside the container
+build
+.svelte-kit
+
+# Environment files — contain secrets, must never be baked into an image
+.env
+.env.*
+
+# Runtime data — database and log files
+src/lib/server/data/
+data/
+*.db
+*.db-journal
+
+# IDE / OS junk
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Plans and docs (not needed in the image)
+plans/
+DatabaseERD.drawio
+
+# Host-only scripts
+init-db.sh
