@@ -32,7 +32,6 @@ vite.config.ts.timestamp-*
 # Other
 /.github
 /.bruno
-/package-lock.json
 /plans
 
 # Data
