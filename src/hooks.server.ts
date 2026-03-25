@@ -93,12 +93,12 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
 
 /**
  * Resolve the effective role: the lesser of the key's role and the analyst's actual role.
- * Hierarchy: 'on-point lead' > 'analyst' > 'observer' > 'read-only'
+ * Hierarchy: 'admin' > 'analyst' > 'reader'
  */
 function resolveEffectiveRole(keyRole: string | null, analystRole: string | null): string {
-    const hierarchy = ['read-only', 'observer', 'analyst', 'on-point lead'];
-    const keyLevel = hierarchy.indexOf(keyRole ?? 'read-only');
-    const analystLevel = hierarchy.indexOf(analystRole ?? 'observer');
+    const hierarchy = ['reader', 'analyst', 'admin'];
+    const keyLevel = hierarchy.indexOf(keyRole ?? 'reader');
+    const analystLevel = hierarchy.indexOf(analystRole ?? 'reader');
     return hierarchy[Math.min(keyLevel, analystLevel)];
 }
 

@@ -78,7 +78,7 @@ async function safeTool(fn: () => Promise<unknown>) {
 // ============================================================================
 
 export function registerTools(server: McpServer, ctx: ServiceContext): void {
-	const writeRoles = ['analyst', 'on-point lead'];
+	const writeRoles = ['analyst', 'admin'];
 
 	// ========================================================================
 	// READ Tools
@@ -282,7 +282,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				username: z.string().optional().describe('Filter by username'),
 				full_name: z.string().optional().describe('Filter by full name'),
 				role: z
-					.enum(['analyst', 'on-point lead', 'observer'])
+					.enum(['reader', 'analyst', 'admin'])
 					.optional()
 					.describe('Filter by role'),
 				active: z.boolean().optional().describe('Filter by active status'),
@@ -553,7 +553,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				username: z.string().describe('Unique username'),
 				full_name: z.string().optional().describe('Full display name'),
 				role: z
-					.enum(['analyst', 'on-point lead', 'observer'])
+					.enum(['reader', 'analyst', 'admin'])
 					.optional()
 					.describe('Analyst role'),
 				active: z.boolean().optional().describe('Whether the analyst is active')
@@ -840,7 +840,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				username: z.string().optional().describe('New username'),
 				full_name: z.string().optional().describe('New full name'),
 				role: z
-					.enum(['analyst', 'on-point lead', 'observer'])
+					.enum(['reader', 'analyst', 'admin'])
 					.optional()
 					.describe('New role'),
 				active: z.boolean().optional().describe('New active status')
@@ -917,7 +917,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 			}
 		},
 		async (params) => {
-			if (ctx.actorRole !== 'on-point lead') {
+			if (ctx.actorRole !== 'admin') {
 				return toolResult({
 					error: 'Insufficient permissions: admin access required'
 				});

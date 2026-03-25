@@ -37,7 +37,7 @@ export const apiKeys = sqliteTable('api_keys', {
 		.references(() => analysts.uuid, { onDelete: 'cascade' }),
 
 	/** Maximum permission level for this key */
-	role: text('role', { enum: ['read-only', 'analyst', 'on-point lead'] })
+	role: text('role', { enum: ['reader', 'analyst', 'admin'] })
 		.notNull()
 		.default('analyst'),
 

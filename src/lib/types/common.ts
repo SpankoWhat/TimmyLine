@@ -3,7 +3,7 @@
  * These live outside $lib/server/ so they can be imported by client code.
  */
 
-export type ServiceRole = 'analyst' | 'on-point lead' | 'observer' | 'read-only';
+export type ServiceRole = 'reader' | 'analyst' | 'admin';
 
 export interface ServiceContext {
 	/** UUID of the analyst performing the action */

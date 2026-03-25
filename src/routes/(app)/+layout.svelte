@@ -27,7 +27,7 @@
                 username: data.session.user.analystUsername || data.session.user.email?.split('@')[0] || 'Unknown',
                 email: data.session.user.email || null,
                 full_name: data.session.user.name || data.session.user.analystUsername || 'Unknown User',
-                role: data.session.user.analystRole as 'analyst' | 'on-point lead' | 'observer' || 'analyst',
+                role: data.session.user.analystRole as 'reader' | 'analyst' | 'admin' || 'analyst',
                 active: true,
                 created_at: null,
                 updated_at: null,

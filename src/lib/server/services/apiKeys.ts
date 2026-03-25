@@ -12,8 +12,8 @@ import { ServiceError, validateRequired, type ServiceContext } from './types';
 // Constants
 // ============================================================================
 
-const ALLOWED_KEY_ROLES = ['read-only', 'analyst', 'on-point lead'] as const;
-const ROLE_HIERARCHY = ['read-only', 'observer', 'analyst', 'on-point lead'] as const;
+const ALLOWED_KEY_ROLES = ['reader', 'analyst', 'admin'] as const;
+const ROLE_HIERARCHY = ['reader', 'analyst', 'admin'] as const;
 
 // ============================================================================
 // List
@@ -71,7 +71,7 @@ export async function createApiKey(
 		name: data.name.trim(),
 		user_id: ctx.actorUserId,
 		analyst_uuid: ctx.actorUUID,
-		role: keyRole as 'read-only' | 'analyst' | 'on-point lead',
+		role: keyRole as 'reader' | 'analyst' | 'admin',
 		expires_at: data.expires_at
 	});
 

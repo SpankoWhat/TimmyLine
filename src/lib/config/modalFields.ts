@@ -349,9 +349,9 @@ export const entityFieldConfigs: Record<string, FieldConfig[]> = {
 			label: 'Role',
 			type: 'select',
 			options: [
+				{ value: 'reader', label: 'Reader' },
 				{ value: 'analyst', label: 'Analyst' },
-				{ value: 'on-point lead', label: 'On-Point Lead' },
-				{ value: 'observer', label: 'Observer' }
+				{ value: 'admin', label: 'Admin' }
 			],
 			defaultValue: 'analyst',
 		},

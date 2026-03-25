@@ -27,9 +27,9 @@
 
 	// ── Role options (static) ──
 	const roleOptions = [
+		{ value: 'reader', label: 'Reader' },
 		{ value: 'analyst', label: 'Analyst' },
-		{ value: 'on-point lead', label: 'On-Point Lead' },
-		{ value: 'observer', label: 'Observer' }
+		{ value: 'admin', label: 'Admin' }
 	];
 
 	// Presence tracking: emit on mount, cleanup on destroy.

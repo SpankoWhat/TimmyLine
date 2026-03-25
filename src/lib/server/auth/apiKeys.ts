@@ -15,7 +15,7 @@ export async function generateApiKey(opts: {
 	name: string;
 	user_id: string;
 	analyst_uuid: string;
-	role?: 'read-only' | 'analyst' | 'on-point lead';
+	role?: 'reader' | 'analyst' | 'admin';
 	expires_at?: number;
 }) {
 	const rawBytes = randomBytes(KEY_BYTES);

@@ -12,7 +12,7 @@
 
 	// New key form
 	let newKeyName = $state('');
-	let newKeyRole = $state<'read-only' | 'analyst' | 'on-point lead'>('analyst');
+	let newKeyRole = $state<'reader' | 'analyst' | 'admin'>('analyst');
 	let newKeyExpiry = $state<'never' | '30d' | '90d' | '1y'>('never');
 	let creating = $state(false);
 
@@ -179,9 +179,9 @@
 					<div class="form-field">
 						<label class="form-label" for="key-role">Max Role</label>
 						<select id="key-role" class="form-select" bind:value={newKeyRole}>
-							<option value="read-only">Read-only</option>
+							<option value="reader">Reader</option>
 							<option value="analyst">Analyst</option>
-							<option value="on-point lead">On-Point Lead</option>
+							<option value="admin">Admin</option>
 						</select>
 					</div>
 					<div class="form-field">
@@ -249,7 +249,7 @@
 									<td class="cell-name">{key.name}</td>
 									<td class="cell-key"><code>{key.key_prefix}…</code></td>
 									<td class="cell-role">
-										<span class="role-badge" class:role-readonly={key.role === 'read-only'} class:role-analyst={key.role === 'analyst'} class:role-lead={key.role === 'on-point lead'}>
+										<span class="role-badge" class:role-reader={key.role === 'reader'} class:role-analyst={key.role === 'analyst'} class:role-admin={key.role === 'admin'}>
 											{key.role}
 										</span>
 									</td>
@@ -695,7 +695,7 @@
 		border-radius: var(--radius-sm);
 		text-transform: capitalize;
 	}
-	.role-readonly {
+	.role-reader {
 		color: hsl(var(--info-default));
 		background: hsl(var(--info-200));
 	}
@@ -703,7 +703,7 @@
 		color: hsl(var(--success-default));
 		background: hsl(var(--success-200));
 	}
-	.role-lead {
+	.role-admin {
 		color: hsl(var(--warning-default));
 		background: hsl(var(--warning-200));
 	}

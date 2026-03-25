@@ -14,7 +14,7 @@ export const analysts = sqliteTable('analysts', {
 	username: text('username', { length: 100 }).notNull().unique(),
 	email: text('email', { length: 255 }).unique(),
 	full_name: text('full_name', { length: 100 }),
-	role: text('role', { enum: ['analyst', 'on-point lead', 'observer'] }),
+	role: text('role', { enum: ['reader', 'analyst', 'admin'] }),
 	active: integer('active', { mode: 'boolean' }).default(sql`1`),
 	created_at: integer('created_at').default(sql`(strftime('%s', 'now'))`),
 	updated_at: integer('updated_at').default(sql`(strftime('%s', 'now'))`),

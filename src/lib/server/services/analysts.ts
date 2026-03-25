@@ -7,7 +7,7 @@ import { ServiceError, validateRequired, validateEnum, stripUndefined, type Serv
 import type { NewAnalyst } from '$lib/server/database';
 import type { ListAnalystsParams, CreateAnalystData, UpdateAnalystData, DeleteAnalystData } from '$lib/types/analysts';
 
-const VALID_ROLES = ['analyst', 'on-point lead', 'observer'] as const;
+const VALID_ROLES = ['reader', 'analyst', 'admin'] as const;
 
 // ============================================================================
 // List

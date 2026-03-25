@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { ServiceContext, ServiceRole } from '$lib/server/services/types';
 
-type AnalystRole = 'analyst' | 'on-point lead' | 'observer';
+type AnalystRole = 'reader' | 'analyst' | 'admin';
 
 /**
  * Verifies the user is authenticated and extracts session info.
@@ -39,17 +39,17 @@ export async function requireReadAccess(event: RequestEvent) {
 }
 
 /**
- * Write access: analysts and on-point leads
+ * Write access: analysts and admins
  */
 export async function requireWriteAccess(event: RequestEvent) {
-    return requireRole(event, ['analyst', 'on-point lead']);
+    return requireRole(event, ['analyst', 'admin']);
 }
 
 /**
- * Admin/management access: on-point leads only
+ * Admin/management access: admins only
  */
 export async function requireAdminAccess(event: RequestEvent) {
-    return requireRole(event, ['on-point lead']);
+    return requireRole(event, ['admin']);
 }
 
 // ============================================================================
@@ -78,7 +78,7 @@ export function buildServiceContext(event: RequestEvent): ServiceContext {
     const session = event.locals.session;
     return {
         actorUUID: session?.user?.analystUUID || 'unknown',
-        actorRole: (session?.user?.analystRole || 'observer') as ServiceRole,
+        actorRole: (session?.user?.analystRole || 'reader') as ServiceRole,
         actorUserId: session?.user?.id
     };
 }
