@@ -4,7 +4,7 @@
 
 	let isLoading = $state(false);
 
-	async function handleProviderLogin(provider: 'google' | 'azure-ad' | 'github') {
+	async function handleProviderLogin(provider: 'google' | 'microsoft-entra-id' | 'github') {
 		isLoading = true;
 		try {
 			await signIn(provider, { redirectTo: '/home' });
@@ -28,7 +28,7 @@
 		<div class="provider-buttons">
 			<button
 				class="provider-btn"
-				onclick={() => handleProviderLogin('azure-ad')}
+				onclick={() => handleProviderLogin('microsoft-entra-id')}
 				disabled={isLoading}
 			>
 				Continue with Microsoft
