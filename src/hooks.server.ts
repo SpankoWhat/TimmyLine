@@ -40,6 +40,16 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
         : null;
 
     if (token) {
+        // Check if API key auth is enabled (reads from config file, hot-reloadable)
+        const { getConfig } = await import('$lib/server/config');
+        const config = getConfig();
+        if (!config.auth.apiKeys.enabled) {
+            return new Response(JSON.stringify({ error: 'API key authentication is disabled by administrator' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const keyInfo = await validateApiKey(token);
 
         if (!keyInfo) {

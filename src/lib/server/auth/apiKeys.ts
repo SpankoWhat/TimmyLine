@@ -1,8 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 import { db } from '$lib/server';
-import { apiKeys, analysts, authUsers } from '$lib/server/database';
-import { eq, and, isNull, or, gt } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+import { apiKeys, analysts } from '$lib/server/database';
+import { eq, and, isNull } from 'drizzle-orm';
 
 const KEY_PREFIX = 'tml_';
 const KEY_BYTES = 32; // 32 bytes = 64 hex chars

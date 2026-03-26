@@ -3,11 +3,12 @@
  */
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { getConfig } from '../config';
 
-// Import environment variables for log file path and write-to-path flag
-import 'dotenv/config';
-const LOG_FILEPATH: string = process.env.LOG_FILEPATH || '';
-const LOG_WRITETOPATH: boolean = process.env.LOG_WRITETOPATH === 'true';
+// Read log settings from config file (boot-time, cached)
+const config = getConfig();
+const LOG_FILEPATH: string = config.logging.filePath || '';
+const LOG_WRITETOPATH: boolean = config.logging.writeToFile;
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 type supportedLogDetails = string | number | boolean | null | undefined;

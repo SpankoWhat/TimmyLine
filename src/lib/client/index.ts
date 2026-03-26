@@ -26,9 +26,11 @@ export { timeline } from './timeline';
 export { apiKeys } from './apiKeys';
 export { exportClient } from './export';
 export { health } from './health';
+export { admin } from './admin';
 
 export type { ApiKeyRow, CreateApiKeyResponse, RevokeApiKeyResponse } from './apiKeys';
 export type { HealthResponse } from './health';
+export type { AdminAnalyst, AppSettingsMap } from './admin';
 
 /**
  * Namespaced API object for ergonomic usage.
@@ -52,6 +54,7 @@ import { timeline } from './timeline';
 import { apiKeys } from './apiKeys';
 import { exportClient } from './export';
 import { health } from './health';
+import { admin } from './admin';
 
 export const api = {
 	incidents,
@@ -67,5 +70,6 @@ export const api = {
 	timeline,
 	apiKeys,
 	export: exportClient,
-	health
+	health,
+	admin
 } as const;

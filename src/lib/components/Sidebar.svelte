@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
-	import { currentSelectedIncident } from '$lib/stores/cacheStore';
+	import { currentSelectedIncident, currentSelectedAnalyst } from '$lib/stores/cacheStore';
 	import { onMount, onDestroy } from 'svelte';
 	import { api } from '$lib/client';
 	import type { HealthResponse } from '$lib/client';
@@ -52,9 +52,19 @@
 		{ label: 'Incidents', path: '/home/incidents', icon: 'alert-triangle' }
 	];
 
+	let currentAnalyst = $derived($currentSelectedAnalyst);
+	let isAdmin = $derived(currentAnalyst?.role === 'admin');
+
 	let configItems: NavItem[] = [
 		{ label: 'Lookup Tables', path: '/settings/lookups', icon: 'database' }
 	];
+
+	let adminItems = $derived.by(() => {
+		if (!isAdmin) return [];
+		return [
+			{ label: 'Administration', path: '/admin', icon: 'shield' } as NavItem
+		];
+	});
 
 	let investigationItems = $derived.by(() => {
 		const items: NavItem[] = [];
@@ -236,6 +246,34 @@
 				<span class="sidebar-item-label">{item.label}</span>
 			</a>
 		{/each}
+
+		<!-- Admin Section (admin role only) -->
+		{#if adminItems.length > 0}
+			<span class="sidebar-section-label">Admin</span>
+			{#each adminItems as item (item.label)}
+				<a
+					href={item.path}
+					class="sidebar-item"
+					class:active={isActive(item.path)}
+					title={expanded ? undefined : item.label}
+					aria-current={isActive(item.path) ? 'page' : undefined}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="sidebar-item-icon"
+						aria-hidden="true"
+					>
+						<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+					</svg>
+					<span class="sidebar-item-label">{item.label}</span>
+				</a>
+			{/each}
+		{/if}
 	</nav>
 
 	<!-- Footer: Health Status, Settings + Toggle -->

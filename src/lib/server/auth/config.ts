@@ -30,6 +30,15 @@ import { env } from '$env/dynamic/private';
  * - AUTH_TRUST_HOST: Set to 'true' in production
  */
 
+/**
+ * NOTE: OAuth provider enable/disable is controlled via `timmyline.config.json`
+ * (keys: `auth.google.enabled`, `auth.microsoft.enabled`, `auth.github.enabled`).
+ * Auth.js does not support per-request provider filtering — all providers must
+ * be registered at module initialisation time. The enable/disable flags are
+ * therefore enforced at the **login page UI level** (the login page reads the
+ * config and only renders buttons for enabled providers), not here in the
+ * Auth.js config.
+ */
 export const { handle, signIn, signOut } = SvelteKitAuth({
 	adapter: DrizzleAdapter(db, {
 		usersTable: authUsers,
