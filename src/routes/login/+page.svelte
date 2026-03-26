@@ -2,7 +2,11 @@
 	import { signIn } from '@auth/sveltekit/client';
 	import '$lib/../app.css';
 
+	let { data } = $props();
 	let isLoading = $state(false);
+
+	const providers = $derived(data.enabledProviders);
+	const hasAnyProvider = $derived(providers.google || providers.microsoft || providers.github);
 
 	async function handleProviderLogin(provider: 'google' | 'microsoft-entra-id' | 'github') {
 		isLoading = true;
@@ -25,31 +29,45 @@
 		<p class="login-description">Incident Response Timeline</p>
 		<p class="login-instruction">Sign in to continue</p>
 
-		<div class="provider-buttons">
-			<button
-				class="provider-btn"
-				onclick={() => handleProviderLogin('microsoft-entra-id')}
-				disabled={isLoading}
-			>
-				Continue with Microsoft
-			</button>
+		{#if hasAnyProvider}
+			<div class="provider-buttons">
+				{#if providers.microsoft}
+					<button
+						class="provider-btn"
+						onclick={() => handleProviderLogin('microsoft-entra-id')}
+						disabled={isLoading}
+					>
+						Continue with Microsoft
+					</button>
+				{/if}
 
-			<button
-				class="provider-btn"
-				onclick={() => handleProviderLogin('google')}
-				disabled={isLoading}
-			>
-				Continue with Google
-			</button>
+				{#if providers.google}
+					<button
+						class="provider-btn"
+						onclick={() => handleProviderLogin('google')}
+						disabled={isLoading}
+					>
+						Continue with Google
+					</button>
+				{/if}
 
-			<button
-				class="provider-btn"
-				onclick={() => handleProviderLogin('github')}
-				disabled={isLoading}
-			>
-				Continue with GitHub
-			</button>
-		</div>
+				{#if providers.github}
+					<button
+						class="provider-btn"
+						onclick={() => handleProviderLogin('github')}
+						disabled={isLoading}
+					>
+						Continue with GitHub
+					</button>
+				{/if}
+			</div>
+		{:else}
+			<div class="no-providers">
+				<span class="no-providers-icon">&#9888;</span>
+				<p class="no-providers-text">No authentication providers are currently enabled.</p>
+				<p class="no-providers-hint">Contact your administrator.</p>
+			</div>
+		{/if}
 
 		{#if isLoading}
 			<div class="loading-indicator">Redirecting...</div>
@@ -149,5 +167,34 @@
 		font-size: var(--text-xs);
 		color: hsl(var(--fg-lighter));
 		margin-top: var(--space-4);
+	}
+
+	.no-providers {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-4) var(--space-3);
+		background: hsl(var(--bg-surface-200));
+		border: var(--border-width) solid hsl(var(--status-warning) / 0.3);
+		border-radius: var(--radius-md);
+	}
+
+	.no-providers-icon {
+		font-size: var(--text-xl);
+		color: hsl(var(--status-warning));
+		margin-bottom: var(--space-1);
+	}
+
+	.no-providers-text {
+		font-size: var(--text-sm);
+		color: hsl(var(--fg-default));
+		margin: 0;
+	}
+
+	.no-providers-hint {
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+		margin: 0;
 	}
 </style>

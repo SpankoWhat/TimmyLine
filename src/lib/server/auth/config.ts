@@ -14,10 +14,15 @@ import {
 import { eq } from 'drizzle-orm';
 import { authLogger as logger } from '$lib/server/logging';
 import { env } from '$env/dynamic/private';
+import { getConfig } from '$lib/server/config';
+import type { Provider } from '@auth/sveltekit/providers';
 
 /**
  * Auth.js Configuration
- * 
+ *
+ * Provider toggles are read from `timmyline.config.json` at boot time.
+ * Changing a provider toggle requires a server restart.
+ *
  * Environment variables required:
  * - AUTH_SECRET: Random secret for session encryption (generate with `openssl rand -base64 32`)
  * - GOOGLE_CLIENT_ID: From Google Cloud Console OAuth 2.0 credentials
@@ -30,23 +35,13 @@ import { env } from '$env/dynamic/private';
  * - AUTH_TRUST_HOST: Set to 'true' in production
  */
 
-/**
- * NOTE: OAuth provider enable/disable is controlled via `timmyline.config.json`
- * (keys: `auth.google.enabled`, `auth.microsoft.enabled`, `auth.github.enabled`).
- * Auth.js does not support per-request provider filtering — all providers must
- * be registered at module initialisation time. The enable/disable flags are
- * therefore enforced at the **login page UI level** (the login page reads the
- * config and only renders buttons for enabled providers), not here in the
- * Auth.js config.
- */
-export const { handle, signIn, signOut } = SvelteKitAuth({
-	adapter: DrizzleAdapter(db, {
-		usersTable: authUsers,
-		accountsTable: authAccounts,
-		sessionsTable: authSessions,
-		verificationTokensTable: authVerificationTokens
-	}),
-	providers: [
+// ── Build providers list from config toggles ────────────────────────────
+const config = getConfig();
+
+const providers: Provider[] = [];
+
+if (config.auth.google.enabled) {
+	providers.push(
 		Google({
 			clientId: env.GOOGLE_CLIENT_ID,
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
@@ -57,7 +52,15 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 					response_type: 'code'
 				}
 			}
-		}),
+		})
+	);
+	logger.info('Auth provider enabled: Google');
+} else {
+	logger.info('Auth provider disabled: Google');
+}
+
+if (config.auth.microsoft.enabled) {
+	providers.push(
 		MicrosoftEntraID({
 			clientId: env.MICROSOFT_ENTRA_ID_CLIENT_ID,
 			clientSecret: env.MICROSOFT_ENTRA_ID_CLIENT_SECRET,
@@ -67,13 +70,44 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 					scope: 'openid profile email User.Read'
 				}
 			}
-		}),
-        // GitHub provider (optional, for developer convenience
-        GitHub({
+		})
+	);
+	logger.info('Auth provider enabled: Microsoft Entra ID');
+} else {
+	logger.info('Auth provider disabled: Microsoft Entra ID');
+}
+
+if (config.auth.github.enabled) {
+	providers.push(
+		GitHub({
 			clientId: env.GITHUB_CLIENT_ID,
 			clientSecret: env.GITHUB_CLIENT_SECRET
-        })
-	],
+		})
+	);
+	logger.info('Auth provider enabled: GitHub');
+} else {
+	logger.info('Auth provider disabled: GitHub');
+}
+
+if (providers.length === 0) {
+	logger.warn('No OAuth providers are enabled — users will not be able to sign in!');
+}
+
+/** Which providers are enabled — exported so the login page can read it via +page.server.ts */
+export const enabledProviders = {
+	google: config.auth.google.enabled,
+	microsoft: config.auth.microsoft.enabled,
+	github: config.auth.github.enabled
+} as const;
+
+export const { handle, signIn, signOut } = SvelteKitAuth({
+	adapter: DrizzleAdapter(db, {
+		usersTable: authUsers,
+		accountsTable: authAccounts,
+		sessionsTable: authSessions,
+		verificationTokensTable: authVerificationTokens
+	}),
+	providers,
 	callbacks: {
 		/**
 		 * Called when a user signs in.
