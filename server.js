@@ -33,9 +33,11 @@
 
 import 'dotenv/config';
 import { createServer } from 'node:http';
+import { getConfig } from './config.js';
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
-const ORIGIN = process.env.ORIGIN || `http://localhost:${PORT}`;
+const config = getConfig();
+const PORT = config.webServer.port;
+const ORIGIN = config.webServer.origin || `http://localhost:${PORT}`;
 
 // Ensure ORIGIN is set for SvelteKit and Socket.IO
 process.env.ORIGIN = ORIGIN;

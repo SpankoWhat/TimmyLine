@@ -43,18 +43,19 @@ COPY --from=builder /app/migrate.js ./
 # Copy Drizzle migration files (needed for `node migrate.js` on first run)
 COPY --from=builder /app/drizzle ./drizzle
 
+# Copy the standalone config reader and example config
+COPY --from=builder /app/config.js ./
+COPY --from=builder /app/timmyline.config.example.json ./
+
 # NOTE: No VOLUME or mkdir for /app/data here — the host owns the data
 # directory and bind-mounts it into the container. Run init-db.sh on the
 # host first to create the directory and seed files.
 
-# ── Environment defaults ─────────────────────────────────────
-# These can all be overridden at runtime via `docker run -e` or `env_file`.
+# ── Environment defaults ───────────────────────────────────────
+# Non-secret config is now in timmyline.config.json.
+# Only secrets and the config file path remain as env vars.
 ENV NODE_ENV=production
-ENV DATABASE_URL=/app/data/timmyLine.db
-ENV LOG_FILEPATH=/app/data/timmyLine.log
-ENV LOG_WRITETOPATH=true
-ENV PORT=3000
-ENV ORIGIN=http://localhost:3000
+ENV TIMMYLINE_CONFIG=/app/data/timmyline.config.json
 
 EXPOSE 3000
 

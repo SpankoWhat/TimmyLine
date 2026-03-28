@@ -2,16 +2,16 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import * as schema from './index';
 import { dbLogger as logger } from '../logging';
-import 'dotenv/config';
+import { getConfig } from '../config';
 
 
 const moduleFilePath = import.meta.url.replace('file:///', '').replace(/%20/g, ' ').replace(/\//g, '\\');
-const DATABASE_URL = process.env.DATABASE_URL;
+const DB_PATH = getConfig().database.filePath;
 const executedFilePath = process.argv[1]
 
 // Seed data for initial database setup
 async function seedDatabase() {
-	const client = new Database(DATABASE_URL);
+	const client = new Database(DB_PATH);
 	const db = drizzle(client, { schema });
 
 	logger.info('--- Starting database seeding process ---');
@@ -119,8 +119,8 @@ async function seedDatabase() {
 	logger.info('Lookup table "entity_type" seeded');
 }
 
-if (!DATABASE_URL) {
-	logger.error('DATABASE_URL is not set. Cannot seed database.');
+if (!DB_PATH) {
+	logger.error('database.filePath is not set in config. Cannot seed database.');
 	process.exit(1);
 }
 

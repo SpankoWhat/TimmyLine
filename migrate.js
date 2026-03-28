@@ -12,25 +12,25 @@
  * In Docker, this runs automatically via the entrypoint before the server starts.
  */
 
-import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { getConfig } from './config.js';
 
-const DATABASE_URL = process.env.DATABASE_URL || './data/timmyLine.db';
+const DB_PATH = getConfig().database.filePath;
 
 // Ensure the directory for the database file exists
 try {
-	mkdirSync(dirname(DATABASE_URL), { recursive: true });
+	mkdirSync(dirname(DB_PATH), { recursive: true });
 } catch {
 	// directory already exists
 }
 
-console.log(`Running migrations against: ${DATABASE_URL}`);
+console.log(`Running migrations against: ${DB_PATH}`);
 
-const client = new Database(DATABASE_URL);
+const client = new Database(DB_PATH);
 const db = drizzle(client);
 
 try {

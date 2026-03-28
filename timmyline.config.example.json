@@ -3,10 +3,25 @@
 		"filePath": "./data/timmyLine.log",
 		"writeToFile": false
 	},
+	"database": {
+		"filePath": "./data/timmyLine.db"
+	},
 	"auth": {
-		"google": { "enabled": true },
-		"microsoft": { "enabled": true },
-		"github": { "enabled": true },
-		"apiKeys": { "enabled": true }
+		"google": {
+			"enabled": false
+		},
+		"microsoft": {
+			"enabled": false
+		},
+		"github": {
+			"enabled": true
+		},
+		"apiKeys": {
+			"enabled": true
+		}
+	},
+	"webServer": {
+		"port": 3000,
+		"origin": "http://localhost"
 	}
 }

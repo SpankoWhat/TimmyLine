@@ -1,18 +1,27 @@
 /**
- * TimmyLine Application Configuration
+ * TimmyLine Application Configuration (SvelteKit wrapper)
  *
  * Reads infrastructure settings from a JSON config file on disk.  These are
  * settings that the application needs **at boot time** (logging paths, auth
- * provider toggles) — they live outside the database so the app can read them
- * before any DB initialisation.
+ * provider toggles, database path, web server port/origin) — they live
+ * outside the database so the app can read them before any DB initialisation.
  *
- * The config file path defaults to `timmyline.config.json` in the project
- * root.  Override with the `TIMMYLINE_CONFIG` env var.
+ * The actual read/parse/merge logic lives in the project-root `config.js`
+ * so that standalone scripts (server.js, migrate.js, seed.ts, drizzle.config.ts)
+ * can also access the config without importing from `$lib/server`.
+ *
+ * This module adds:
+ *   - TypeScript types
+ *   - In-memory caching (singleton)
+ *   - Hot-reload support (`reloadConfig()`)
+ *   - Write-back for the admin settings API
  *
  * Usage:
  *   import { getConfig, reloadConfig } from '$lib/server/config';
  *   const cfg = getConfig();
- *   cfg.logging.writeToFile; // boolean
+ *   cfg.logging.writeToFile;    // boolean
+ *   cfg.database.filePath;      // "./data/timmyLine.db"
+ *   cfg.webServer.port;         // 3000
  *
  * Hot-reload:
  *   After the admin API writes an updated config file, call `reloadConfig()`
@@ -21,8 +30,12 @@
  *   (e.g. Auth.js providers, logger file path) still require a restart.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { writeFileSync } from 'node:fs';
+import {
+	readConfigFile as _readConfigFile,
+	resolveConfigPath,
+	CONFIG_DEFAULTS
+} from '../../../../config.js';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -35,83 +48,33 @@ export interface TimmyLineConfig {
 		/** Whether to write logs to file (instead of stdout) */
 		writeToFile: boolean;
 	};
+	database: {
+		/** Absolute or relative path to the SQLite database file */
+		filePath: string;
+	};
 	auth: {
 		google: { enabled: boolean };
 		microsoft: { enabled: boolean };
 		github: { enabled: boolean };
 		apiKeys: { enabled: boolean };
 	};
+	webServer: {
+		/** Port the production server listens on */
+		port: number;
+		/** Public origin URL (used by SvelteKit and Socket.IO CORS) */
+		origin: string;
+	};
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Defaults
-// ────────────────────────────────────────────────────────────────────────────
-
-const DEFAULTS: TimmyLineConfig = {
-	logging: {
-		filePath: './data/timmyLine.log',
-		writeToFile: false
-	},
-	auth: {
-		google: { enabled: true },
-		microsoft: { enabled: true },
-		github: { enabled: true },
-		apiKeys: { enabled: true }
-	}
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// Resolution helpers
-// ────────────────────────────────────────────────────────────────────────────
-
-/** Resolve the config file path (env override or project-root default). */
-function resolveConfigPath(): string {
-	return resolve(process.env.TIMMYLINE_CONFIG || 'timmyline.config.json');
-}
-
-/**
- * Deep-merge `partial` onto `base`, returning a new object.
- * Only merges plain objects; arrays and primitives overwrite.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function deepMerge(base: any, partial: any): any {
-	const out: Record<string, unknown> = { ...base };
-	for (const key of Object.keys(partial)) {
-		const baseVal = base[key];
-		const partialVal = partial[key];
-		if (
-			baseVal && partialVal &&
-			typeof baseVal === 'object' && !Array.isArray(baseVal) &&
-			typeof partialVal === 'object' && !Array.isArray(partialVal)
-		) {
-			out[key] = deepMerge(baseVal, partialVal);
-		} else if (partialVal !== undefined) {
-			out[key] = partialVal;
-		}
-	}
-	return out;
-}
+// re-export defaults so other server modules can reference them
+const DEFAULTS: TimmyLineConfig = CONFIG_DEFAULTS as TimmyLineConfig;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Read / write
 // ────────────────────────────────────────────────────────────────────────────
 
 function readConfigFile(): TimmyLineConfig {
-	const filePath = resolveConfigPath();
-
-	if (!existsSync(filePath)) {
-		// No config file yet — use defaults
-		return structuredClone(DEFAULTS);
-	}
-
-	try {
-		const raw = readFileSync(filePath, 'utf-8');
-		const parsed = JSON.parse(raw);
-		return deepMerge(DEFAULTS, parsed) as TimmyLineConfig;
-	} catch {
-		console.error(`[config] Failed to parse ${filePath} — falling back to defaults`);
-		return structuredClone(DEFAULTS);
-	}
+	return _readConfigFile() as TimmyLineConfig;
 }
 
 /**

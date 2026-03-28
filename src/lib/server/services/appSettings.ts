@@ -31,7 +31,10 @@ export function getSettingsMap(): Record<string, string> {
 		'auth.github_enabled': String(cfg.auth.github.enabled),
 		'auth.api_keys_enabled': String(cfg.auth.apiKeys.enabled),
 		'logging.file_path': cfg.logging.filePath,
-		'logging.write_to_file': String(cfg.logging.writeToFile)
+		'logging.write_to_file': String(cfg.logging.writeToFile),
+		'database.file_path': cfg.database.filePath,
+		'web_server.port': String(cfg.webServer.port),
+		'web_server.origin': cfg.webServer.origin
 	};
 }
 
@@ -51,7 +54,10 @@ const KEY_MAP: Record<string, (cfg: TimmyLineConfig, v: string) => void> = {
 	'auth.github_enabled': (c, v) => { c.auth.github.enabled = v === 'true'; },
 	'auth.api_keys_enabled': (c, v) => { c.auth.apiKeys.enabled = v === 'true'; },
 	'logging.file_path': (c, v) => { c.logging.filePath = v; },
-	'logging.write_to_file': (c, v) => { c.logging.writeToFile = v === 'true'; }
+	'logging.write_to_file': (c, v) => { c.logging.writeToFile = v === 'true'; },
+	'database.file_path': (c, v) => { c.database.filePath = v; },
+	'web_server.port': (c, v) => { c.webServer.port = parseInt(v, 10); },
+	'web_server.origin': (c, v) => { c.webServer.origin = v; }
 };
 
 /**

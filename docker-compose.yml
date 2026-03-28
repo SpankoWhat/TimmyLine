@@ -20,8 +20,5 @@ services:
     env_file: .env
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=/app/data/timmyLine.db
-      - LOG_FILEPATH=/app/data/timmyLine.log
-      - LOG_WRITETOPATH=true
-      - PORT=3000
+      - TIMMYLINE_CONFIG=/app/data/timmyline.config.json
     restart: unless-stopped

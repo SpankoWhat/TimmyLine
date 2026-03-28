@@ -5,9 +5,9 @@ import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
 
-import 'dotenv/config';
-import { userInfo } from 'os';
-const ORIGIN = process.env.ORIGIN;
+import { getConfig } from '../config';
+
+const ORIGIN = getConfig().webServer.origin;
 
 // Use globalThis to persist across HMR reloads
 const globalForSocket = globalThis as unknown as {

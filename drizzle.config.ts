@@ -1,15 +1,14 @@
 import { defineConfig } from 'drizzle-kit';
+import { getConfig } from './config.js';
 
-// Ensure environment variables
-import 'dotenv/config';
-const DATABASE_URL = process.env.DATABASE_URL || './data/timmyLine.db';
+const DB_PATH = getConfig().database.filePath;
 
 export default defineConfig({
 	schema: './src/lib/server/database',
 	out: './drizzle',
 	dialect: 'sqlite',
 	dbCredentials: {
-		url: DATABASE_URL
+		url: DB_PATH
 	},
 	verbose: true,
 	strict: true
