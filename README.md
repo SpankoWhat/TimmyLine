@@ -7,7 +7,7 @@ TimmyLine is a cybersecurity incident response timeline visualization and manage
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Environment Variables](#environment-variables)
+- [Configuration](#configuration)
 - [Database Management](#database-management)
 - [MCP Server Integration](#mcp-server-integration)
 - [Features](#features)
@@ -49,15 +49,23 @@ cd TimmyLine
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Configure
 
-Copy the example environment file and fill in your OAuth credentials and paths:
+TimmyLine uses two configuration layers:
+
+| File | Purpose |
+|---|---|
+| `timmyline.config.json` | Non-secret settings: database path, logging, auth toggles, web server port/origin |
+| `.env` | Secrets only: `AUTH_SECRET`, OAuth client IDs/secrets |
 
 ```powershell
+cp timmyline.config.example.json timmyline.config.json
 cp example.env .env
 ```
 
-See [Environment Variables](#environment-variables) for details on each variable.
+Edit `.env` to fill in your OAuth credentials and session secret. Edit `timmyline.config.json` to customise paths, ports, and feature toggles.
+
+See [Configuration](#configuration) for details.
 
 ### 3. Initialize the Database
 
@@ -94,9 +102,11 @@ Docker is the easiest way to run TimmyLine in production. The database (SQLite) 
 git clone https://github.com/SpankoWhat/TimmyLine.git
 cd TimmyLine
 
-# Create your environment file
+# Create your environment and config files
 cp example.env .env
-# Edit .env — at minimum set AUTH_SECRET and at least one OAuth provider
+cp timmyline.config.example.json timmyline.config.json
+# Edit .env — set AUTH_SECRET and at least one OAuth provider
+# Edit timmyline.config.json — adjust paths, port, origin as needed
 
 # Initialize the host data directory (creates ./data with DB and log files)
 chmod +x init-db.sh
@@ -106,17 +116,18 @@ chmod +x init-db.sh
 docker compose up -d
 ```
 
-The app will be available at `http://localhost:3000`. Database migrations run automatically on startup.
+The app will be available at the port configured in `timmyline.config.json` (default `3000`). Database migrations run automatically on startup. If no config file exists in the data volume, the Docker entrypoint copies the example config automatically.
 
 To pull a pre-built image instead of building locally:
 
 ```bash
 docker pull ghcr.io/spankwhat/timmyline:latest
 ./init-db.sh          # ensure ./data exists on the host
+cp timmyline.config.example.json ./data/timmyline.config.json
 docker run -d -p 3000:3000 \
   -v ./data:/app/data \
   --env-file .env \
-  -e ORIGIN=http://localhost:3000 \
+  -e TIMMYLINE_CONFIG=/app/data/timmyline.config.json \
   ghcr.io/spankwhat/timmyline:latest
 ```
 
@@ -137,9 +148,11 @@ cd TimmyLine
 npm ci
 npm run build
 
-# Configure environment
+# Configure
 cp example.env .env
-# Edit .env — set AUTH_SECRET, OAuth credentials, ORIGIN=http://localhost:3000
+cp timmyline.config.example.json timmyline.config.json
+# Edit .env — set AUTH_SECRET and OAuth credentials
+# Edit timmyline.config.json — set port, origin, database path, etc.
 
 # Initialize the database (first time only)
 node migrate.js
@@ -148,30 +161,64 @@ node migrate.js
 node server.js
 ```
 
-The `server.js` entry point creates a Node.js HTTP server that serves the SvelteKit app and attaches Socket.IO for real-time collaboration — all on a single port (default 3000).
-
-### Production Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `3000` | HTTP server port |
-| `ORIGIN` | `http://localhost:3000` | Application URL (used for CORS and Socket.IO) |
-| `DATABASE_URL` | `./data/timmyLine.db` | Path to SQLite database file |
-| `LOG_FILEPATH` | `./data/timmyLine.log` | Path to log file |
-| `LOG_WRITETOPATH` | `false` | Set to `true` to enable file logging |
-| `AUTH_SECRET` | *(required)* | Session signing secret. Generate with `openssl rand -base64 32` |
-| `AUTH_TRUST_HOST` | `true` | Required by Auth.js in production |
-
-Plus the OAuth provider variables listed in the [Environment Variables](#environment-variables) section.
+The `server.js` entry point creates a Node.js HTTP server that serves the SvelteKit app and attaches Socket.IO for real-time collaboration — all on a single port (configured in `timmyline.config.json`, default `3000`).
 
 ---
 
-## Environment Variables
+## Configuration
 
-Create a `.env` file in the project root. See `example.env` for a template.
+TimmyLine separates secrets from infrastructure settings:
+
+- **`timmyline.config.json`** — All non-secret configuration. Editable at runtime via the admin settings page (some changes require a restart).
+- **`.env`** — Secrets only. Never committed to version control.
+
+The config file path defaults to `timmyline.config.json` in the project root. Override with the `TIMMYLINE_CONFIG` environment variable (useful in Docker where the config lives on a data volume).
+
+### Config File (`timmyline.config.json`)
+
+```json
+{
+  "logging": {
+    "filePath": "./data/timmyLine.log",
+    "writeToFile": false
+  },
+  "database": {
+    "filePath": "./data/timmyLine.db"
+  },
+  "auth": {
+    "google": { "enabled": true },
+    "microsoft": { "enabled": true },
+    "github": { "enabled": true },
+    "apiKeys": { "enabled": true }
+  },
+  "webServer": {
+    "port": 3000,
+    "origin": "http://localhost"
+  }
+}
+```
+
+| Key | Default | Description |
+|---|---|---|
+| `logging.filePath` | `./data/timmyLine.log` | Path to the log output file. |
+| `logging.writeToFile` | `false` | Set to `true` to enable file logging. |
+| `database.filePath` | `./data/timmyLine.db` | Path to the SQLite database file. |
+| `auth.google.enabled` | `true` | Enable Google OAuth sign-in. |
+| `auth.microsoft.enabled` | `true` | Enable Microsoft Entra ID sign-in. |
+| `auth.github.enabled` | `true` | Enable GitHub OAuth sign-in. |
+| `auth.apiKeys.enabled` | `true` | Enable API key authentication. |
+| `webServer.port` | `3000` | HTTP server port (production only — dev uses Vite's default). |
+| `webServer.origin` | `http://localhost` | Public origin URL (used by SvelteKit and Socket.IO CORS). |
+
+Any key omitted from the file falls back to its default.
+
+### Environment Variables (`.env`)
+
+Create a `.env` file in the project root. See `example.env` for a template. Only **secrets** belong here.
 
 | Variable | Description |
 |---|---|
+| `TIMMYLINE_CONFIG` | Path to the config JSON file. Default: `timmyline.config.json`. |
 | `AUTH_SECRET` | Secret used to sign session tokens. Generate with `openssl rand -base64 32`. |
 | `AUTH_TRUST_HOST` | Set to `true` in production environments. Required by Auth.js. |
 | `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID. |
@@ -181,10 +228,6 @@ Create a `.env` file in the project root. See `example.env` for a template.
 | `MICROSOFT_ENTRA_ID_TENANT_ID` | Microsoft Entra ID tenant ID. |
 | `GITHUB_CLIENT_ID` | GitHub OAuth application client ID. |
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth application client secret. |
-| `DATABASE_URL` | Absolute path to the SQLite database file. |
-| `LOG_FILEPATH` | Absolute path to the log output file. |
-| `LOG_WRITETOPATH` | Set to `true` to enable file logging. |
-| `ORIGIN` | The application origin URL, used for Socket.IO CORS. Example: `http://localhost:5173`. |
 
 ---
 
@@ -501,6 +544,9 @@ The server hook chain (`src/hooks.server.ts`) processes requests through four st
 ## Project Structure
 
 ```
+config.js                          Standalone config reader (used by all scripts)
+timmyline.config.json              Non-secret app configuration (not committed)
+timmyline.config.example.json      Example config file template
 src/
   app.css                          Root CSS variables and design tokens
   app.html                         HTML shell
