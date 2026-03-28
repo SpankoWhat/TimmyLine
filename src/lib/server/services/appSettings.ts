@@ -34,7 +34,8 @@ export function getSettingsMap(): Record<string, string> {
 		'logging.write_to_file': String(cfg.logging.writeToFile),
 		'database.file_path': cfg.database.filePath,
 		'web_server.port': String(cfg.webServer.port),
-		'web_server.origin': cfg.webServer.origin
+		'web_server.origin': cfg.webServer.origin,
+		'collaboration.cursor_throttle_ms': String(cfg.collaboration.cursorThrottleMs)
 	};
 }
 
@@ -57,7 +58,8 @@ const KEY_MAP: Record<string, (cfg: TimmyLineConfig, v: string) => void> = {
 	'logging.write_to_file': (c, v) => { c.logging.writeToFile = v === 'true'; },
 	'database.file_path': (c, v) => { c.database.filePath = v; },
 	'web_server.port': (c, v) => { c.webServer.port = parseInt(v, 10); },
-	'web_server.origin': (c, v) => { c.webServer.origin = v; }
+	'web_server.origin': (c, v) => { c.webServer.origin = v; },
+	'collaboration.cursor_throttle_ms': (c, v) => { c.collaboration.cursorThrottleMs = parseInt(v, 10); }
 };
 
 /**

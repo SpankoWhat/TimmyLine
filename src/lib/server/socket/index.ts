@@ -1,6 +1,6 @@
 import { Server, type Socket } from 'socket.io';
 import { socketLogger as logger } from '../logging/index';
-import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID } from '../../config/socketType.ts';
+import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID, CursorPosition } from '../../config/socketType.ts';
 import { db } from '..';
 import { authSessions, authUsers, analysts } from '../database';
 import { eq } from 'drizzle-orm';
@@ -161,10 +161,17 @@ export function initializeSocketIO(
             `Socket ${socket.id} - Connected as ${socket.data.analystName} (${socket.data.analystUUID})`
         );
 
+        // Send collaboration config to the client
+        const cfg = getConfig();
+        socket.emit('config', {
+            cursorThrottleMs: cfg.collaboration.cursorThrottleMs
+        });
+
         registerLobbyEvents(socket);
         registerJoinRoomEvent(socket);
         registerLeaveRoomEvent(socket);
         registerUserIncidentPresence(socket);
+        registerCursorRelay(socket);
         registerDisconnectEvent(socket);
     });
 
@@ -328,6 +335,7 @@ function registerJoinRoomEvent(socket: Socket) {
                         analystName: analystName,
                         focusedRow: null,
                         editingRow: null,
+                        cursor: null,
                         socketIds: [socket.id]
                     };
 
@@ -476,6 +484,21 @@ function registerUserIncidentPresence(socket: Socket) {
             globalForSocket.io!.to(roomName).emit('user-status-updated', analystUUID, data.updates);
             logger.debug(`Analyst ${analystUUID} updated status in ${roomName}:`, data.updates);
     });
+}
+
+function registerCursorRelay(socket: Socket) {
+    socket.on(
+        'cursor-move',
+        (data: { incidentUUID: string; cursor: CursorPosition }) => {
+            const analystUUID = socketToAnalystMap.get(socket.id);
+            if (!analystUUID) return;
+
+            const roomName = `incident:${data.incidentUUID}`;
+
+            // Pure relay — broadcast to all OTHER sockets in the room, no server state tracking
+            socket.broadcast.to(roomName).emit('cursor-moved', analystUUID, data.cursor);
+        }
+    );
 }
 
 function registerLeaveRoomEvent(socket: Socket) {

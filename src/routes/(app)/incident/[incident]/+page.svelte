@@ -12,12 +12,13 @@
 		currentTimelineView
 	} from '$lib/stores/cacheStore.js';
 	import { timelineViews } from '$lib/config/timelineViews';
-	import { joinIncidentSocket, leaveIncidentSocket } from '$lib/stores/collabStore.js';
+	import { joinIncidentSocket, leaveIncidentSocket, emitCursorMove, emitCursorLeave } from '$lib/stores/collabStore.js';
 	import type { Incident } from '$lib/server/database';
 
 	// Component Imports
 	import IncidentStats from '$lib/components/IncidentStats.svelte';
 	import ActiveUsersIndicator from '$lib/components/ActiveUsersIndicator.svelte';
+	import RemoteCursors from '$lib/components/RemoteCursors.svelte';
 	import EntitiesAnnotationsPanel from '$lib/components/EntitiesAnnotationsPanel.svelte';
 	import FieldSelectorPanel from '$lib/components/FieldSelectorPanel.svelte';
 	import FloatingPanel from '$lib/components/FloatingPanel.svelte';
@@ -47,6 +48,7 @@
 	let entitiesPanelFloating = $state(false);
 	let fieldSelectorFloating = $state(false);
 	let searchQuery = $state('');
+	let timelineScrollEl: HTMLDivElement | undefined = $state();
 
 	// Dynamic view component — resolved from view registry
 	let ActiveViewModule = $state<{ default: any } | null>(null);
@@ -208,7 +210,21 @@
 		$currentSelectedIncident = null;
 		leaveIncidentSocket();
 		clearHighlights();
+		emitCursorLeave();
 	});
+
+	function handleCursorMove(e: MouseEvent) {
+		if (!timelineScrollEl) return;
+		const rect = timelineScrollEl.getBoundingClientRect();
+		// Absolute px relative to the full scrollable content
+		const x = e.clientX - rect.left + timelineScrollEl.scrollLeft;
+		const y = e.clientY - rect.top + timelineScrollEl.scrollTop;
+		emitCursorMove(x, y);
+	}
+
+	function handleCursorLeave() {
+		emitCursorLeave();
+	}
 </script>
 
 <!-- Page Header -->
@@ -304,8 +320,15 @@
 	</div>
 
 	<!-- Main content area -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="timeline-content">
-		<div class="timeline-list-wrapper">
+		<div
+			class="timeline-list-wrapper"
+			bind:this={timelineScrollEl}
+			onmousemove={handleCursorMove}
+			onmouseleave={handleCursorLeave}
+		>
+			<RemoteCursors />
 			{#if ActiveViewModule}
 				<ActiveViewModule.default
 					items={filteredTimeline}
@@ -769,12 +792,14 @@
 		display: flex;
 		flex: 1;
 		min-height: 0;
+		position: relative;
 	}
 
 	.timeline-list-wrapper {
 		flex: 1;
 		overflow-y: auto;
 		padding: var(--space-3);
+		position: relative;
 	}
 
 	/* ===== Entities Overlay (same pattern as field selector) ===== */

@@ -64,6 +64,10 @@ export interface TimmyLineConfig {
 		/** Public origin URL (used by SvelteKit and Socket.IO CORS) */
 		origin: string;
 	};
+	collaboration: {
+		/** Throttle interval (ms) for broadcasting cursor positions via Socket.IO */
+		cursorThrottleMs: number;
+	};
 }
 
 // re-export defaults so other server modules can reference them
@@ -87,14 +91,18 @@ export function writeConfigFile(config: TimmyLineConfig): void {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Singleton cache
+// Singleton cache (globalThis so Vite plugin + SSR share one instance)
 // ────────────────────────────────────────────────────────────────────────────
 
-let cached: TimmyLineConfig = readConfigFile();
+const globalForConfig = globalThis as unknown as { __timmylineConfig?: TimmyLineConfig };
+
+if (!globalForConfig.__timmylineConfig) {
+	globalForConfig.__timmylineConfig = readConfigFile();
+}
 
 /** Return the current (cached) config. */
 export function getConfig(): Readonly<TimmyLineConfig> {
-	return cached;
+	return globalForConfig.__timmylineConfig!;
 }
 
 /**
@@ -102,8 +110,8 @@ export function getConfig(): Readonly<TimmyLineConfig> {
  * Call after saving changes so per-request checks pick up new values.
  */
 export function reloadConfig(): TimmyLineConfig {
-	cached = readConfigFile();
-	return cached;
+	globalForConfig.__timmylineConfig = readConfigFile();
+	return globalForConfig.__timmylineConfig;
 }
 
 export { DEFAULTS as CONFIG_DEFAULTS };

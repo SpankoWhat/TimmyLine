@@ -5,7 +5,7 @@ import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
 import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
-import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID } from '$lib/config/socketType.ts';
+import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID, CursorPosition } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
 let socketReadyPromise: Promise<boolean> | null = null;
@@ -20,6 +20,9 @@ export const usersInEachIncident = writable<Map<IncidentUUID, number>>(new Map()
 
 let localUserInfo: UserIncidentState | null = null;
 let localLastIncidentUUID: IncidentUUID | null = null;
+
+// Remote cursor positions (keyed by analyst UUID)
+export const remoteCursors = writable<Map<AnalystUUID, CursorPosition & { analystName: string }>>(new Map());
 
 // ============================================================================
 // STORES
@@ -123,6 +126,7 @@ function initializeSocketInternal(analyst: { uuid: string; full_name: string | n
         analystName: (analyst.full_name || analyst.username || 'Unknown') as string,
         focusedRow: null,
         editingRow: null,
+        cursor: null,
         socketIds: [] // Empty on client side, managed by server
     };
 
@@ -142,7 +146,14 @@ export function disconnectSocket() {
 
 function registerEventListeners(socket: Socket) {
     socket.onAny((event, ...args) => {
-        console.log(`%c[SOCKET-RX] ${event}`, 'color: #00ff88; font-weight: bold', ...args);
+        // console.debug(`%c[SOCKET-RX] ${event}`, 'color: #00ff88; font-weight: bold', ...args);
+    });
+
+    // Server-pushed collaboration config
+    socket.on('config', (cfg: { cursorThrottleMs?: number }) => {
+        if (cfg.cursorThrottleMs != null && cfg.cursorThrottleMs > 0) {
+            cursorThrottleMs = cfg.cursorThrottleMs;
+        }
     });
 
     // Lobby presence events
@@ -206,6 +217,28 @@ function registerEventListeners(socket: Socket) {
         usersInCurrentIncident.update((incident) => {
             incident.delete(analystUUID);
             return incident;
+        });
+        // Remove their cursor
+        remoteCursors.update((cursors) => {
+            cursors.delete(analystUUID);
+            return cursors;
+        });
+    });
+
+    // Remote cursor movement events
+    socket.on('cursor-moved', (analystUUID: AnalystUUID, cursor: CursorPosition) => {
+        // Look up the analyst name from the incident users store
+        const incidentUsers = get(usersInCurrentIncident);
+        const userInfo = incidentUsers.get(analystUUID);
+        const analystName = userInfo?.analystName ?? 'Unknown';
+
+        remoteCursors.update((cursors) => {
+            if (cursor.visible) {
+                cursors.set(analystUUID, { ...cursor, analystName });
+            } else {
+                cursors.delete(analystUUID);
+            }
+            return cursors;
         });
     });
 
@@ -317,6 +350,7 @@ export function leaveIncidentSocket() {
     usersInCurrentIncident.update(() => {
         return new Map<AnalystUUID, UserIncidentState>();
     });
+    remoteCursors.set(new Map());
     localLastIncidentUUID = null;
 }
 
@@ -375,4 +409,47 @@ export function emitEditingRowStatus(rowUUID: string | null, isEditing: boolean)
     if (localUserInfo) {
         localUserInfo.editingRow = isEditing ? rowUUID : null;
     }
+}
+
+// ============================================================================
+// CURSOR SHARING
+// ============================================================================
+
+let lastCursorEmitTime = 0;
+let cursorThrottleMs = 50; // Default ~20fps — overridden by server config on connect
+
+/**
+ * Emit cursor position to other users in the same incident room.
+ * Coordinates should be percentages (0–100) of the tracked container.
+ * Throttled to ~20fps to avoid flooding the socket.
+ */
+export function emitCursorMove(x: number, y: number) {
+    if (!browser || !socket) return;
+
+    const now = Date.now();
+    if (now - lastCursorEmitTime < cursorThrottleMs) return;
+    lastCursorEmitTime = now;
+
+    const incident = get(currentSelectedIncident);
+    if (!incident?.uuid) return;
+
+    socket.emit('cursor-move', {
+        incidentUUID: incident.uuid as IncidentUUID,
+        cursor: { x, y, visible: true } as CursorPosition
+    });
+}
+
+/**
+ * Emit that the cursor has left the tracked area (mouse left the container).
+ */
+export function emitCursorLeave() {
+    if (!browser || !socket) return;
+
+    const incident = get(currentSelectedIncident);
+    if (!incident?.uuid) return;
+
+    socket.emit('cursor-move', {
+        incidentUUID: incident.uuid as IncidentUUID,
+        cursor: { x: 0, y: 0, visible: false } as CursorPosition
+    });
 }

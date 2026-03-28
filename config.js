@@ -39,6 +39,9 @@ const DEFAULTS = {
 	webServer: {
 		port: 3000,
 		origin: 'http://localhost'
+	},
+	collaboration: {
+		cursorThrottleMs: 50
 	}
 };
 
