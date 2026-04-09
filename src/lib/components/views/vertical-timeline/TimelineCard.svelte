@@ -3,7 +3,8 @@
     import type { DisplayFieldsConfiguration, DisplayField } from '$lib/config/displayFieldsConfig';
     import type { TimelineEvent } from '$lib/types/events';
     import type { InvestigationAction } from '$lib/types/actions';
-    import { highlightedItemUuids } from '$lib/stores/cacheStore';
+    import { analystsByUuid, highlightedItemUuids } from '$lib/stores/cacheStore';
+    import { timePreferences } from '$lib/stores/timePreferencesStore';
     import { api } from '$lib/client';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
@@ -28,18 +29,10 @@
     );
     let isHighlighted = $derived($highlightedItemUuids.has(item.uuid));
 
-    function formatTimestamp(epochTime: number): string {
-        if (!epochTime) return 'N/A';
-        const timestamp = epochTime.toString().length === 10 ? epochTime * 1000 : epochTime;
-        const date = new Date(timestamp);
-        if (isNaN(date.getTime())) return 'Invalid';
-        return date.toLocaleString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-    }
+    let fieldValueContext = $derived({
+        analystLookup: $analystsByUuid,
+        timePreferences: $timePreferences
+    });
 
     function toggleExpandedDetails() {
         if (showExpandedDetails) {
@@ -169,7 +162,7 @@
         <!-- Card Fields -->
         <div class="card-fields">
             {#each getVisibleFields() as field (field.key)}
-                {@const value = getFieldValue(item.data as Record<string, unknown>, field)}
+                {@const value = getFieldValue(item.data as Record<string, unknown>, field, fieldValueContext)}
                 {#if value && value !== '—'}
                     <div class="card-field">
                         <span class="card-field-label">{field.label}</span>

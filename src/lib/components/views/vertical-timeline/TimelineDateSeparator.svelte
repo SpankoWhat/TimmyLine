@@ -1,17 +1,25 @@
 <script lang="ts">
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatAbsoluteTimestamp } from '$lib/utils/dateTime';
+
 	interface Props {
-		date: string;
+		dateKey: string;
+		epoch: number;
 	}
 
-	let { date }: Props = $props();
+	let { dateKey, epoch }: Props = $props();
 
-	const formattedDate = $derived(
-		new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const formattedDate = $derived.by(() => {
+		const isoLikeAbsolute = formatAbsoluteTimestamp(epoch, {
+			...$timePreferences,
+			absoluteFormat: 'iso-like',
+			displayMode: 'absolute'
+		});
+		if (!isoLikeAbsolute || isoLikeAbsolute === '—') {
+			return dateKey;
+		}
+		return isoLikeAbsolute.split(' ')[0] || dateKey;
+	});
 </script>
 
 <div class="date-separator" role="separator" aria-label={formattedDate}>

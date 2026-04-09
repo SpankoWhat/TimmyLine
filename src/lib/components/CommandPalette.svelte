@@ -5,6 +5,7 @@
 		currentCachedIncidents,
 		currentSelectedIncident,
 	} from "$lib/stores/cacheStore";
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
 	import { modalStore, createModalConfig } from "$lib/modals/ModalRegistry";
 	import { api } from '$lib/client';
 
@@ -37,7 +38,7 @@
 		const incident = get(currentSelectedIncident);
 		if (incident) {
 			try {
-				const response = await api.export.download(incident.uuid);
+				const response = await api.export.download(incident.uuid, get(timePreferences));
 				const blob = await response.blob();
 				const url = URL.createObjectURL(blob);
 				const a = document.createElement("a");
@@ -151,6 +152,16 @@
 	];
 
 	const configureItems: CommandItem[] = [
+		{
+			id: "configure-time-preferences",
+			label: "Open Time Preferences",
+			description: "Quickly change timezone and timestamp display settings",
+			category: "Configuration",
+			action: () => {
+				close();
+				modalStore.open(createModalConfig("time_preferences", "edit"));
+			},
+		},
 		{
 			id: "configure-event-types",
 			label: "Configure Event Types",

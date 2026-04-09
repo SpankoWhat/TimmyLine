@@ -11,6 +11,7 @@
 	import AnnotationModal from './modals/AnnotationModal.svelte';
 	import AnalystModal from './modals/AnalystModal.svelte';
 	import LookupModal from './modals/LookupModal.svelte';
+	import TimePreferencesModal from './modals/TimePreferencesModal.svelte';
 
 	let current = $derived($modalStore);
 
@@ -89,6 +90,8 @@
 			onclose={handleClose}
 			onsave={handleSave}
 		/>
+	{:else if current.entityType === 'time_preferences'}
+		<TimePreferencesModal onclose={handleClose} />
 	{:else if isLookupType(current.entityType)}
 		<LookupModal
 			mode={activeMode}

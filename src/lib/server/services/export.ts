@@ -8,9 +8,14 @@
 import { aggregateIncidentData, type ExportPayload, type ExportTimelineItem } from '$lib/server/export/exportIncident';
 import { renderExportHtml } from '$lib/server/export/exportTemplate';
 import { ServiceError } from './types';
+import type { TimeDisplayPreferences } from '$lib/utils/dateTime';
 
 // Re-export types for convenience
 export type { ExportPayload, ExportTimelineItem };
+
+export interface ExportFormattingOptions {
+	timePreferences?: Partial<TimeDisplayPreferences> | null;
+}
 
 // ============================================================================
 // Export Incident Data
@@ -42,9 +47,9 @@ export async function exportIncidentData(incidentId: string): Promise<ExportPayl
 /**
  * Render an export payload into a self-contained interactive HTML document.
  */
-export function renderExportToHtml(payload: ExportPayload): string {
+export function renderExportToHtml(payload: ExportPayload, options: ExportFormattingOptions = {}): string {
 	try {
-		return renderExportHtml(payload);
+		return renderExportHtml(payload, options);
 	} catch (err) {
 		throw new ServiceError(500, 'RENDER_ERROR', `Failed to render export HTML: ${(err as Error).message}`);
 	}
@@ -58,9 +63,12 @@ export function renderExportToHtml(payload: ExportPayload): string {
  * Complete export pipeline: aggregate data + render to HTML.
  * Returns the HTML string and a suggested filename.
  */
-export async function exportIncidentHtml(incidentId: string): Promise<{ html: string; filename: string }> {
+export async function exportIncidentHtml(
+	incidentId: string,
+	options: ExportFormattingOptions = {}
+): Promise<{ html: string; filename: string }> {
 	const payload = await exportIncidentData(incidentId);
-	const html = renderExportToHtml(payload);
+	const html = renderExportToHtml(payload, options);
 
 	const safeTitle = payload.incident.title
 		.replace(/[^a-zA-Z0-9_\- ]/g, '')

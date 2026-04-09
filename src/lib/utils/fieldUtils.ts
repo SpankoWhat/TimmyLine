@@ -9,6 +9,20 @@
  */
 
 import type { DisplayField, DisplayFieldsConfiguration, DynamicField, SystemField } from '$lib/config/displayFieldsConfig';
+import { enrichAnalystUuid, type AnalystLookup } from '$lib/utils/analystDisplay';
+import {
+	formatIfEpochField,
+	type TimeDisplayPreferences
+} from '$lib/utils/dateTime';
+
+const ANALYST_UUID_FIELDS = new Set(['discovered_by', 'actioned_by', 'noted_by', 'entered_by']);
+
+export interface FieldValueContext {
+	analystLookup?: AnalystLookup;
+	timePreferences?: Partial<TimeDisplayPreferences> | null;
+	locale?: string;
+	nowEpochSeconds?: number;
+}
 
 // ─── Shared Helpers ──────────────────────────────────────────────────────────
 
@@ -101,7 +115,8 @@ export function getNestedValue(obj: Record<string, unknown>, path: string): unkn
  */
 export function getFieldValue(
 	data: Record<string, unknown>,
-	field: DisplayField
+	field: DisplayField,
+	context: FieldValueContext = {}
 ): string {
 	if (field.kind === 'dynamic') {
 		// This is a dynamic sub-field - need to parse parent JSON first
@@ -130,6 +145,42 @@ export function getFieldValue(
 			const keys = Object.keys(parsed);
 			return `{${keys.length} fields}`;
 		}
+	}
+
+	if (ANALYST_UUID_FIELDS.has(field.key)) {
+		if (typeof value === 'string' || value === null || value === undefined) {
+			return enrichAnalystUuid(value as string | null | undefined, context.analystLookup);
+		}
+	}
+
+	const epochFormatted = formatIfEpochField(field.key, value, context.timePreferences, {
+		locale: context.locale,
+		nowEpochSeconds: context.nowEpochSeconds
+	});
+	if (epochFormatted !== null) {
+		return epochFormatted;
+	}
+
+	return formatDynamicValue(value);
+}
+
+export function getScalarFieldValue(
+	fieldKey: string,
+	value: unknown,
+	context: FieldValueContext = {}
+): string {
+	if (ANALYST_UUID_FIELDS.has(fieldKey)) {
+		if (typeof value === 'string' || value === null || value === undefined) {
+			return enrichAnalystUuid(value as string | null | undefined, context.analystLookup);
+		}
+	}
+
+	const epochFormatted = formatIfEpochField(fieldKey, value, context.timePreferences, {
+		locale: context.locale,
+		nowEpochSeconds: context.nowEpochSeconds
+	});
+	if (epochFormatted !== null) {
+		return epochFormatted;
 	}
 
 	return formatDynamicValue(value);

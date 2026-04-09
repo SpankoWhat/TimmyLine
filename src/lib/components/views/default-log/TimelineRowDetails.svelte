@@ -1,7 +1,10 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
+    import { analystsByUuid } from '$lib/stores/cacheStore';
     import ResizableDivider from '../../ResizableDivider.svelte';
     import JsonViewer from '../../JsonViewer.svelte';
+    import { timePreferences } from '$lib/stores/timePreferencesStore';
+    import { getScalarFieldValue, keyToLabel } from '$lib/utils/fieldUtils';
 
     let {
         item,
@@ -17,6 +20,15 @@
 
     /** Keys that contain JSON data and should be rendered with the JSON viewer */
     const jsonFieldKeys = new Set(['event_data', 'action_data']);
+
+    let fieldValueContext = $derived({
+        analystLookup: $analystsByUuid,
+        timePreferences: $timePreferences
+    });
+
+    function getDetailValue(key: string, value: unknown): string {
+        return getScalarFieldValue(key, value, fieldValueContext);
+    }
 
     // Extract related entities and events from enriched data
     let relatedEntities = $derived(
@@ -44,10 +56,10 @@
             <div class="column-header">Full Details</div>
             <div class="details-grid">
                 {#each Object.entries(item.data) as [key, value] (key)}
-                    {#if value && typeof value !== 'object'}
+                    {#if value !== null && value !== undefined && typeof value !== 'object'}
                         {#if jsonFieldKeys.has(key)}
                             <div class="detail-item">
-                                <span class="detail-label">{key.replace(/_/g, ' ')}</span>
+                                <span class="detail-label">{keyToLabel(key)}</span>
                                 <span class="detail-value"></span>
                             </div>
                             <div class="json-viewer-slot">
@@ -55,8 +67,8 @@
                             </div>
                         {:else}
                             <div class="detail-item">
-                                <span class="detail-label">{key.replace(/_/g, ' ')}</span>
-                                <span class="detail-value">{value}</span>
+                                <span class="detail-label">{keyToLabel(key)}</span>
+                                <span class="detail-value">{getDetailValue(key, value)}</span>
                             </div>
                         {/if}
                     {/if}

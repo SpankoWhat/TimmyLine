@@ -3,6 +3,8 @@
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
 	import type { TimelineEvent } from '$lib/types/events';
 	import type { InvestigationAction } from '$lib/types/actions';
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatTimestampForUi } from '$lib/utils/dateTime';
 
 	interface Props {
 		items: TimelineItem[];
@@ -37,16 +39,6 @@
 		const h = Math.floor(seconds / 3600);
 		const m = Math.round((seconds % 3600) / 60);
 		return m > 0 ? `${h}h ${m}m` : `${h}h`;
-	}
-
-	function formatTime(epoch: number): string {
-		const d = new Date(epoch * 1000);
-		return d.toLocaleTimeString('en-GB', {
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit',
-			hour12: false
-		});
 	}
 
 	function getItemLabel(item: TimelineItem): string {
@@ -115,8 +107,9 @@
 	{#if expanded}
 		<div class="cluster-items">
 			{#each items as item (item.uuid)}
+				{@const itemTimestampUi = formatTimestampForUi(item.timestamp, $timePreferences)}
 				<div class="cluster-item">
-					<span class="cluster-item-time">{formatTime(item.timestamp)}</span>
+					<span class="cluster-item-time" title={itemTimestampUi.tooltip ?? itemTimestampUi.absolute}>{itemTimestampUi.text}</span>
 					<span class="cluster-item-type">{getItemTypeLabel(item)}</span>
 					<span class="cluster-item-label">{getItemLabel(item)}</span>
 				</div>

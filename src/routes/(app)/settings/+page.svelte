@@ -3,8 +3,70 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/client';
 	import type { ApiKeyRow } from '$lib/client';
+	import { createModalConfig, modalStore } from '$lib/modals/ModalRegistry';
+	import {
+		defaultTimePreferences,
+		resetTimePreferences,
+		timePreferences,
+		updateTimePreferences
+	} from '$lib/stores/timePreferencesStore';
+	import {
+		ABSOLUTE_TIME_FORMATS,
+		TIME_DISPLAY_MODES,
+		formatTimestampForUi,
+		type AbsoluteTimeFormat,
+		type TimeDisplayMode
+	} from '$lib/utils/dateTime';
 
 	let { data }: PageProps = $props();
+
+	type SettingsTab = 'preferences' | 'api-keys';
+
+	const FALLBACK_TIMEZONES = [
+		'UTC',
+		'Etc/UTC',
+		'Africa/Johannesburg',
+		'America/Chicago',
+		'America/Denver',
+		'America/Los_Angeles',
+		'America/New_York',
+		'America/Phoenix',
+		'America/Sao_Paulo',
+		'Asia/Dubai',
+		'Asia/Hong_Kong',
+		'Asia/Kolkata',
+		'Asia/Singapore',
+		'Asia/Tokyo',
+		'Australia/Perth',
+		'Australia/Sydney',
+		'Europe/Amsterdam',
+		'Europe/Berlin',
+		'Europe/London',
+		'Europe/Madrid',
+		'Europe/Paris',
+		'Europe/Warsaw',
+		'Pacific/Auckland'
+	] as const;
+
+	const ABSOLUTE_FORMAT_LABELS: Record<AbsoluteTimeFormat, string> = {
+		'iso-like': 'ISO-like (YYYY-MM-DD HH:mm:ss TZ)',
+		'locale-short': 'Localized (date + short time)',
+		'utc-fixed': 'Fixed UTC (YYYY-MM-DD HH:mm:ss UTC)'
+	};
+
+	const DISPLAY_MODE_LABELS: Record<TimeDisplayMode, string> = {
+		absolute: 'Absolute',
+		relative: 'Relative'
+	};
+
+	type TimeZoneOptionsResult = {
+		values: string[];
+		source: 'supported' | 'fallback';
+	};
+
+	let activeTab = $state<SettingsTab>('preferences');
+	let timeZoneOptions = $state<string[]>([]);
+	let timeZoneSource = $state<'supported' | 'fallback'>('fallback');
 
 	let apiKeys = $state<ApiKeyRow[]>([]);
 	let loading = $state(true);
@@ -78,22 +140,6 @@
 		setTimeout(() => (copied = false), 2000);
 	}
 
-	function formatTimestamp(epoch: number | null): string {
-		if (!epoch) return '—';
-		const date = new Date(epoch * 1000);
-		return date.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
-	}
-
-	function formatRelative(epoch: number | null): string {
-		if (!epoch) return 'Never';
-		const now = Math.floor(Date.now() / 1000);
-		const diff = now - epoch;
-		if (diff < 60) return 'Just now';
-		if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-		if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-		return `${Math.floor(diff / 86400)}d ago`;
-	}
-
 	function isExpired(key: ApiKeyRow): boolean {
 		if (!key.expires_at) return false;
 		return key.expires_at < Math.floor(Date.now() / 1000);
@@ -101,6 +147,95 @@
 
 	let activeKeys = $derived(apiKeys.filter((k: ApiKeyRow) => !k.revoked_at && !isExpired(k)));
 	let inactiveKeys = $derived(apiKeys.filter((k: ApiKeyRow) => k.revoked_at || isExpired(k)));
+	let isDefaultTimePreferences = $derived(
+		$timePreferences.timezone === defaultTimePreferences.timezone &&
+			$timePreferences.absoluteFormat === defaultTimePreferences.absoluteFormat &&
+			$timePreferences.displayMode === defaultTimePreferences.displayMode &&
+			$timePreferences.showTooltipAlternate === defaultTimePreferences.showTooltipAlternate
+	);
+	let previewAbsolute = $derived(
+		formatTimestampForUi(
+			Math.floor(Date.now() / 1000),
+			{ ...$timePreferences, displayMode: 'absolute' },
+			{ nowEpochSeconds: Math.floor(Date.now() / 1000) }
+		).text
+	);
+	let previewRelative = $derived(
+		formatTimestampForUi(
+			Math.floor(Date.now() / 1000),
+			{ ...$timePreferences, displayMode: 'relative' },
+			{ nowEpochSeconds: Math.floor(Date.now() / 1000) }
+		).text
+	);
+
+	function getTimeZoneOptions(): TimeZoneOptionsResult {
+		const withCurrent = new Set<string>([$timePreferences.timezone, ...FALLBACK_TIMEZONES]);
+		const intlWithSupportedValues = Intl as typeof Intl & {
+			supportedValuesOf?: (key: 'timeZone') => string[];
+		};
+
+		if (typeof intlWithSupportedValues.supportedValuesOf === 'function') {
+			try {
+				const supported = intlWithSupportedValues.supportedValuesOf('timeZone');
+				for (const tz of supported) {
+					withCurrent.add(tz);
+				}
+
+				return {
+					values: Array.from(withCurrent).sort((a, b) => a.localeCompare(b)),
+					source: 'supported'
+				};
+			} catch {
+				// Fall through to fallback values.
+			}
+		}
+
+		return {
+			values: Array.from(withCurrent).sort((a, b) => a.localeCompare(b)),
+			source: 'fallback'
+		};
+	}
+
+	function handleTimeZoneChange(event: Event) {
+		const select = event.currentTarget as HTMLSelectElement | null;
+		if (!select) return;
+		updateTimePreferences({ timezone: select.value });
+	}
+
+	function handleAbsoluteFormatChange(event: Event) {
+		const select = event.currentTarget as HTMLSelectElement | null;
+		if (!select) return;
+		updateTimePreferences({ absoluteFormat: select.value as AbsoluteTimeFormat });
+	}
+
+	function handleDisplayModeChange(event: Event) {
+		const select = event.currentTarget as HTMLSelectElement | null;
+		if (!select) return;
+		updateTimePreferences({ displayMode: select.value as TimeDisplayMode });
+	}
+
+	function handleTooltipAlternateToggle(event: Event) {
+		const input = event.currentTarget as HTMLInputElement | null;
+		if (!input) return;
+		updateTimePreferences({ showTooltipAlternate: input.checked });
+	}
+
+	function openQuickPreferencesModal() {
+		modalStore.open(createModalConfig('time_preferences', 'edit'));
+	}
+
+	$effect(() => {
+		if (timeZoneOptions.length > 0) return;
+		const result = getTimeZoneOptions();
+		timeZoneOptions = result.values;
+		timeZoneSource = result.source;
+	});
+
+	$effect(() => {
+		const timezone = $timePreferences.timezone;
+		if (!timezone || timeZoneOptions.includes(timezone)) return;
+		timeZoneOptions = [timezone, ...timeZoneOptions].sort((a, b) => a.localeCompare(b));
+	});
 
 	onMount(() => {
 		document.title = 'Settings — TimmyLine';
@@ -114,6 +249,139 @@
 </header>
 
 <div class="page-content">
+	<div class="settings-tabs" role="tablist" aria-label="Settings sections">
+		<button
+			type="button"
+			class="settings-tab"
+			class:active={activeTab === 'preferences'}
+			role="tab"
+			aria-selected={activeTab === 'preferences'}
+			onclick={() => (activeTab = 'preferences')}
+		>
+			Preferences
+		</button>
+		<button
+			type="button"
+			class="settings-tab"
+			class:active={activeTab === 'api-keys'}
+			role="tab"
+			aria-selected={activeTab === 'api-keys'}
+			onclick={() => (activeTab = 'api-keys')}
+		>
+			API Keys
+		</button>
+	</div>
+
+	{#if activeTab === 'preferences'}
+		<section class="settings-section">
+			<div class="section-header">
+				<h2 class="section-title">Time Display Preferences</h2>
+				<p class="section-description">
+					Control timezone and timestamp formatting across timeline views and details.
+				</p>
+			</div>
+
+			<div class="preferences-card">
+				<div class="preferences-grid">
+					<div class="preferences-field preferences-field-full">
+						<label class="preferences-label" for="settings-timezone">Timezone</label>
+						<select
+							id="settings-timezone"
+							class="preferences-input mono"
+							value={$timePreferences.timezone}
+							onchange={handleTimeZoneChange}
+						>
+							{#if timeZoneOptions.length === 0}
+								<option value={$timePreferences.timezone}>{$timePreferences.timezone}</option>
+							{:else}
+								{#each timeZoneOptions as timezone (timezone)}
+									<option value={timezone}>{timezone}</option>
+								{/each}
+							{/if}
+						</select>
+						<p class="preferences-hint">
+							{#if timeZoneSource === 'supported'}
+								Loaded from <code>Intl.supportedValuesOf('timeZone')</code>.
+							{:else}
+								Using fallback timezone list.
+							{/if}
+						</p>
+					</div>
+
+					<div class="preferences-field">
+						<label class="preferences-label" for="settings-absolute-format">Absolute Format</label>
+						<select
+							id="settings-absolute-format"
+							class="preferences-input"
+							value={$timePreferences.absoluteFormat}
+							onchange={handleAbsoluteFormatChange}
+						>
+							{#each ABSOLUTE_TIME_FORMATS as format (format)}
+								<option value={format}>{ABSOLUTE_FORMAT_LABELS[format]}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="preferences-field">
+						<label class="preferences-label" for="settings-display-mode">Display Mode</label>
+						<select
+							id="settings-display-mode"
+							class="preferences-input"
+							value={$timePreferences.displayMode}
+							onchange={handleDisplayModeChange}
+						>
+							{#each TIME_DISPLAY_MODES as mode (mode)}
+								<option value={mode}>{DISPLAY_MODE_LABELS[mode]}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<label class="preferences-toggle" for="settings-tooltip-alternate">
+					<input
+						id="settings-tooltip-alternate"
+						type="checkbox"
+						checked={$timePreferences.showTooltipAlternate}
+						onchange={handleTooltipAlternateToggle}
+					/>
+					<span class="preferences-toggle-copy">
+						<span class="preferences-toggle-title">Show alternate timestamp in tooltip</span>
+						<span class="preferences-toggle-description">
+							When enabled, relative timestamps show absolute time on hover and vice versa.
+						</span>
+					</span>
+				</label>
+
+				<div class="preferences-preview">
+					<div class="preferences-preview-header">Preview</div>
+					<div class="preferences-preview-grid">
+						<div class="preferences-preview-item">
+							<span class="preferences-preview-label">Absolute</span>
+							<span class="preferences-preview-value mono">{previewAbsolute}</span>
+						</div>
+						<div class="preferences-preview-item">
+							<span class="preferences-preview-label">Relative</span>
+							<span class="preferences-preview-value mono">{previewRelative}</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="preferences-actions">
+					<button
+						type="button"
+						class="btn-secondary"
+						onclick={() => resetTimePreferences()}
+						disabled={isDefaultTimePreferences}
+					>
+						Reset to Defaults
+					</button>
+					<button type="button" class="btn-secondary" onclick={openQuickPreferencesModal}>
+						Open Quick Preferences Modal
+					</button>
+				</div>
+			</div>
+		</section>
+	{:else}
 	<!-- API Keys Section -->
 	<section class="settings-section">
 		<div class="section-header">
@@ -245,6 +513,10 @@
 						</thead>
 						<tbody>
 							{#each activeKeys as key (key.id)}
+								{@const nowEpoch = Math.floor(Date.now() / 1000)}
+								{@const createdAtUi = formatTimestampForUi(key.created_at, $timePreferences, { nowEpochSeconds: nowEpoch })}
+								{@const lastUsedAtUi = formatTimestampForUi(key.last_used_at, $timePreferences, { nowEpochSeconds: nowEpoch })}
+								{@const expiresAtUi = formatTimestampForUi(key.expires_at, $timePreferences, { nowEpochSeconds: nowEpoch })}
 								<tr>
 									<td class="cell-name">{key.name}</td>
 									<td class="cell-key"><code>{key.key_prefix}…</code></td>
@@ -253,11 +525,11 @@
 											{key.role}
 										</span>
 									</td>
-									<td class="cell-date mono" title={formatTimestamp(key.created_at)}>{formatRelative(key.created_at)}</td>
-									<td class="cell-date mono" title={formatTimestamp(key.last_used_at)}>{formatRelative(key.last_used_at)}</td>
-									<td class="cell-date mono" title={formatTimestamp(key.expires_at)}>
+									<td class="cell-date mono" title={createdAtUi.tooltip ?? undefined}>{createdAtUi.text}</td>
+									<td class="cell-date mono" title={lastUsedAtUi.tooltip ?? undefined}>{lastUsedAtUi.text}</td>
+									<td class="cell-date mono" title={expiresAtUi.tooltip ?? undefined}>
 										{#if key.expires_at}
-											{formatTimestamp(key.expires_at)}
+											{expiresAtUi.text}
 										{:else}
 											Never
 										{/if}
@@ -297,16 +569,19 @@
 						</thead>
 						<tbody>
 							{#each inactiveKeys as key (key.id)}
+								{@const nowEpoch = Math.floor(Date.now() / 1000)}
+								{@const createdAtUi = formatTimestampForUi(key.created_at, $timePreferences, { nowEpochSeconds: nowEpoch })}
+								{@const revokedAtUi = formatTimestampForUi(key.revoked_at, $timePreferences, { nowEpochSeconds: nowEpoch })}
 								<tr class="row-inactive">
 									<td class="cell-name">{key.name}</td>
 									<td class="cell-key"><code>{key.key_prefix}…</code></td>
 									<td class="cell-role">
 										<span class="role-badge role-inactive">{key.role}</span>
 									</td>
-									<td class="cell-date mono">{formatRelative(key.created_at)}</td>
+									<td class="cell-date mono" title={createdAtUi.tooltip ?? undefined}>{createdAtUi.text}</td>
 									<td class="cell-status">
 										{#if key.revoked_at}
-											<span class="status-revoked">Revoked {formatRelative(key.revoked_at)}</span>
+											<span class="status-revoked" title={revokedAtUi.tooltip ?? undefined}>Revoked {revokedAtUi.text}</span>
 										{:else}
 											<span class="status-expired">Expired</span>
 										{/if}
@@ -319,6 +594,7 @@
 			{/if}
 		{/if}
 	</section>
+	{/if}
 </div>
 
 <style>
@@ -350,6 +626,50 @@
 		overflow-y: auto;
 	}
 
+	.settings-tabs {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-1);
+		background: hsl(var(--bg-surface-100));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-md);
+		width: fit-content;
+	}
+
+	.settings-tab {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 28px;
+		padding: var(--space-1) var(--space-3);
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: hsl(var(--fg-light));
+		background: transparent;
+		border: var(--border-width) solid transparent;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: var(--transition-colors);
+	}
+
+	.settings-tab:hover {
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-surface-200));
+	}
+
+	.settings-tab.active {
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-surface-300));
+		border-color: hsl(var(--border-strong));
+	}
+
+	.settings-tab:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 1px;
+	}
+
 	/* ============================================================
 	   Settings Section
 	   ============================================================ */
@@ -376,6 +696,191 @@
 		color: hsl(var(--fg-light));
 		margin: 0;
 		max-width: 640px;
+	}
+
+	.preferences-card {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		padding: var(--space-4);
+		background: hsl(var(--bg-surface-100));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-lg);
+	}
+
+	.preferences-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-3);
+	}
+
+	.preferences-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+
+	.preferences-field-full {
+		grid-column: 1 / -1;
+	}
+
+	.preferences-label {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		font-weight: var(--font-medium);
+		color: hsl(var(--fg-light));
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
+	.preferences-input {
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-control));
+		border: var(--border-width) solid hsl(var(--border-control));
+		border-radius: var(--radius-sm);
+		padding: var(--space-1\.5) var(--space-2);
+		min-height: 32px;
+		transition: var(--transition-colors);
+	}
+
+	.preferences-input:focus {
+		outline: none;
+		border-color: hsl(var(--border-focus));
+	}
+
+	.preferences-hint {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		line-height: var(--leading-snug);
+		color: hsl(var(--fg-lighter));
+		margin: 0;
+	}
+
+	.preferences-hint code {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-data));
+	}
+
+	.preferences-toggle {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-2);
+		padding: var(--space-2) var(--space-3);
+		background: hsl(var(--bg-surface-75));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-md);
+		cursor: pointer;
+	}
+
+	.preferences-toggle input {
+		margin-top: var(--space-0\.5);
+	}
+
+	.preferences-toggle-copy {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-0\.5);
+	}
+
+	.preferences-toggle-title {
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: hsl(var(--fg-default));
+	}
+
+	.preferences-toggle-description {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+	}
+
+	.preferences-preview {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		padding: var(--space-3);
+		background: hsl(var(--bg-surface-75));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-md);
+	}
+
+	.preferences-preview-header {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		font-weight: var(--font-semibold);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+		color: hsl(var(--fg-lighter));
+	}
+
+	.preferences-preview-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-3);
+	}
+
+	.preferences-preview-item {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+
+	.preferences-preview-label {
+		font-family: var(--font-family);
+		font-size: var(--text-xs);
+		color: hsl(var(--fg-lighter));
+	}
+
+	.preferences-preview-value {
+		font-size: var(--text-sm);
+		color: hsl(var(--fg-data));
+		word-break: break-word;
+	}
+
+	.preferences-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
+
+	.btn-secondary {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-1);
+		padding: var(--space-1\.5) var(--space-3);
+		font-family: var(--font-family);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		line-height: var(--leading-tight);
+		color: hsl(var(--fg-light));
+		background: hsl(var(--bg-surface-300));
+		border: var(--border-width) solid hsl(var(--border-default));
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: var(--transition-colors);
+		min-height: 32px;
+	}
+
+	.btn-secondary:hover:not(:disabled) {
+		color: hsl(var(--fg-default));
+		background: hsl(var(--bg-surface-400));
+		border-color: hsl(var(--border-strong));
+	}
+
+	.btn-secondary:focus-visible {
+		outline: var(--border-width-thick) solid hsl(var(--border-focus));
+		outline-offset: 2px;
+	}
+
+	.btn-secondary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	/* ============================================================

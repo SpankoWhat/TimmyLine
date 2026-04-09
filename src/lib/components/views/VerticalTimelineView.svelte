@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { TimelineItem } from '$lib/stores/cacheStore';
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatTimestampForUi, getTimelineDateKey } from '$lib/utils/dateTime';
 
 	import TimelineCard from './vertical-timeline/TimelineCard.svelte';
 	import TimelineGap from './vertical-timeline/TimelineGap.svelte';
@@ -40,7 +42,8 @@
 
 	type DateSeparatorNode = {
 		kind: 'date-separator';
-		date: string; // ISO date 'YYYY-MM-DD'
+		dateKey: string;
+		anchorEpoch: number;
 	};
 
 	type GapNode = {
@@ -63,45 +66,25 @@
 
 	// ── Processing Logic ───────────────────────────────────────────────────
 
-	function epochToDateStr(epoch: number): string {
-		const ts = epoch.toString().length === 10 ? epoch * 1000 : epoch;
-		const d = new Date(ts);
-		const year = d.getFullYear();
-		const month = String(d.getMonth() + 1).padStart(2, '0');
-		const day = String(d.getDate()).padStart(2, '0');
-		return `${year}-${month}-${day}`;
-	}
-
-	function formatTime(epoch: number): string {
-		const ts = epoch.toString().length === 10 ? epoch * 1000 : epoch;
-		const d = new Date(ts);
-		return d.toLocaleTimeString('en-US', {
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit',
-			hour12: false
-		});
-	}
-
 	/**
 	 * Process raw timeline items into a list of virtual nodes
 	 * that includes date separators, time gaps, and clusters.
 	 */
-	function processTimelineItems(sourceItems: TimelineItem[]): ProcessedNode[] {
+	function processTimelineItems(sourceItems: TimelineItem[], timezone: string): ProcessedNode[] {
 		if (sourceItems.length === 0) return [];
 
 		const result: ProcessedNode[] = [];
-		let lastDate = '';
+		let lastDateKey = '';
 		let i = 0;
 
 		while (i < sourceItems.length) {
 			const current = sourceItems[i];
-			const currentDate = epochToDateStr(current.timestamp);
+			const currentDateKey = getTimelineDateKey(current.timestamp, timezone);
 
 			// Insert date separator on day change
-			if (currentDate !== lastDate) {
-				result.push({ kind: 'date-separator', date: currentDate });
-				lastDate = currentDate;
+			if (currentDateKey !== lastDateKey) {
+				result.push({ kind: 'date-separator', dateKey: currentDateKey, anchorEpoch: current.timestamp });
+				lastDateKey = currentDateKey;
 			}
 
 			// Try to detect a cluster starting at this index
@@ -138,10 +121,10 @@
 				}
 
 				// Check for date change after gap
-				const nextDate = epochToDateStr(next.timestamp);
-				if (nextDate !== lastDate) {
-					result.push({ kind: 'date-separator', date: nextDate });
-					lastDate = nextDate;
+				const nextDateKey = getTimelineDateKey(next.timestamp, timezone);
+				if (nextDateKey !== lastDateKey) {
+					result.push({ kind: 'date-separator', dateKey: nextDateKey, anchorEpoch: next.timestamp });
+					lastDateKey = nextDateKey;
 				}
 			}
 		}
@@ -151,7 +134,7 @@
 
 	// ── Derived Processed Items ────────────────────────────────────────────
 
-	let processedNodes = $derived(processTimelineItems(items));
+	let processedNodes = $derived(processTimelineItems(items, $timePreferences.timezone));
 </script>
 
 {#if !hasIncident}
@@ -183,7 +166,7 @@
 		{#each processedNodes as node, idx (idx)}
 			{#if node.kind === 'date-separator'}
 				<li class="timeline-node separator-node" role="separator">
-					<TimelineDateSeparator date={node.date} />
+					<TimelineDateSeparator dateKey={node.dateKey} epoch={node.anchorEpoch} />
 				</li>
 			{:else if node.kind === 'gap'}
 				<li class="timeline-node gap-node">
@@ -211,8 +194,11 @@
 					</div>
 				</li>
 			{:else if node.kind === 'item'}
+				{@const nodeTimestampUi = formatTimestampForUi(node.item.timestamp, $timePreferences)}
 				<li class="timeline-node item-node">
-					<div class="node-timestamp">{formatTime(node.item.timestamp)}</div>
+					<div class="node-timestamp" title={nodeTimestampUi.tooltip ?? nodeTimestampUi.absolute}>
+						{nodeTimestampUi.text}
+					</div>
 					<div class="node-spine">
 						{#if node.item.type === 'event'}
 							<div class="spine-dot event-dot"></div>

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { TimelineItem } from '$lib/stores/cacheStore';
-    import { highlightedItemUuids } from '$lib/stores/cacheStore';
+    import { analystsByUuid, highlightedItemUuids } from '$lib/stores/cacheStore';
     import { api } from '$lib/client';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
@@ -8,6 +8,8 @@
     import type { DisplayField } from '$lib/config/displayFieldsConfig';
     import { fade } from 'svelte/transition';
     import { getFieldValue } from '$lib/utils/fieldUtils';
+    import { timePreferences } from '$lib/stores/timePreferencesStore';
+    import { formatTimestampForUi } from '$lib/utils/dateTime';
     import TimelineRowDetails from './TimelineRowDetails.svelte';
     
     let { 
@@ -29,27 +31,15 @@
 
     let isHighlighted = $derived($highlightedItemUuids.has(item.uuid));
 
+    let fieldValueContext = $derived({
+        analystLookup: $analystsByUuid,
+        timePreferences: $timePreferences
+    });
+
+    let timestampUi = $derived(formatTimestampForUi(item.timestamp, $timePreferences));
+
     function getDisplayValue(field: DisplayField): string {
-        return getFieldValue(item.data as Record<string, unknown>, field);
-    }
-
-    function formatTimestamp(epochTime: number): string {
-        if (!epochTime) return "N/A";
-
-        const timestamp =
-            epochTime.toString().length === 10 ? epochTime * 1000 : epochTime;
-        const date = new Date(timestamp);
-        if (isNaN(date.getTime())) return "Invalid Date";
-
-        return date.toLocaleString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-        });
+        return getFieldValue(item.data as Record<string, unknown>, field, fieldValueContext);
     }
 
     function toggleExpandedDetails() {
@@ -120,9 +110,9 @@
     <div class="main-row">
         <div class="data-row">
             <!-- Timestamp -->
-            <div class="data-field timestamp-field" title="Occurred or Performed At">
+            <div class="data-field timestamp-field" title={timestampUi.tooltip ?? timestampUi.absolute}>
                 <span class="field-label">TIME</span>
-                <span class="field-value">{formatTimestamp(item.timestamp)}</span>
+                <span class="field-value">{timestampUi.text}</span>
             </div>
 
             <!-- Pinned Entity Fields -->
@@ -329,11 +319,6 @@
     .note-field {
         display: flex;
         gap: var(--space-0\.5);
-    }
-
-    .note-prefix {
-        color: hsl(var(--fg-muted));
-        user-select: none;
     }
 
     .note-value {

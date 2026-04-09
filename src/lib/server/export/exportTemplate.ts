@@ -21,17 +21,32 @@
 import type { ExportPayload } from './exportIncident';
 import { getAppCss } from './extractStyles';
 import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
+import {
+	formatTimestampForUi,
+	resolveTimePreferences,
+	type TimeDisplayPreferences
+} from '$lib/utils/dateTime';
+
+export interface ExportRenderOptions {
+	timePreferences?: Partial<TimeDisplayPreferences> | null;
+}
 
 /**
  * Renders the export payload into a complete self-contained HTML string.
  */
-export function renderExportHtml(payload: ExportPayload): string {
+export function renderExportHtml(payload: ExportPayload, options: ExportRenderOptions = {}): string {
 	const dataJson = JSON.stringify(payload);
+	const resolvedTimePreferences = resolveTimePreferences(options.timePreferences);
+	const resolvedTimePreferencesJson = JSON.stringify(resolvedTimePreferences);
 	const incidentTitle = escapeHtml(payload.incident.title);
-	const exportDate = new Date(payload.exportedAt).toLocaleString('en-US', {
-		year: 'numeric', month: '2-digit', day: '2-digit',
-		hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-	});
+	const exportedAtEpochMs = Date.parse(payload.exportedAt);
+	const exportedAtEpoch = Number.isFinite(exportedAtEpochMs)
+		? Math.trunc(exportedAtEpochMs / 1000)
+		: null;
+	const exportDate =
+		exportedAtEpoch === null
+			? payload.exportedAt
+			: formatTimestampForUi(exportedAtEpoch, resolvedTimePreferences).text;
 
 	// Serialize the real displayFieldsConfig for the embedded JS
 	const fieldConfigJson = JSON.stringify(displayFieldsConfig);
@@ -151,6 +166,7 @@ ${getExportStyles()}
 // EMBEDDED DATA
 // ════════════════════════════════════════════════════════════════════════════
 var DATA = ${dataJson};
+var TIME_PREFERENCES = ${resolvedTimePreferencesJson};
 
 // ════════════════════════════════════════════════════════════════════════════
 // DISPLAY FIELD CONFIG (auto-imported from displayFieldsConfig.ts)
@@ -207,7 +223,7 @@ function getFieldValue(data, field) {
 		var p = safeJsonParse(value);
 		if (p) return '{' + Object.keys(p).length + ' fields}';
 	}
-	return formatDynamicValue(value);
+	return formatValueWithSemantics(field.key, value).text;
 }
 
 function discoverDynamicFields(items, config, itemType) {
@@ -256,15 +272,202 @@ function mergeFieldConfigs(staticConfig, dynamicMap) {
 // FORMATTING
 // ════════════════════════════════════════════════════════════════════════════
 
-function formatTimestamp(epochTime) {
-	if (!epochTime) return 'N/A';
-	var ts = epochTime.toString().length === 10 ? epochTime * 1000 : epochTime;
-	var date = new Date(ts);
-	if (isNaN(date.getTime())) return 'Invalid Date';
-	return date.toLocaleString('en-US', {
-		year: 'numeric', month: '2-digit', day: '2-digit',
-		hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+var COMMON_EPOCH_FIELD_REGEX = /(timestamp|_at$|occurred|discovered|performed|created|updated|deleted|expires|last_used)/i;
+var ANALYST_UUID_FIELD_REGEX = /(^|_)(discovered_by|actioned_by|entered_by|noted_by|analyst_uuid)$/i;
+
+function isValidTimeZone(timezone) {
+	if (!timezone || typeof timezone !== 'string') return false;
+	try {
+		new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+		return true;
+	} catch (e) {
+		return false;
+	}
+}
+
+function normalizeEpoch(value) {
+	if (value === null || value === undefined) return null;
+
+	var numericValue;
+	if (value instanceof Date) {
+		numericValue = value.getTime();
+	} else if (typeof value === 'string') {
+		numericValue = Number(value);
+	} else if (typeof value === 'number') {
+		numericValue = value;
+	} else {
+		return null;
+	}
+
+	if (!Number.isFinite(numericValue)) return null;
+
+	var abs = Math.abs(numericValue);
+	if (abs > 1e11) {
+		return Math.trunc(numericValue / 1000);
+	}
+
+	return Math.trunc(numericValue);
+}
+
+function partsToObject(parts) {
+	var collected = {};
+	parts.forEach(function(part) {
+		if (part.type !== 'literal') {
+			collected[part.type] = part.value;
+		}
 	});
+	return collected;
+}
+
+function formatIsoLike(date, timezone) {
+	var formatter = new Intl.DateTimeFormat('en-CA', {
+		timeZone: timezone,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false,
+		timeZoneName: 'short'
+	});
+
+	var p = partsToObject(formatter.formatToParts(date));
+	var year = p.year || '0000';
+	var month = p.month || '00';
+	var day = p.day || '00';
+	var hour = p.hour || '00';
+	var minute = p.minute || '00';
+	var second = p.second || '00';
+	var zone = p.timeZoneName || timezone;
+
+	return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + ' ' + zone;
+}
+
+function formatUtcFixed(date) {
+	var year = date.getUTCFullYear();
+	var month = String(date.getUTCMonth() + 1).padStart(2, '0');
+	var day = String(date.getUTCDate()).padStart(2, '0');
+	var hour = String(date.getUTCHours()).padStart(2, '0');
+	var minute = String(date.getUTCMinutes()).padStart(2, '0');
+	var second = String(date.getUTCSeconds()).padStart(2, '0');
+
+	return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + ' UTC';
+}
+
+function formatAbsoluteTimestamp(epochTime) {
+	var epochSeconds = normalizeEpoch(epochTime);
+	if (epochSeconds === null) return '\u2014';
+
+	var date = new Date(epochSeconds * 1000);
+	if (isNaN(date.getTime())) return '\u2014';
+
+	var timezone = isValidTimeZone(TIME_PREFERENCES.timezone)
+		? TIME_PREFERENCES.timezone
+		: 'UTC';
+	var format = TIME_PREFERENCES.absoluteFormat;
+
+	if (format === 'utc-fixed') {
+		return formatUtcFixed(date);
+	}
+
+	if (format === 'iso-like') {
+		return formatIsoLike(date, timezone);
+	}
+
+	return new Intl.DateTimeFormat(undefined, {
+		timeZone: timezone,
+		dateStyle: 'medium',
+		timeStyle: 'short'
+	}).format(date);
+}
+
+function formatRelativeTimestamp(epochTime, nowEpochSeconds) {
+	var target = normalizeEpoch(epochTime);
+	if (target === null) return '\u2014';
+
+	var now = normalizeEpoch(nowEpochSeconds);
+	if (now === null) now = Math.floor(Date.now() / 1000);
+
+	var delta = target - now;
+	var absDelta = Math.abs(delta);
+
+	if (absDelta < 10) {
+		return 'just now';
+	}
+
+	var units = [
+		['y', 31536000],
+		['mo', 2592000],
+		['w', 604800],
+		['d', 86400],
+		['h', 3600],
+		['m', 60],
+		['s', 1]
+	];
+
+	for (var i = 0; i < units.length; i++) {
+		var label = units[i][0];
+		var size = units[i][1];
+		if (absDelta >= size) {
+			var amount = Math.floor(absDelta / size);
+			return delta < 0 ? amount + label + ' ago' : 'in ' + amount + label;
+		}
+	}
+
+	return 'just now';
+}
+
+function formatTimestampForDisplay(epochTime) {
+	var absolute = formatAbsoluteTimestamp(epochTime);
+	var relative = formatRelativeTimestamp(epochTime, Math.floor(Date.now() / 1000));
+	var text = TIME_PREFERENCES.displayMode === 'relative' ? relative : absolute;
+	var tooltip = null;
+
+	if (TIME_PREFERENCES.showTooltipAlternate) {
+		tooltip = TIME_PREFERENCES.displayMode === 'relative' ? absolute : relative;
+	}
+
+	return {
+		text: text,
+		tooltip: tooltip,
+		absolute: absolute,
+		relative: relative
+	};
+}
+
+function resolveAnalyst(analystUuid) {
+	if (!analystUuid || !DATA.analysts) return null;
+	var analyst = DATA.analysts[analystUuid];
+	if (!analyst) return null;
+	return analyst;
+}
+
+function enrichAnalystUuid(analystUuid) {
+	if (!analystUuid) return '\u2014';
+	var analyst = resolveAnalyst(analystUuid);
+	if (!analyst) return analystUuid;
+
+	var fullName = typeof analyst.full_name === 'string' ? analyst.full_name.trim() : '';
+	if (fullName) return fullName;
+
+	var username = typeof analyst.username === 'string' ? analyst.username.trim() : '';
+	if (username) return username;
+
+	return analystUuid;
+}
+
+function formatValueWithSemantics(fieldKey, value) {
+	if (typeof fieldKey === 'string' && ANALYST_UUID_FIELD_REGEX.test(fieldKey)) {
+		return { text: enrichAnalystUuid(typeof value === 'string' ? value : String(value || '')), tooltip: null };
+	}
+
+	if (typeof fieldKey === 'string' && COMMON_EPOCH_FIELD_REGEX.test(fieldKey) && normalizeEpoch(value) !== null) {
+		var tsUi = formatTimestampForDisplay(value);
+		return { text: tsUi.text, tooltip: tsUi.tooltip };
+	}
+
+	return { text: formatDynamicValue(value), tooltip: null };
 }
 
 function esc(str) {
@@ -351,12 +554,14 @@ function renderTimelineRow(item) {
 	var pinnedFields = fields.filter(function(f) { return f.pinned && f.kind !== 'system'; }).sort(function(a, b) { return a.order - b.order; });
 	var noteFields = fields.filter(function(f) { return f.kind === 'system' && f.showInNote; });
 	var uuid = item.uuid;
+	var timestampUi = formatTimestampForDisplay(item.timestamp);
+	var timestampTitleAttr = timestampUi.tooltip ? ' title="' + esc(timestampUi.tooltip) + '"' : '';
 
 	var html = '<div class="timeline-item" data-timeline-uuid="' + uuid + '" onclick="toggleDetails(\\'' + uuid + '\\')" role="button" tabindex="0" onkeydown="if(event.key===\\'Enter\\')toggleDetails(\\'' + uuid + '\\')">';
 
 	// Main row (mirrors TimelineRow.svelte .main-row)
 	html += '<div class="main-row"><div class="data-row">';
-	html += '<div class="data-field timestamp-field"><span class="field-prefix">│</span><span class="field-label">TIME</span><span class="field-value">' + formatTimestamp(item.timestamp) + '</span></div>';
+	html += '<div class="data-field timestamp-field"><span class="field-prefix">│</span><span class="field-label">TIME</span><span class="field-value"' + timestampTitleAttr + '>' + esc(timestampUi.text) + '</span></div>';
 	pinnedFields.forEach(function(field) {
 		var val = getFieldValue(item.data, field);
 		if (val && val !== '\\u2014') {
@@ -410,7 +615,9 @@ function renderTimelineRowDetails(item) {
 				html += '<div class="detail-item"><span class="detail-label">' + esc(key.replace(/_/g, ' ')) + '</span><span class="detail-value"></span></div>';
 				html += '<div class="json-viewer-slot">' + renderJsonViewer(String(value)) + '</div>';
 			} else {
-				html += '<div class="detail-item"><span class="detail-label">' + esc(key.replace(/_/g, ' ')) + '</span><span class="detail-value">' + esc(String(value)) + '</span></div>';
+				var formattedValue = formatValueWithSemantics(key, value);
+				var detailTitleAttr = formattedValue.tooltip ? ' title="' + esc(formattedValue.tooltip) + '"' : '';
+				html += '<div class="detail-item"><span class="detail-label">' + esc(key.replace(/_/g, ' ')) + '</span><span class="detail-value"' + detailTitleAttr + '>' + esc(String(formattedValue.text)) + '</span></div>';
 			}
 		}
 	});

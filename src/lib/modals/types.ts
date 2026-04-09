@@ -18,6 +18,7 @@ export type EntityType =
 	| 'entity_type' 
 	| 'event_type' 
 	| 'annotation_type' 
+	| 'time_preferences'
 	| 'analyst'
 	| 'action_entities'
 	| 'action_events'

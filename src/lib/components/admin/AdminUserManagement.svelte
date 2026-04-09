@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { api } from '$lib/client';
 	import type { AdminAnalyst } from '$lib/client';
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatTimestampForUi } from '$lib/utils/dateTime';
 
 	interface Props {
 		analysts: AdminAnalyst[];
@@ -49,11 +51,6 @@
 		}
 	}
 
-	function formatTimestamp(epoch: number | null): string {
-		if (!epoch) return '—';
-		const date = new Date(epoch * 1000);
-		return date.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
-	}
 </script>
 
 <section class="admin-section">
@@ -97,6 +94,7 @@
 				</thead>
 				<tbody>
 					{#each activeAnalysts as analyst (analyst.uuid)}
+						{@const createdAtUi = formatTimestampForUi(analyst.created_at, $timePreferences)}
 						<tr>
 							<td class="cell-username mono">{analyst.username}</td>
 							<td class="cell-name">{analyst.full_name ?? '—'}</td>
@@ -126,7 +124,7 @@
 								<span class="status-dot" class:status-active={analyst.active} class:status-inactive={!analyst.active}></span>
 								{analyst.active ? 'Active' : 'Inactive'}
 							</td>
-							<td class="cell-date mono">{formatTimestamp(analyst.created_at)}</td>
+							<td class="cell-date mono" title={createdAtUi.tooltip ?? undefined}>{createdAtUi.text}</td>
 							<td class="cell-actions">
 								<button
 									class="btn-text"
@@ -158,11 +156,12 @@
 						</thead>
 						<tbody>
 							{#each deletedAnalysts as analyst (analyst.uuid)}
+								{@const deletedAtUi = formatTimestampForUi(analyst.deleted_at, $timePreferences)}
 								<tr>
 									<td class="cell-username mono">{analyst.username}</td>
 									<td class="cell-name">{analyst.full_name ?? '—'}</td>
 									<td><span class="role-badge role-inactive">{analyst.role ?? '—'}</span></td>
-									<td class="cell-date mono">{formatTimestamp(analyst.deleted_at)}</td>
+									<td class="cell-date mono" title={deletedAtUi.tooltip ?? undefined}>{deletedAtUi.text}</td>
 								</tr>
 							{/each}
 						</tbody>

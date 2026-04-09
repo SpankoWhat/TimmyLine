@@ -1,6 +1,29 @@
 import { type RequestHandler } from '@sveltejs/kit';
 import { requireReadAccess } from '$lib/server/auth/authorization';
 import { exportIncidentHtml, ServiceError } from '$lib/server/services';
+import {
+	normalizeAbsoluteFormat,
+	normalizeDisplayMode,
+	normalizeTimezone,
+	type TimeDisplayPreferences
+} from '$lib/utils/dateTime';
+
+function parseBooleanQuery(value: string | null): boolean | undefined {
+	if (value === null) {
+		return undefined;
+	}
+
+	const normalized = value.trim().toLowerCase();
+	if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
+		return true;
+	}
+
+	if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') {
+		return false;
+	}
+
+	return undefined;
+}
 
 export const GET: RequestHandler = async (event) => {
 	await requireReadAccess(event);
@@ -14,8 +37,37 @@ export const GET: RequestHandler = async (event) => {
 		});
 	}
 
+	const requestedTimePreferences: Partial<TimeDisplayPreferences> = {};
+
+	const timezoneQuery = url.searchParams.get('timezone');
+	if (timezoneQuery !== null) {
+		requestedTimePreferences.timezone = normalizeTimezone(timezoneQuery);
+	}
+
+	const absoluteFormatQuery = url.searchParams.get('absoluteFormat');
+	if (absoluteFormatQuery !== null) {
+		requestedTimePreferences.absoluteFormat = normalizeAbsoluteFormat(absoluteFormatQuery);
+	}
+
+	const displayModeQuery = url.searchParams.get('displayMode');
+	if (displayModeQuery !== null) {
+		requestedTimePreferences.displayMode = normalizeDisplayMode(displayModeQuery);
+	}
+
+	const showTooltipAlternate =
+		parseBooleanQuery(url.searchParams.get('showTooltipAlternate')) ??
+		parseBooleanQuery(url.searchParams.get('show_tooltip_alternate'));
+	if (showTooltipAlternate !== undefined) {
+		requestedTimePreferences.showTooltipAlternate = showTooltipAlternate;
+	}
+
+	const hasPreferenceOverrides = Object.values(requestedTimePreferences).some((value) => value !== undefined);
+
 	try {
-		const { html, filename } = await exportIncidentHtml(incidentId);
+		const { html, filename } = await exportIncidentHtml(
+			incidentId,
+			hasPreferenceOverrides ? { timePreferences: requestedTimePreferences } : undefined
+		);
 
 		return new Response(html, {
 			status: 200,

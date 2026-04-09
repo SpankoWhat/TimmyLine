@@ -104,6 +104,16 @@ export const annotationTypes: Writable<AnnotationType[]> = writable([]);
 export const relationTypes: Writable<RelationType[]> = writable([]);
 export const analysts: Writable<Analyst[]> = writable([]);
 
+export const analystsByUuid = derived(analysts, ($analysts) => {
+	const map = new Map<string, Analyst>();
+	for (const analyst of $analysts) {
+		if (analyst.uuid) {
+			map.set(analyst.uuid, analyst);
+		}
+	}
+	return map;
+});
+
 // ============================================================================
 // DERIVED STORES - Computed Values
 // ============================================================================

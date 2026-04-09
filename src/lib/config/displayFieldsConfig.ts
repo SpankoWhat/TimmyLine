@@ -51,8 +51,9 @@ export const displayFieldsConfig: DisplayFieldsConfiguration = {
 		// Additional fields (unpinned)
 		{ key: 'confidence', label: 'Confidence', pinned: false, order: 101, kind: 'standard' },
 		{ key: 'occurred_at', label: 'Occurred At', pinned: false, order: 102, kind: 'standard' },
-		{ key: 'discovered_at', label: 'Discovered At', pinned: false, order: 103, kind: 'standard' },
-		{ key: 'tags', label: 'Tags', pinned: false, order: 104, kind: 'standard' },
+		{ key: 'discovered_by', label: 'Discovered By', pinned: false, order: 103, kind: 'standard' },
+		{ key: 'discovered_at', label: 'Discovered At', pinned: false, order: 104, kind: 'standard' },
+		{ key: 'tags', label: 'Tags', pinned: false, order: 106, kind: 'standard' },
 	],
 	action: [
 		// Primary display fields (pinned)
@@ -67,7 +68,8 @@ export const displayFieldsConfig: DisplayFieldsConfiguration = {
 		// Additional fields (unpinned)
 		{ key: 'outcome', label: 'Outcome', pinned: false, order: 101, kind: 'standard' },
 		{ key: 'next_steps', label: 'Next Steps', pinned: false, order: 102, kind: 'standard' },
-		{ key: 'performed_at', label: 'Performed At', pinned: false, order: 103, kind: 'standard' },
+		{ key: 'actioned_by', label: 'Actioned By', pinned: false, order: 103, kind: 'standard' },
+		{ key: 'performed_at', label: 'Performed At', pinned: false, order: 104, kind: 'standard' },
 		{ key: 'tags', label: 'Tags', pinned: false, order: 105, kind: 'standard' },
 	],
 };

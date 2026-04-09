@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/client';
 	import type { LookupTableName } from '$lib/types';
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatTimestampForUi } from '$lib/utils/dateTime';
 
 	// ============================================================================
 	// Types
@@ -144,12 +146,6 @@
 		editingEntry = null;
 		editName = '';
 		editDescription = '';
-	}
-
-	function formatTimestamp(epoch: number | null): string {
-		if (!epoch) return '';
-		const date = new Date(epoch * 1000);
-		return date.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
 	}
 
 	function handleTableChange(key: string) {
@@ -384,10 +380,11 @@
 					</thead>
 					<tbody>
 						{#each deletedEntries as entry (entry.name)}
+							{@const deletedAtUi = formatTimestampForUi(entry.deleted_at, $timePreferences)}
 							<tr class="row-deleted">
 								<td class="cell-name mono">{entry.name}</td>
 								<td class="cell-description">{entry.description ?? '—'}</td>
-								<td class="cell-date mono">{formatTimestamp(entry.deleted_at)}</td>
+								<td class="cell-date mono" title={deletedAtUi.tooltip ?? undefined}>{deletedAtUi.text}</td>
 								<td class="col-actions">
 									<button
 										class="btn-action btn-restore"

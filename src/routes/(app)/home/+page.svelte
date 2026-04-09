@@ -7,6 +7,8 @@
 	import DashboardStats from '$lib/components/DashboardStats.svelte';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import { joinLobbySocket, leaveLobbySocket, usersInLobby, usersInEachIncident, initializeSocket } from '$lib/stores/collabStore';
+	import { timePreferences } from '$lib/stores/timePreferencesStore';
+	import { formatTimestampForUi } from '$lib/utils/dateTime';
 	import { api } from '$lib/client';
 
 	const RECENT_LIMIT = 10;
@@ -45,12 +47,6 @@
 
 	function openNewIncidentModal() {
 		modalStore.open(createModalConfig('incident', 'create'));
-	}
-
-	function formatTimestamp(epoch: number | null): string {
-		if (!epoch) return '—';
-		const date = new Date(epoch * 1000);
-		return date.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
 	}
 
 	onMount(() => {
@@ -108,6 +104,7 @@
 					<tbody>
 						{#each recentIncidents as incident, i (incident.uuid)}
 							{@const activeCount = $usersInEachIncident.get(incident.uuid) ?? 0}
+							{@const createdAtUi = formatTimestampForUi(incident.created_at, $timePreferences)}
 							<tr
 								class="table-row-interactive severity-row-{incident.priority}"
 								onclick={() => userSelectedIncident(incident)}
@@ -137,7 +134,7 @@
 										<span class="status-badge status-closed">{incident.status}</span>
 									{/if}
 								</td>
-								<td class="mono">{formatTimestamp(incident.created_at)}</td>
+								<td class="mono" title={createdAtUi.tooltip ?? undefined}>{createdAtUi.text}</td>
 								<td>
 									{#if activeCount > 0}
 										<span class="presence-indicator">
