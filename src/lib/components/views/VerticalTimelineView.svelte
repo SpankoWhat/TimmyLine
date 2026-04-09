@@ -2,7 +2,7 @@
 	import type { TimelineItem } from '$lib/stores/cacheStore';
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
 	import { timePreferences } from '$lib/stores/timePreferencesStore';
-	import { formatTimestampForUi, getTimelineDateKey } from '$lib/utils/dateTime';
+	import { formatTimelineTimestampForUi, getTimelineDateKey } from '$lib/utils/dateTime';
 
 	import TimelineCard from './vertical-timeline/TimelineCard.svelte';
 	import TimelineGap from './vertical-timeline/TimelineGap.svelte';
@@ -194,7 +194,7 @@
 					</div>
 				</li>
 			{:else if node.kind === 'item'}
-				{@const nodeTimestampUi = formatTimestampForUi(node.item.timestamp, $timePreferences)}
+				{@const nodeTimestampUi = formatTimelineTimestampForUi(node.item.timestamp, $timePreferences)}
 				<li class="timeline-node item-node">
 					<div class="node-timestamp" title={nodeTimestampUi.tooltip ?? nodeTimestampUi.absolute}>
 						{nodeTimestampUi.text}

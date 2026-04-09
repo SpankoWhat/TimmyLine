@@ -47,6 +47,7 @@
 	let showEntitiesPanel = $state(false);
 	let entitiesPanelFloating = $state(false);
 	let fieldSelectorFloating = $state(false);
+	let compactHeader = $state(false);
 	let searchQuery = $state('');
 	let timelineScrollEl: HTMLDivElement | undefined = $state();
 
@@ -225,31 +226,39 @@
 	function handleCursorLeave() {
 		emitCursorLeave();
 	}
+
+	function handleTimelineScroll() {
+		if (!timelineScrollEl) return;
+		compactHeader = timelineScrollEl.scrollTop > 8;
+	}
 </script>
 
-<!-- Page Header -->
-<header class="page-header">
-	<div class="page-header-left">
-		<h1 class="page-title">{$currentSelectedIncident?.title ?? 'Loading...'}</h1>
-		<div class="incident-meta">
-			{#if $currentSelectedIncident}
-				<span class="severity-badge {severityClass($currentSelectedIncident.priority)}">
-					{$currentSelectedIncident.priority}
-				</span>
-				<span class="status-badge {statusClass($currentSelectedIncident.status)}">
-					{$currentSelectedIncident.status}
-				</span>
-			{/if}
-			<ActiveUsersIndicator />
+<div class="incident-page">
+	<!-- Page Header -->
+	<header class="page-header" class:is-compact={compactHeader}>
+		<div class="page-header-top">
+			<h1 class="page-title">{$currentSelectedIncident?.title ?? 'Loading...'}</h1>
+			<div class="page-header-right">
+				<IncidentStats />
+			</div>
 		</div>
-	</div>
-	<div class="page-header-right">
-		<IncidentStats />
-	</div>
-</header>
+		<div class="page-header-bottom">
+			<div class="incident-meta">
+				{#if $currentSelectedIncident}
+					<span class="severity-badge {severityClass($currentSelectedIncident.priority)}">
+						{$currentSelectedIncident.priority}
+					</span>
+					<span class="status-badge {statusClass($currentSelectedIncident.status)}">
+						{$currentSelectedIncident.status}
+					</span>
+				{/if}
+				<ActiveUsersIndicator />
+			</div>
+		</div>
+	</header>
 
-<!-- Page Content -->
-<div class="page-content">
+	<!-- Page Content -->
+	<div class="page-content">
 	<!-- Toolbar above timeline -->
 	<div class="toolbar">
 		<div class="toolbar-group">
@@ -325,6 +334,7 @@
 		<div
 			class="timeline-list-wrapper"
 			bind:this={timelineScrollEl}
+			onscroll={handleTimelineScroll}
 			onmousemove={handleCursorMove}
 			onmouseleave={handleCursorLeave}
 		>
@@ -427,63 +437,86 @@
 		</div>
 	{/if}
 
-	<!-- Floating field selector panel -->
-	{#if fieldSelectorFloating}
-		<FloatingPanel
-			title="Field Configuration"
-			panelId="field-selector"
-			defaultPosition={{ x: window.innerWidth - 720, y: 80 }}
-			defaultSize={{ width: 680, height: 520 }}
-			minWidth={500}
-			minHeight={300}
-			ondock={dockFieldSelector}
-			onclose={closeFieldSelector}
-		>
-			<div class="floating-field-selector-content">
-				<div class="field-selector-panels">
-					<FieldSelectorPanel
-						title="Event Fields"
-						type="event"
-						timelineItems={$currentCachedTimeline}
-						bind:fields={fieldStates.event}
-					/>
-					<FieldSelectorPanel
-						title="Action Fields"
-						type="action"
-						timelineItems={$currentCachedTimeline}
-						bind:fields={fieldStates.action}
-					/>
+		<!-- Floating field selector panel -->
+		{#if fieldSelectorFloating}
+			<FloatingPanel
+				title="Field Configuration"
+				panelId="field-selector"
+				defaultPosition={{ x: window.innerWidth - 720, y: 80 }}
+				defaultSize={{ width: 680, height: 520 }}
+				minWidth={500}
+				minHeight={300}
+				ondock={dockFieldSelector}
+				onclose={closeFieldSelector}
+			>
+				<div class="floating-field-selector-content">
+					<div class="field-selector-panels">
+						<FieldSelectorPanel
+							title="Event Fields"
+							type="event"
+							timelineItems={$currentCachedTimeline}
+							bind:fields={fieldStates.event}
+						/>
+						<FieldSelectorPanel
+							title="Action Fields"
+							type="action"
+							timelineItems={$currentCachedTimeline}
+							bind:fields={fieldStates.action}
+						/>
+					</div>
+					<button class="btn-secondary btn-sm reset-btn" onclick={resetFieldSelection}>
+						Reset to Default
+					</button>
 				</div>
-				<button class="btn-secondary btn-sm reset-btn" onclick={resetFieldSelection}>
-					Reset to Default
-				</button>
-			</div>
-		</FloatingPanel>
-	{/if}
+			</FloatingPanel>
+		{/if}
+	</div>
 </div>
 
 <style>
+	.incident-page {
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		min-height: 0;
+		overflow: hidden;
+	}
+
 	/* ===== Page Header (SOP §11.1) ===== */
 	.page-header {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		flex-wrap: wrap;
-		gap: var(--space-3);
+		flex-direction: column;
+		align-items: stretch;
+		gap: var(--space-2);
 		padding: var(--space-4) var(--space-6);
 		border-bottom: var(--border-width) solid hsl(var(--border-muted));
 		flex-shrink: 0;
+		position: sticky;
+		top: 0;
+		z-index: var(--z-sticky);
+		background: hsl(var(--bg-root));
+		transition: var(--transition-all);
 	}
 
-	.page-header-left {
+	.page-header-top {
 		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		min-width: 0;
+	}
+
+	.page-header-bottom {
+		display: flex;
+		align-items: center;
+		justify-content: flex-start;
+		min-width: 0;
 	}
 
 	.page-header-right {
 		display: flex;
 		align-items: center;
+		flex-shrink: 0;
 	}
 
 	.page-title {
@@ -492,12 +525,25 @@
 		color: hsl(var(--fg-default));
 		letter-spacing: var(--tracking-tight);
 		margin: 0;
+		min-width: 0;
 	}
 
 	.incident-meta {
 		display: flex;
 		align-items: center;
+		flex-wrap: wrap;
 		gap: var(--space-2);
+	}
+
+	/* Sticky/compact header prep: hide the secondary row while preserving title + stats */
+	.page-header.is-compact {
+		gap: var(--space-1);
+		padding-top: var(--space-2);
+		padding-bottom: var(--space-2);
+	}
+
+	.page-header.is-compact .page-header-bottom {
+		display: none;
 	}
 
 	/* ===== Severity Badge (SOP §16.2) ===== */

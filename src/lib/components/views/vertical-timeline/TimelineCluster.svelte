@@ -4,7 +4,7 @@
 	import type { TimelineEvent } from '$lib/types/events';
 	import type { InvestigationAction } from '$lib/types/actions';
 	import { timePreferences } from '$lib/stores/timePreferencesStore';
-	import { formatTimestampForUi } from '$lib/utils/dateTime';
+	import { formatTimelineTimestampForUi } from '$lib/utils/dateTime';
 
 	interface Props {
 		items: TimelineItem[];
@@ -107,7 +107,7 @@
 	{#if expanded}
 		<div class="cluster-items">
 			{#each items as item (item.uuid)}
-				{@const itemTimestampUi = formatTimestampForUi(item.timestamp, $timePreferences)}
+				{@const itemTimestampUi = formatTimelineTimestampForUi(item.timestamp, $timePreferences)}
 				<div class="cluster-item">
 					<span class="cluster-item-time" title={itemTimestampUi.tooltip ?? itemTimestampUi.absolute}>{itemTimestampUi.text}</span>
 					<span class="cluster-item-type">{getItemTypeLabel(item)}</span>

@@ -229,6 +229,26 @@ export function formatAbsoluteTimestamp(
 	}).format(date);
 }
 
+export function formatAbsoluteTimeOnly(
+    epoch: unknown,
+    preferences?: Partial<TimeDisplayPreferences> | null,
+    options: FormatTimestampOptions = {}
+): string {
+    const date = toDateFromEpoch(epoch);
+    if (!date) {
+        return '—';
+    }
+
+    const resolved = resolveTimePreferences(preferences);
+    const timezone = normalizeTimezone(resolved.timezone, detectSystemTimeZone());
+
+    return new Intl.DateTimeFormat(options.locale, {
+        timeZone: timezone,
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
 export function formatRelativeTimestamp(epoch: unknown, nowEpochSeconds?: number): string {
 	const target = normalizeEpoch(epoch);
 	if (target === null) {
@@ -285,6 +305,24 @@ export function formatTimestampForUi(
 		relative,
 		epochSeconds: normalizeEpoch(epoch)
 	};
+}
+
+export function formatTimelineTimestampForUi(
+    epoch: unknown,
+    preferences?: Partial<TimeDisplayPreferences> | null,
+    options: FormatTimestampOptions = {}
+): FormattedTimestampUi {
+    const base = formatTimestampForUi(epoch, preferences, options);
+    const resolved = resolveTimePreferences(preferences);
+
+    if (resolved.displayMode !== 'absolute') {
+        return base;
+    }
+
+    return {
+        ...base,
+        text: formatAbsoluteTimeOnly(epoch, resolved, options)
+    };
 }
 
 export function getTimelineDateKey(epoch: unknown, timezone: string): string {

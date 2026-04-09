@@ -38,7 +38,7 @@
 		background: hsl(var(--bg-surface-100));
 		border: 1px solid hsl(var(--border-default));
 		border-radius: var(--radius-lg);
-		padding: var(--space-3) var(--space-4);
+		padding: var(--space-1) var(--space-4);
 	}
 
 	.stat-value {
