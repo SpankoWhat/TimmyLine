@@ -7,7 +7,8 @@
 
 import { aggregateIncidentData, type ExportPayload, type ExportTimelineItem } from '$lib/server/export/exportIncident';
 import { renderExportHtml } from '$lib/server/export/exportTemplate';
-import { ServiceError, requireReadServiceAccess } from './types';
+import { exportLogger } from '$lib/server/logging';
+import { ServiceError, requireExportServiceAccess } from './types';
 import type { TimeDisplayPreferences } from '$lib/utils/dateTime';
 import type { ServiceContext } from './types';
 
@@ -18,15 +19,37 @@ export interface ExportFormattingOptions {
 	timePreferences?: Partial<TimeDisplayPreferences> | null;
 }
 
-// ============================================================================
-// Export Incident Data
-// ============================================================================
+type ExportAuditType = 'data' | 'html';
 
-/**
- * Aggregate all data for a single incident into an export payload.
- */
-export async function exportIncidentData(incidentId: string, ctx: ServiceContext): Promise<ExportPayload> {
-	requireReadServiceAccess(ctx);
+function logExportAuditEvent(type: ExportAuditType, payload: ExportPayload, ctx: ServiceContext): void {
+	exportLogger.info('Incident export completed', {
+		exportType: type,
+		classification: 'RED',
+		incidentId: payload.incident.uuid,
+		incidentTitle: payload.incident.title,
+		actorUUID: ctx.actorUUID,
+		actorUserId: ctx.actorUserId ?? null,
+		actorRole: ctx.actorRole,
+		timelineItems: payload.stats.totalItems,
+		entities: payload.stats.entities,
+		annotations: payload.stats.annotations
+	});
+}
+
+function logExportFailure(type: ExportAuditType, incidentId: string, ctx: ServiceContext, err: unknown): void {
+	exportLogger.warn('Incident export failed', {
+		exportType: type,
+		classification: 'RED',
+		incidentId,
+		actorUUID: ctx.actorUUID,
+		actorUserId: ctx.actorUserId ?? null,
+		actorRole: ctx.actorRole,
+		error: err instanceof Error ? err.message : String(err)
+	});
+}
+
+async function loadExportPayload(incidentId: string, ctx: ServiceContext): Promise<ExportPayload> {
+	requireExportServiceAccess(ctx);
 
 	if (!incidentId) {
 		throw new ServiceError(400, 'MISSING_FIELDS', 'incident_id is required');
@@ -40,6 +63,24 @@ export async function exportIncidentData(incidentId: string, ctx: ServiceContext
 			throw new ServiceError(404, 'NOT_FOUND', message);
 		}
 		throw new ServiceError(500, 'EXPORT_ERROR', `Failed to aggregate incident data: ${message}`);
+	}
+}
+
+// ============================================================================
+// Export Incident Data
+// ============================================================================
+
+/**
+ * Aggregate all data for a single incident into an export payload.
+ */
+export async function exportIncidentData(incidentId: string, ctx: ServiceContext): Promise<ExportPayload> {
+	try {
+		const payload = await loadExportPayload(incidentId, ctx);
+		logExportAuditEvent('data', payload, ctx);
+		return payload;
+	} catch (err) {
+		logExportFailure('data', incidentId, ctx, err);
+		throw err;
 	}
 }
 
@@ -71,14 +112,21 @@ export async function exportIncidentHtml(
 	ctx: ServiceContext,
 	options: ExportFormattingOptions = {}
 ): Promise<{ html: string; filename: string }> {
-	const payload = await exportIncidentData(incidentId, ctx);
-	const html = renderExportToHtml(payload, options);
+	try {
+		const payload = await loadExportPayload(incidentId, ctx);
+		const html = renderExportToHtml(payload, options);
 
-	const safeTitle = payload.incident.title
-		.replace(/[^a-zA-Z0-9_\- ]/g, '')
-		.replace(/\s+/g, '_')
-		.substring(0, 60);
-	const filename = `TimmyLine_${safeTitle}_${incidentId.substring(0, 8)}.html`;
+		const safeTitle = payload.incident.title
+			.replace(/[^a-zA-Z0-9_\- ]/g, '')
+			.replace(/\s+/g, '_')
+			.substring(0, 60);
+		const filename = `TimmyLine_${safeTitle}_${incidentId.substring(0, 8)}.html`;
 
-	return { html, filename };
+		logExportAuditEvent('html', payload, ctx);
+
+		return { html, filename };
+	} catch (err) {
+		logExportFailure('html', incidentId, ctx, err);
+		throw err;
+	}
 }

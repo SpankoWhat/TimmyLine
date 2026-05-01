@@ -172,3 +172,4 @@ export const socketLogger = new Logger('socket');
 export const apiLogger = new Logger('api');
 export const authLogger = new Logger('auth');
 export const mcpLogger = new Logger('mcp');
+export const exportLogger = new Logger('export');

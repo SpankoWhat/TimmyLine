@@ -37,6 +37,7 @@ export class ServiceError extends Error {
 const READ_ROLES: ServiceRole[] = ['reader', 'analyst', 'admin'];
 const WRITE_ROLES: ServiceRole[] = ['analyst', 'admin'];
 const ADMIN_ROLES: ServiceRole[] = ['admin'];
+const EXPORT_ROLES: ServiceRole[] = ['analyst', 'admin'];
 
 function assertAuthenticatedContext(ctx: ServiceContext): void {
 	if (!ctx.actorUUID || ctx.actorUUID === 'unknown') {
@@ -66,6 +67,10 @@ export function requireWriteServiceAccess(ctx: ServiceContext): void {
 
 export function requireAdminServiceAccess(ctx: ServiceContext): void {
 	assertRole(ctx, ADMIN_ROLES, 'Insufficient permissions: admin access required');
+}
+
+export function requireExportServiceAccess(ctx: ServiceContext): void {
+	assertRole(ctx, EXPORT_ROLES, 'Insufficient permissions: export access requires analyst privileges');
 }
 
 export function requireActorUserId(ctx: ServiceContext): string {

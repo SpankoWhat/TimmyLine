@@ -7,7 +7,7 @@
 	} from "$lib/stores/cacheStore";
 	import { timePreferences } from '$lib/stores/timePreferencesStore';
 	import { modalStore, createModalConfig } from "$lib/modals/ModalRegistry";
-	import { api } from '$lib/client';
+	import { api, ApiError } from '$lib/client';
 
 	// ---------------------------------------------------------------------------
 	// Types
@@ -33,10 +33,20 @@
 	let query = $state("");
 	let highlightedIndex = $state(0);
 	let inputEl: HTMLInputElement | undefined = $state(undefined);
+	const exportWarningMessage = [
+		"This export creates a self-contained HTML file with embedded incident data.",
+		"Classification: RED.",
+		"Only continue if you are handling this file on an approved system and for an approved recipient."
+	].join("\n\n");
 
 	async function handleExportActions() {
 		const incident = get(currentSelectedIncident);
 		if (incident) {
+			const confirmed = window.confirm(exportWarningMessage);
+			if (!confirmed) {
+				return;
+			}
+
 			try {
 				const response = await api.export.download(incident.uuid, get(timePreferences));
 				const blob = await response.blob();
@@ -50,7 +60,7 @@
 				URL.revokeObjectURL(url);
 			} catch (err) {
 				console.error("Export failed", err);
-				alert("Failed to export incident. Please try again.");
+				alert(err instanceof ApiError ? err.message : "Failed to export incident. Please try again.");
 			}
 		}
 	}
@@ -209,7 +219,7 @@
 			id: "other-export-incident",
 			label: "Export Dynamic Incident",
 			description:
-				"Export the current incident in a dynamic format - one html file with embedded data for sharing",
+				"Export the current incident as a RED-labeled HTML file with embedded data for sharing",
 			category: "Other",
 			requiresIncident: true,
 			action: () => {
@@ -348,12 +358,6 @@
 	// Backdrop click
 	// ---------------------------------------------------------------------------
 
-	function handleBackdropClick(e: MouseEvent) {
-		if ((e.target as HTMLElement).classList.contains("command-backdrop")) {
-			close();
-		}
-	}
-
 	// ---------------------------------------------------------------------------
 	// Effects – global listeners
 	// ---------------------------------------------------------------------------
@@ -412,13 +416,9 @@
 </script>
 
 {#if isOpen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="command-backdrop"
-		onmousedown={handleBackdropClick}
-		onkeydown={handlePaletteKeydown}
-	>
-		<div class="command-palette" role="dialog" aria-label="Command palette">
+	<div class="command-backdrop">
+		<button class="command-backdrop-hitbox" type="button" aria-label="Close command palette" onclick={close}></button>
+		<div class="command-palette" role="dialog" aria-label="Command palette" tabindex="-1" onkeydown={handlePaletteKeydown}>
 			<!-- Search input -->
 			<div class="command-input-wrapper">
 				<svg
@@ -462,9 +462,7 @@
 								type="button"
 							>
 								{#if item.icon}
-									<span class="command-item-icon"
-										>{@html item.icon}</span
-									>
+									<span class="command-item-icon">{item.icon}</span>
 								{/if}
 								<span class="command-item-label">
 									{item.label}
@@ -509,8 +507,19 @@
 		padding-top: 20vh;
 	}
 
+	.command-backdrop-hitbox {
+		position: absolute;
+		inset: 0;
+		background: transparent;
+		border: none;
+		padding: 0;
+		margin: 0;
+	}
+
 	/* ===== PALETTE CONTAINER ===== */
 	.command-palette {
+		position: relative;
+		z-index: 1;
 		background: hsl(var(--bg-command));
 		border: var(--border-width) solid hsl(var(--border-overlay));
 		border-radius: var(--radius-xl);

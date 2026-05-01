@@ -4,6 +4,7 @@ import {
 	ServiceError,
 	requireActorUserId,
 	requireAdminServiceAccess,
+	requireExportServiceAccess,
 	requireReadServiceAccess,
 	requireWriteServiceAccess
 } from './types';
@@ -48,6 +49,31 @@ describe('service RBAC helpers', () => {
 				code: 'INSUFFICIENT_PERMISSIONS'
 			});
 		}
+	});
+
+	it('rejects export access for readers', () => {
+		try {
+			requireExportServiceAccess({
+				actorUUID: 'analyst-1',
+				actorRole: 'reader'
+			});
+			throw new Error('expected export access to be denied');
+		} catch (err) {
+			expect(err).toBeInstanceOf(ServiceError);
+			expect(err).toMatchObject({
+				status: 403,
+				code: 'INSUFFICIENT_PERMISSIONS'
+			});
+		}
+	});
+
+	it('allows export access for analysts', () => {
+		expect(() =>
+			requireExportServiceAccess({
+				actorUUID: 'analyst-1',
+				actorRole: 'analyst'
+			})
+		).not.toThrow();
 	});
 
 	it('rejects unauthenticated service contexts', () => {

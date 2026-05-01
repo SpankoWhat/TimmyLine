@@ -31,13 +31,26 @@ export interface ExportRenderOptions {
 	timePreferences?: Partial<TimeDisplayPreferences> | null;
 }
 
+const EXPORT_CLASSIFICATION = 'RED';
+const EXPORT_WARNING_COPY =
+	'This export embeds incident data for offline review. Handle it only on approved systems and share it strictly on a need-to-know basis.';
+
+export function serializeForInlineScript(value: unknown): string {
+	return JSON.stringify(value)
+		.replace(/</g, '\\u003C')
+		.replace(/>/g, '\\u003E')
+		.replace(/&/g, '\\u0026')
+		.replace(/\u2028/g, '\\u2028')
+		.replace(/\u2029/g, '\\u2029');
+}
+
 /**
  * Renders the export payload into a complete self-contained HTML string.
  */
 export function renderExportHtml(payload: ExportPayload, options: ExportRenderOptions = {}): string {
-	const dataJson = JSON.stringify(payload);
+	const dataJson = serializeForInlineScript(payload);
 	const resolvedTimePreferences = resolveTimePreferences(options.timePreferences);
-	const resolvedTimePreferencesJson = JSON.stringify(resolvedTimePreferences);
+	const resolvedTimePreferencesJson = serializeForInlineScript(resolvedTimePreferences);
 	const incidentTitle = escapeHtml(payload.incident.title);
 	const exportedAtEpochMs = Date.parse(payload.exportedAt);
 	const exportedAtEpoch = Number.isFinite(exportedAtEpochMs)
@@ -49,7 +62,7 @@ export function renderExportHtml(payload: ExportPayload, options: ExportRenderOp
 			: formatTimestampForUi(exportedAtEpoch, resolvedTimePreferences).text;
 
 	// Serialize the real displayFieldsConfig for the embedded JS
-	const fieldConfigJson = JSON.stringify(displayFieldsConfig);
+	const fieldConfigJson = serializeForInlineScript(displayFieldsConfig);
 
 	// Get the live app CSS
 	const appCss = getAppCss();
@@ -76,6 +89,18 @@ ${getExportStyles()}
 </style>
 </head>
 <body>
+<div id="classificationWarning" class="classification-overlay" role="dialog" aria-modal="true" aria-labelledby="classificationWarningTitle" aria-describedby="classificationWarningBody">
+	<div class="classification-dialog">
+		<div class="classification-pill classification-pill-danger">DATA LABEL: ${EXPORT_CLASSIFICATION}</div>
+		<h1 id="classificationWarningTitle" class="classification-title">Sensitive incident export</h1>
+		<p id="classificationWarningBody" class="classification-copy">${escapeHtml(EXPORT_WARNING_COPY)}</p>
+		<div class="classification-meta">
+			<span>Incident: ${incidentTitle}</span>
+			<span>Exported: ${exportDate}</span>
+		</div>
+		<button type="button" class="classification-dismiss" id="classificationDismissButton" onclick="dismissClassificationWarning()">Acknowledge and open export</button>
+	</div>
+</div>
 <div id="app">
 	<!-- ──────── Header ──────── -->
 	<header class="export-header">
@@ -95,6 +120,16 @@ ${getExportStyles()}
 			<span class="header-meta">Exported: ${exportDate}</span>
 		</div>
 	</header>
+
+	<div class="classification-banner" role="note" aria-label="Data classification">
+		<div class="classification-banner-main">
+			<span class="classification-pill classification-pill-danger">${EXPORT_CLASSIFICATION}</span>
+			<div class="classification-banner-copy">
+				<strong>Data label:</strong> ${EXPORT_CLASSIFICATION}
+				<span>${escapeHtml(EXPORT_WARNING_COPY)}</span>
+			</div>
+		</div>
+	</div>
 
 	<!-- ──────── Stats Bar (mirrors IncidentStats.svelte) ──────── -->
 	<div class="stats-bar">
@@ -794,11 +829,19 @@ function highlightEntity(entityUuid) {
 	if (firstMatch) firstMatch.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function dismissClassificationWarning() {
+	var warning = document.getElementById('classificationWarning');
+	if (warning) warning.classList.add('hidden');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // INITIALIZATION
 // ════════════════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', function() {
+	var dismissButton = document.getElementById('classificationDismissButton');
+	if (dismissButton) dismissButton.focus();
+
 	// Render timeline
 	var timelineList = document.getElementById('timelineList');
 	if (DATA.timeline.length === 0) {
@@ -832,6 +875,129 @@ function getExportStyles(): string {
 	return `
 /* ── Utility ── */
 .hidden { display: none !important; }
+
+/* ── Classification Warning ── */
+.classification-overlay {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-6);
+	background: hsl(var(--bg-root) / 0.86);
+	backdrop-filter: blur(8px);
+	z-index: 200;
+}
+.classification-dialog {
+	width: min(640px, 100%);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	padding: var(--space-5);
+	background: hsl(var(--bg-dialog));
+	border: var(--border-width) solid hsl(var(--destructive-default));
+	border-radius: var(--radius-lg);
+	box-shadow: 0 24px 60px hsl(var(--bg-root) / 0.45);
+}
+.classification-title {
+	margin: 0;
+	font-family: var(--font-family);
+	font-size: var(--text-xl);
+	font-weight: var(--font-bold);
+	line-height: var(--leading-tight);
+	color: hsl(var(--fg-default));
+}
+.classification-copy {
+	margin: 0;
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+	color: hsl(var(--fg-light));
+}
+.classification-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	color: hsl(var(--fg-lighter));
+}
+.classification-dismiss {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 32px;
+	padding: var(--space-1\.5) var(--space-3);
+	background: hsl(var(--destructive-default));
+	border: var(--border-width) solid hsl(var(--destructive-600));
+	border-radius: var(--radius-md);
+	font-family: var(--font-family);
+	font-size: var(--text-sm);
+	font-weight: var(--font-semibold);
+	color: hsl(var(--fg-default));
+	cursor: pointer;
+	transition: background-color var(--duration-normal) var(--ease-default),
+		border-color var(--duration-normal) var(--ease-default);
+}
+.classification-dismiss:hover {
+	background: hsl(var(--destructive-600));
+	border-color: hsl(var(--destructive-600));
+}
+.classification-dismiss:focus-visible,
+.type-header:focus-visible,
+.item-row:focus-visible,
+.tab-btn:focus-visible,
+.btn-ghost:focus-visible {
+	outline: var(--border-width-thick) solid hsl(var(--border-focus));
+	outline-offset: 1px;
+}
+.classification-banner {
+	display: flex;
+	align-items: center;
+	padding: var(--space-2) var(--space-6);
+	background: hsl(var(--destructive-300));
+	border-bottom: var(--border-width) solid hsl(var(--destructive-default));
+}
+.classification-banner-main {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	flex-wrap: wrap;
+	width: 100%;
+}
+.classification-banner-copy {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+	font-size: var(--text-xs);
+	line-height: var(--leading-snug);
+	color: hsl(var(--fg-default));
+}
+.classification-banner-copy strong {
+	text-transform: uppercase;
+	letter-spacing: var(--tracking-wide);
+	color: hsl(var(--destructive-600));
+}
+.classification-pill {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-0\.5) var(--space-2);
+	border-radius: var(--radius-sm);
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	font-weight: var(--font-bold);
+	letter-spacing: var(--tracking-wide);
+	text-transform: uppercase;
+	border: var(--border-width) solid transparent;
+	white-space: nowrap;
+}
+.classification-pill-danger {
+	background: hsl(var(--destructive-default));
+	border-color: hsl(var(--destructive-600));
+	color: hsl(var(--fg-default));
+}
 
 /* ── Export Header ── */
 .export-header {
@@ -1426,6 +1592,7 @@ function getExportStyles(): string {
 
 /* ── Print ── */
 @media print {
+	.classification-overlay { display: none !important; }
 	body { background: white; color: black; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 	.export-header { position: static; }
 	.btn-ghost { display: none; }
