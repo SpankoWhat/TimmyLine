@@ -13,12 +13,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { buildServiceContext } from '$lib/server/auth/authorization';
+import type { ServiceContext } from '$lib/server/services';
 import type { McpSessionOwner } from '$lib/server/mcp/session';
-import { createSession, getSession, sessionMatchesOwner } from '$lib/server/mcp/session';
+import { createSession, getSession, refreshSessionContext, sessionMatchesOwner } from '$lib/server/mcp/session';
 import { mcpLogger as logger } from '$lib/server/logging';
 
-function buildSessionOwner(event: Parameters<RequestHandler>[0]): McpSessionOwner {
-	const ctx = buildServiceContext(event);
+function buildSessionOwner(
+	event: Parameters<RequestHandler>[0],
+	ctx: ServiceContext
+): McpSessionOwner {
 
 	if (event.locals.apiKey) {
 		return {
@@ -38,7 +41,15 @@ function buildSessionOwner(event: Parameters<RequestHandler>[0]): McpSessionOwne
 	};
 }
 
-function getOwnedSession(event: Parameters<RequestHandler>[0], sessionId: string) {
+function buildRequestIdentity(event: Parameters<RequestHandler>[0]) {
+	const ctx = buildServiceContext(event);
+	return {
+		ctx,
+		owner: buildSessionOwner(event, ctx)
+	};
+}
+
+function getOwnedSession(sessionId: string, owner: McpSessionOwner) {
 	const session = getSession(sessionId);
 	if (!session) {
 		return {
@@ -46,7 +57,6 @@ function getOwnedSession(event: Parameters<RequestHandler>[0], sessionId: string
 		};
 	}
 
-	const owner = buildSessionOwner(event);
 	if (!sessionMatchesOwner(session, owner)) {
 		logger.warn('Rejected MCP session reuse by mismatched principal', {
 			sessionId,
@@ -76,16 +86,16 @@ function getOwnedSession(event: Parameters<RequestHandler>[0], sessionId: string
  */
 export const POST: RequestHandler = async (event) => {
 	const sessionId = event.request.headers.get('mcp-session-id');
-	const ctx = buildServiceContext(event);
-	const owner = buildSessionOwner(event);
+	const { ctx, owner } = buildRequestIdentity(event);
 
 	try {
 		if (sessionId) {
-			const sessionResult = getOwnedSession(event, sessionId);
+			const sessionResult = getOwnedSession(sessionId, owner);
 			if (sessionResult.response) {
 				return sessionResult.response;
 			}
 
+			refreshSessionContext(sessionResult.session, ctx);
 			const response = await sessionResult.session.transport.handleRequest(event.request);
 			return response;
 		}
@@ -115,12 +125,15 @@ export const GET: RequestHandler = async (event) => {
 		return json({ error: 'mcp-session-id header required for GET requests' }, { status: 400 });
 	}
 
-	const sessionResult = getOwnedSession(event, sessionId);
+	const { ctx, owner } = buildRequestIdentity(event);
+
+	const sessionResult = getOwnedSession(sessionId, owner);
 	if (sessionResult.response) {
 		return sessionResult.response;
 	}
 
 	try {
+		refreshSessionContext(sessionResult.session, ctx);
 		const response = await sessionResult.session.transport.handleRequest(event.request);
 		return response;
 	} catch (err) {
@@ -139,12 +152,15 @@ export const DELETE: RequestHandler = async (event) => {
 		return json({ error: 'mcp-session-id header required for DELETE requests' }, { status: 400 });
 	}
 
-	const sessionResult = getOwnedSession(event, sessionId);
+	const { ctx, owner } = buildRequestIdentity(event);
+
+	const sessionResult = getOwnedSession(sessionId, owner);
 	if (sessionResult.response) {
 		return sessionResult.response;
 	}
 
 	try {
+		refreshSessionContext(sessionResult.session, ctx);
 		const response = await sessionResult.session.transport.handleRequest(event.request);
 		return response;
 	} catch (err) {

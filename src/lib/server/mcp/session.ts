@@ -13,6 +13,8 @@ import type { ServiceContext } from '$lib/server/services';
 import type { ServiceRole } from '$lib/types/common';
 import { mcpLogger as logger } from '../logging';
 
+import type { ServiceContextRef } from './tools';
+
 export interface McpSessionOwner {
 	authType: 'api_key' | 'session';
 	actorUUID: string;
@@ -24,6 +26,7 @@ export interface McpSessionOwner {
 export interface McpSession {
 	server: McpServer;
 	transport: WebStandardStreamableHTTPServerTransport;
+	contextRef: ServiceContextRef;
 	owner: McpSessionOwner;
 	analystUUID: string;
 	analystRole: string;
@@ -60,13 +63,14 @@ export function createSession(
 	owner: McpSessionOwner
 ): WebStandardStreamableHTTPServerTransport {
 	startCleanupTimer();
+	const contextRef: ServiceContextRef = { current: ctx };
 
 	const server = new McpServer({
 		name: 'timmyline',
 		version: '1.0.0'
 	});
 
-	registerTools(server, ctx);
+	registerTools(server, contextRef);
 
 	const transport = new WebStandardStreamableHTTPServerTransport({
 		sessionIdGenerator: () => crypto.randomUUID(),
@@ -78,6 +82,7 @@ export function createSession(
 			sessions.set(sessionId, {
 				server,
 				transport,
+				contextRef,
 				owner,
 				analystUUID: ctx.actorUUID,
 				analystRole: ctx.actorRole,
@@ -104,6 +109,12 @@ export function getSession(sessionId: string): McpSession | undefined {
 		session.lastAccessedAt = Date.now();
 	}
 	return session;
+}
+
+export function refreshSessionContext(session: McpSession, ctx: ServiceContext): void {
+	session.contextRef.current = ctx;
+	session.analystUUID = ctx.actorUUID;
+	session.analystRole = ctx.actorRole;
 }
 
 export function sessionMatchesOwner(session: McpSession, owner: McpSessionOwner): boolean {

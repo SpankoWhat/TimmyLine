@@ -16,6 +16,13 @@ function createSession(owner: McpSessionOwner): McpSession {
 	return {
 		server: {} as McpSession['server'],
 		transport: {} as McpSession['transport'],
+        contextRef: {
+            current: {
+                actorUUID: owner.actorUUID,
+                actorRole: owner.actorRole,
+                actorUserId: owner.actorUserId
+            }
+        },
 		owner,
 		analystUUID: owner.actorUUID,
 		analystRole: owner.actorRole,

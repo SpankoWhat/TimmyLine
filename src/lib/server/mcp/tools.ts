@@ -3,7 +3,8 @@
  *
  * Registers all TimmyLine tools on an McpServer instance.
  * Tools call service functions directly (in-process, no HTTP).
- * The ServiceContext captures the authenticated analyst making the request.
+ * The ServiceContext is resolved dynamically from the latest authenticated
+ * request bound to the session.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -77,7 +78,27 @@ async function safeTool(fn: () => Promise<unknown>) {
 // Tool Registration
 // ============================================================================
 
-export function registerTools(server: McpServer, ctx: ServiceContext): void {
+export interface ServiceContextRef {
+	current: ServiceContext;
+}
+
+function createDynamicServiceContext(contextRef: ServiceContextRef): ServiceContext {
+	return {
+		get actorUUID() {
+			return contextRef.current.actorUUID;
+		},
+		get actorRole() {
+			return contextRef.current.actorRole;
+		},
+		get actorUserId() {
+			return contextRef.current.actorUserId;
+		}
+	};
+}
+
+export function registerTools(server: McpServer, contextRef: ServiceContextRef): void {
+	const ctx = createDynamicServiceContext(contextRef);
+
 	// ========================================================================
 	// READ Tools
 	// ========================================================================
