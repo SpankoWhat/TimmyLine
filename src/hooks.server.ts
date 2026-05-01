@@ -27,6 +27,33 @@ if (globalWithServer.__timmyline_server && !globalWithServer.__timmyline_socket_
 }
 
 /**
+ * Resolve the effective role: the lesser of the key's role and the analyst's actual role.
+ * Hierarchy: 'admin' > 'analyst' > 'reader'
+ */
+function resolveEffectiveRole(keyRole: string | null, analystRole: string | null): string {
+    const hierarchy = ['reader', 'analyst', 'admin'];
+    const keyLevel = hierarchy.indexOf(keyRole ?? 'reader');
+    const analystLevel = hierarchy.indexOf(analystRole ?? 'reader');
+    return hierarchy[Math.min(keyLevel, analystLevel)];
+}
+
+function isPublicRoute(pathname: string): boolean {
+    const publicRoutes = ['/login', '/auth', '/api/health'];
+    return publicRoutes.some((route) => pathname.startsWith(route)) || pathname === '/';
+}
+
+function isAdminRoute(pathname: string): boolean {
+    return pathname === '/admin' || pathname.startsWith('/admin/');
+}
+
+function jsonError(message: string, status: number): Response {
+    return new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+/**
  * API Key Authentication Hook
  * Checks for Bearer token before session auth. If a valid API key is found,
  * synthesizes a session so downstream auth helpers work unchanged.
@@ -102,29 +129,6 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
 };
 
 /**
- * Resolve the effective role: the lesser of the key's role and the analyst's actual role.
- * Hierarchy: 'admin' > 'analyst' > 'reader'
- */
-function resolveEffectiveRole(keyRole: string | null, analystRole: string | null): string {
-    const hierarchy = ['reader', 'analyst', 'admin'];
-    const keyLevel = hierarchy.indexOf(keyRole ?? 'reader');
-    const analystLevel = hierarchy.indexOf(analystRole ?? 'reader');
-    return hierarchy[Math.min(keyLevel, analystLevel)];
-}
-
-function isPublicRoute(pathname: string): boolean {
-    const publicRoutes = ['/login', '/auth', '/api/health'];
-    return publicRoutes.some((route) => pathname.startsWith(route)) || pathname === '/';
-}
-
-function jsonError(message: string, status: number): Response {
-    return new Response(JSON.stringify({ error: message }), {
-        status,
-        headers: { 'Content-Type': 'application/json' }
-    });
-}
-
-/**
  * Authentication & Authorization Hook
  * Validates session and protects routes.
  * API key requests bypass redirect logic (already authenticated by apiKeyHandle).
@@ -158,6 +162,14 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
     const toRouteFrom = ['/login', '/'];
     // Redirect authenticated users away from login/landing pages
     if (session?.user && (toRouteFrom.some((route) => event.url.pathname === route))) {
+        throw redirect(303, '/home');
+    }
+
+    if (session?.user && isAdminRoute(event.url.pathname) && session.user.analystRole !== 'admin') {
+        logger.debug('Non-admin attempted to access admin route, redirecting to /home', {
+            path: event.url.pathname,
+            actorRole: session.user.analystRole
+        });
         throw redirect(303, '/home');
     }
 

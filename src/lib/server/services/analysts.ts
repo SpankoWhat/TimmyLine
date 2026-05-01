@@ -4,6 +4,7 @@ import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
 import {
 	ServiceError,
+	requireAdminServiceAccess,
 	requireReadServiceAccess,
 	requireWriteServiceAccess,
 	validateRequired,
@@ -23,6 +24,10 @@ const VALID_ROLES = ['reader', 'analyst', 'admin'] as const;
 
 export async function listAnalysts(params: ListAnalystsParams = {}, ctx: ServiceContext) {
 	requireReadServiceAccess(ctx);
+
+	if (params.include_deleted) {
+		requireAdminServiceAccess(ctx);
+	}
 
 	const conditions: SQL[] = [];
 
@@ -94,6 +99,18 @@ export async function updateAnalyst(
 	ctx: ServiceContext
 ) {
 	requireWriteServiceAccess(ctx);
+	return updateAnalystRecord(data);
+}
+
+export async function updateAnalystAsAdmin(
+	data: UpdateAnalystData,
+	ctx: ServiceContext
+) {
+	requireAdminServiceAccess(ctx);
+	return updateAnalystRecord(data);
+}
+
+async function updateAnalystRecord(data: UpdateAnalystData) {
 
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	if (data.role !== undefined) {
