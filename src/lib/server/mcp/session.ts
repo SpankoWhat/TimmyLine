@@ -10,11 +10,21 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { registerTools } from './tools';
 import type { ServiceContext } from '$lib/server/services';
+import type { ServiceRole } from '$lib/types/common';
 import { mcpLogger as logger } from '../logging';
 
-interface McpSession {
+export interface McpSessionOwner {
+	authType: 'api_key' | 'session';
+	actorUUID: string;
+	actorRole: ServiceRole;
+	actorUserId?: string;
+	apiKeyId?: string;
+}
+
+export interface McpSession {
 	server: McpServer;
 	transport: WebStandardStreamableHTTPServerTransport;
+	owner: McpSessionOwner;
 	analystUUID: string;
 	analystRole: string;
 	createdAt: number;
@@ -45,7 +55,10 @@ function startCleanupTimer(): void {
 	}, 5 * 60 * 1000);
 }
 
-export function createSession(ctx: ServiceContext): WebStandardStreamableHTTPServerTransport {
+export function createSession(
+	ctx: ServiceContext,
+	owner: McpSessionOwner
+): WebStandardStreamableHTTPServerTransport {
 	startCleanupTimer();
 
 	const server = new McpServer({
@@ -65,6 +78,7 @@ export function createSession(ctx: ServiceContext): WebStandardStreamableHTTPSer
 			sessions.set(sessionId, {
 				server,
 				transport,
+				owner,
 				analystUUID: ctx.actorUUID,
 				analystRole: ctx.actorRole,
 				createdAt: Date.now(),
@@ -90,6 +104,19 @@ export function getSession(sessionId: string): McpSession | undefined {
 		session.lastAccessedAt = Date.now();
 	}
 	return session;
+}
+
+export function sessionMatchesOwner(session: McpSession, owner: McpSessionOwner): boolean {
+	if (session.owner.authType !== owner.authType) return false;
+	if (session.owner.actorUUID !== owner.actorUUID) return false;
+	if (session.owner.actorRole !== owner.actorRole) return false;
+	if ((session.owner.actorUserId ?? undefined) !== (owner.actorUserId ?? undefined)) return false;
+
+	if (owner.authType === 'api_key') {
+		return session.owner.apiKeyId === owner.apiKeyId;
+	}
+
+	return true;
 }
 
 export function destroySession(sessionId: string): boolean {

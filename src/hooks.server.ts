@@ -112,6 +112,18 @@ function resolveEffectiveRole(keyRole: string | null, analystRole: string | null
     return hierarchy[Math.min(keyLevel, analystLevel)];
 }
 
+function isPublicRoute(pathname: string): boolean {
+    const publicRoutes = ['/login', '/auth', '/api/health'];
+    return publicRoutes.some((route) => pathname.startsWith(route)) || pathname === '/';
+}
+
+function jsonError(message: string, status: number): Response {
+    return new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
 /**
  * Authentication & Authorization Hook
  * Validates session and protects routes.
@@ -124,14 +136,21 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
     }
 
     const session = await event.locals.auth();
+    const isApiRequest = event.url.pathname.startsWith('/api/');
 
     // Public routes that don't require authentication
-    // /api/mcp is listed here to prevent redirect; it enforces its own API key auth
-    const publicRoutes = ['/login', '/auth', '/api/health', '/api/mcp'];
-    const isPublicRoute = publicRoutes.some((route) => event.url.pathname.startsWith(route)) || event.url.pathname === '/';
+    const routeIsPublic = isPublicRoute(event.url.pathname);
 
-    // Redirect unauthenticated users to login
-    if (!session?.user && !isPublicRoute) {
+    // API routes should return JSON errors instead of browser redirects.
+    if (!session?.user && !routeIsPublic && isApiRequest) {
+        logger.debug('Unauthenticated API access to protected route', {
+            path: event.url.pathname
+        });
+        return jsonError('Authentication required', 401);
+    }
+
+    // Redirect unauthenticated browser users to login
+    if (!session?.user && !routeIsPublic) {
         logger.debug('Unauthenticated access to protected route, redirecting to /login');
         throw redirect(303, '/login');
     }
