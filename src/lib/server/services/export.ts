@@ -7,8 +7,9 @@
 
 import { aggregateIncidentData, type ExportPayload, type ExportTimelineItem } from '$lib/server/export/exportIncident';
 import { renderExportHtml } from '$lib/server/export/exportTemplate';
-import { ServiceError } from './types';
+import { ServiceError, requireReadServiceAccess } from './types';
 import type { TimeDisplayPreferences } from '$lib/utils/dateTime';
+import type { ServiceContext } from './types';
 
 // Re-export types for convenience
 export type { ExportPayload, ExportTimelineItem };
@@ -24,7 +25,9 @@ export interface ExportFormattingOptions {
 /**
  * Aggregate all data for a single incident into an export payload.
  */
-export async function exportIncidentData(incidentId: string): Promise<ExportPayload> {
+export async function exportIncidentData(incidentId: string, ctx: ServiceContext): Promise<ExportPayload> {
+	requireReadServiceAccess(ctx);
+
 	if (!incidentId) {
 		throw new ServiceError(400, 'MISSING_FIELDS', 'incident_id is required');
 	}
@@ -65,9 +68,10 @@ export function renderExportToHtml(payload: ExportPayload, options: ExportFormat
  */
 export async function exportIncidentHtml(
 	incidentId: string,
+	ctx: ServiceContext,
 	options: ExportFormattingOptions = {}
 ): Promise<{ html: string; filename: string }> {
-	const payload = await exportIncidentData(incidentId);
+	const payload = await exportIncidentData(incidentId, ctx);
 	const html = renderExportToHtml(payload, options);
 
 	const safeTitle = payload.incident.title

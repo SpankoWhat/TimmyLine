@@ -6,6 +6,13 @@
  * broadcasting. Both API routes and MCP tool handlers call into services.
  */
 
+import type {
+	ServiceRole,
+	ServiceContext,
+	LookupTableName,
+	JunctionTableName
+} from '$lib/types/common';
+
 // Re-export shared types from $lib/types for backward compatibility
 export type { ServiceRole, ServiceContext, LookupTableName, JunctionTableName } from '$lib/types/common';
 
@@ -25,6 +32,50 @@ export class ServiceError extends Error {
 		this.status = status;
 		this.code = code;
 	}
+}
+
+const READ_ROLES: ServiceRole[] = ['reader', 'analyst', 'admin'];
+const WRITE_ROLES: ServiceRole[] = ['analyst', 'admin'];
+const ADMIN_ROLES: ServiceRole[] = ['admin'];
+
+function assertAuthenticatedContext(ctx: ServiceContext): void {
+	if (!ctx.actorUUID || ctx.actorUUID === 'unknown') {
+		throw new ServiceError(401, 'AUTH_REQUIRED', 'Authentication required');
+	}
+}
+
+function assertRole(
+	ctx: ServiceContext,
+	allowedRoles: ServiceRole[],
+	errorMessage: string
+): void {
+	assertAuthenticatedContext(ctx);
+
+	if (!allowedRoles.includes(ctx.actorRole)) {
+		throw new ServiceError(403, 'INSUFFICIENT_PERMISSIONS', errorMessage);
+	}
+}
+
+export function requireReadServiceAccess(ctx: ServiceContext): void {
+	assertRole(ctx, READ_ROLES, 'Insufficient permissions: read access required');
+}
+
+export function requireWriteServiceAccess(ctx: ServiceContext): void {
+	assertRole(ctx, WRITE_ROLES, 'Insufficient permissions: write access required');
+}
+
+export function requireAdminServiceAccess(ctx: ServiceContext): void {
+	assertRole(ctx, ADMIN_ROLES, 'Insufficient permissions: admin access required');
+}
+
+export function requireActorUserId(ctx: ServiceContext): string {
+	assertAuthenticatedContext(ctx);
+
+	if (!ctx.actorUserId) {
+		throw new ServiceError(401, 'AUTH_REQUIRED', 'Authenticated user context is required');
+	}
+
+	return ctx.actorUserId;
 }
 
 // ============================================================================

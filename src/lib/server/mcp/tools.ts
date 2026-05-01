@@ -47,11 +47,11 @@ import {
 	updateActionEntity,
 	deleteJunction,
 	getEnrichedTimeline,
+	exportIncidentData,
+	exportIncidentHtml,
 	ServiceError,
 	type ServiceContext
 } from '$lib/server/services';
-import { aggregateIncidentData } from '$lib/server/export/exportIncident';
-import { renderExportHtml } from '$lib/server/export/exportTemplate';
 
 // ============================================================================
 // Helpers
@@ -78,8 +78,6 @@ async function safeTool(fn: () => Promise<unknown>) {
 // ============================================================================
 
 export function registerTools(server: McpServer, ctx: ServiceContext): void {
-	const writeRoles = ['analyst', 'admin'];
-
 	// ========================================================================
 	// READ Tools
 	// ========================================================================
@@ -132,7 +130,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				include_deleted: z.boolean().optional().describe('Include soft-deleted incidents')
 			}
 		},
-		async (params) => safeTool(() => listIncidents(params))
+		async (params) => safeTool(() => listIncidents(params, ctx))
 	);
 
 	// ── List Timeline Events ─────────────────────────────────────────────
@@ -169,7 +167,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				include_deleted: z.boolean().optional().describe('Include soft-deleted events')
 			}
 		},
-		async (params) => safeTool(() => listTimelineEvents(params))
+		async (params) => safeTool(() => listTimelineEvents(params, ctx))
 	);
 
 	// ── Get Enriched Timeline ────────────────────────────────────────────
@@ -186,7 +184,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				include_deleted: z.boolean().optional().describe('Include soft-deleted items')
 			}
 		},
-		async (params) => safeTool(() => getEnrichedTimeline(params))
+		async (params) => safeTool(() => getEnrichedTimeline(params, ctx))
 	);
 
 	// ── List Investigation Actions ───────────────────────────────────────
@@ -212,7 +210,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				include_deleted: z.boolean().optional().describe('Include soft-deleted actions')
 			}
 		},
-		async (params) => safeTool(() => listInvestigationActions(params))
+		async (params) => safeTool(() => listInvestigationActions(params, ctx))
 	);
 
 	// ── List Entities ────────────────────────────────────────────────────
@@ -242,7 +240,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				include_deleted: z.boolean().optional().describe('Include soft-deleted entities')
 			}
 		},
-		async (params) => safeTool(() => listEntities(params))
+		async (params) => safeTool(() => listEntities(params, ctx))
 	);
 
 	// ── List Annotations ─────────────────────────────────────────────────
@@ -268,7 +266,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Include soft-deleted annotations')
 			}
 		},
-		async (params) => safeTool(() => listAnnotations(params))
+		async (params) => safeTool(() => listAnnotations(params, ctx))
 	);
 
 	// ── List Analysts ────────────────────────────────────────────────────
@@ -292,7 +290,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Include soft-deleted analysts')
 			}
 		},
-		async (params) => safeTool(() => listAnalysts(params))
+		async (params) => safeTool(() => listAnalysts(params, ctx))
 	);
 
 	// ── Read Lookup Table ────────────────────────────────────────────────
@@ -314,7 +312,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Which lookup table to read')
 			}
 		},
-		async (params) => safeTool(() => listLookups({ table: params.table }))
+		async (params) => safeTool(() => listLookups({ table: params.table }, ctx))
 	);
 
 	// ── Export Incident Data ─────────────────────────────────────────────
@@ -330,7 +328,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 		},
 		async (params) =>
 			safeTool(async () => {
-				const payload = await aggregateIncidentData(params.incident_id);
+				const payload = await exportIncidentData(params.incident_id, ctx);
 				return payload;
 			})
 	);
@@ -348,8 +346,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 		},
 		async (params) => {
 			try {
-				const payload = await aggregateIncidentData(params.incident_id);
-				const html = renderExportHtml(payload);
+				const { html } = await exportIncidentHtml(params.incident_id, ctx);
 				return { content: [{ type: 'text' as const, text: html }] };
 			} catch (err) {
 				return toolResult({ error: (err as Error).message });
@@ -916,14 +913,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				uuid: z.string().describe('UUID of the incident to delete')
 			}
 		},
-		async (params) => {
-			if (ctx.actorRole !== 'admin') {
-				return toolResult({
-					error: 'Insufficient permissions: admin access required'
-				});
-			}
-			return safeTool(() => deleteIncident(params, ctx));
-		}
+		async (params) => safeTool(() => deleteIncident(params, ctx))
 	);
 
 	// ── Delete Timeline Event ────────────────────────────────────────────
@@ -940,14 +930,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Incident UUID (for Socket.IO broadcast)')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteTimelineEvent(params, ctx));
-		}
+		async (params) => safeTool(() => deleteTimelineEvent(params, ctx))
 	);
 
 	// ── Delete Investigation Action ──────────────────────────────────────
@@ -965,14 +948,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Incident UUID (for Socket.IO broadcast)')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteInvestigationAction(params, ctx));
-		}
+		async (params) => safeTool(() => deleteInvestigationAction(params, ctx))
 	);
 
 	// ── Delete Entity ────────────────────────────────────────────────────
@@ -989,14 +965,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Incident UUID (for Socket.IO broadcast)')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteEntity(params, ctx));
-		}
+		async (params) => safeTool(() => deleteEntity(params, ctx))
 	);
 
 	// ── Delete Annotation ────────────────────────────────────────────────
@@ -1013,14 +982,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Incident UUID (for Socket.IO broadcast)')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteAnnotation(params, ctx));
-		}
+		async (params) => safeTool(() => deleteAnnotation(params, ctx))
 	);
 
 	// ── Delete Analyst ───────────────────────────────────────────────────
@@ -1033,14 +995,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				uuid: z.string().describe('UUID of the analyst to delete')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteAnalyst(params, ctx));
-		}
+		async (params) => safeTool(() => deleteAnalyst(params, ctx))
 	);
 
 	// ── Delete Lookup Entry ──────────────────────────────────────────────
@@ -1063,14 +1018,7 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 				name: z.string().describe('Name of the lookup entry to delete')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteLookup(params, ctx));
-		}
+		async (params) => safeTool(() => deleteLookup(params, ctx))
 	);
 
 	// ── Delete Junction Record ───────────────────────────────────────────
@@ -1115,13 +1063,6 @@ export function registerTools(server: McpServer, ctx: ServiceContext): void {
 					.describe('Reference type (for annotation_references)')
 			}
 		},
-		async (params) => {
-			if (!writeRoles.includes(ctx.actorRole)) {
-				return toolResult({
-					error: 'Insufficient permissions: write access required'
-				});
-			}
-			return safeTool(() => deleteJunction(params, ctx));
-		}
+		async (params) => safeTool(() => deleteJunction(params, ctx))
 	);
 }

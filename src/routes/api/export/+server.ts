@@ -1,5 +1,5 @@
 import { type RequestHandler } from '@sveltejs/kit';
-import { requireReadAccess } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { exportIncidentHtml, ServiceError } from '$lib/server/services';
 import {
 	normalizeAbsoluteFormat,
@@ -26,8 +26,8 @@ function parseBooleanQuery(value: string | null): boolean | undefined {
 }
 
 export const GET: RequestHandler = async (event) => {
-	await requireReadAccess(event);
 	const { url } = event;
+	const ctx = buildServiceContext(event);
 
 	const incidentId = url.searchParams.get('incident_id');
 	if (!incidentId) {
@@ -66,6 +66,7 @@ export const GET: RequestHandler = async (event) => {
 	try {
 		const { html, filename } = await exportIncidentHtml(
 			incidentId,
+			ctx,
 			hasPreferenceOverrides ? { timePreferences: requestedTimePreferences } : undefined
 		);
 

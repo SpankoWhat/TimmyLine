@@ -9,7 +9,15 @@ import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 import type { ListEntitiesParams, CreateEntityData, UpdateEntityData, DeleteEntityData } from '$lib/types/entities';
 
 import type { NewEntity } from '$lib/server/database';
@@ -21,7 +29,9 @@ const CRITICALITY_VALUES = ['critical', 'high', 'medium', 'low', 'unknown'] as c
 // List
 // ============================================================================
 
-export async function listEntities(params: ListEntitiesParams) {
+export async function listEntities(params: ListEntitiesParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.entities.uuid, params.uuid));
@@ -57,6 +67,8 @@ export async function createEntity(
 	data: CreateEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, [
 		'incident_id',
 		'entered_by',
@@ -104,6 +116,8 @@ export async function updateEntity(
 	data: UpdateEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	validateEnum('status', data.status, STATUS_VALUES);
 	validateEnum('criticality', data.criticality, CRITICALITY_VALUES);
@@ -146,6 +160,8 @@ export async function deleteEntity(
 	data: DeleteEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	try {

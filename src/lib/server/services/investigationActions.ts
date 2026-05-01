@@ -9,7 +9,15 @@ import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 import type { ListInvestigationActionsParams, CreateInvestigationActionData, UpdateInvestigationActionData, DeleteInvestigationActionData } from '$lib/types/actions';
 
 import type { NewInvestigationAction } from '$lib/server/database';
@@ -20,7 +28,9 @@ const RESULT_VALUES = ['success', 'failed', 'partial', 'pending'] as const;
 // List
 // ============================================================================
 
-export async function listInvestigationActions(params: ListInvestigationActionsParams) {
+export async function listInvestigationActions(params: ListInvestigationActionsParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.investigation_actions.uuid, params.uuid));
@@ -53,6 +63,8 @@ export async function createInvestigationAction(
 	data: CreateInvestigationActionData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, [
 		'incident_id',
 		'actioned_by',
@@ -98,6 +110,8 @@ export async function updateInvestigationAction(
 	data: UpdateInvestigationActionData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	validateEnum('result', data.result, RESULT_VALUES);
 
@@ -138,6 +152,8 @@ export async function deleteInvestigationAction(
 	data: DeleteInvestigationActionData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	try {

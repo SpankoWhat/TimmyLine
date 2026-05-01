@@ -9,7 +9,15 @@ import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 import type { ListAnnotationsParams, CreateAnnotationData, UpdateAnnotationData, DeleteAnnotationData } from '$lib/types/annotations';
 
 import type { NewAnnotation } from '$lib/server/database';
@@ -20,7 +28,9 @@ const CONFIDENCE_VALUES = ['high', 'medium', 'low', 'guess'] as const;
 // List
 // ============================================================================
 
-export async function listAnnotations(params: ListAnnotationsParams) {
+export async function listAnnotations(params: ListAnnotationsParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(schema.annotations.uuid, params.uuid));
@@ -53,6 +63,8 @@ export async function createAnnotation(
 	data: CreateAnnotationData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, [
 		'incident_id',
 		'noted_by',
@@ -96,6 +108,8 @@ export async function updateAnnotation(
 	data: UpdateAnnotationData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	validateEnum('confidence', data.confidence, CONFIDENCE_VALUES);
 
@@ -136,6 +150,8 @@ export async function deleteAnnotation(
 	data: DeleteAnnotationData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	try {

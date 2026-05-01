@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireReadAccess, requireWriteAccess, requireAdminAccess, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import {
 	listLookups,
 	createLookup,
@@ -22,12 +22,12 @@ function validateTable(table: string): LookupTableName {
 }
 
 export const GET: RequestHandler = async (event) => {
-	await requireReadAccess(event);
 	const table = validateTable(event.params.table);
 	const include_deleted = event.url.searchParams.get('include_deleted') === 'true';
+	const ctx = buildServiceContext(event);
 
 	try {
-		const results = await listLookups({ table, include_deleted });
+		const results = await listLookups({ table, include_deleted }, ctx);
 		return json(results);
 	} catch (err) {
 		if (err instanceof ServiceError) {
@@ -38,7 +38,6 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
 	const table = validateTable(event.params.table);
 
 	let body;
@@ -62,7 +61,6 @@ export const POST: RequestHandler = async (event) => {
 };
 
 export const PATCH: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
 	const table = validateTable(event.params.table);
 
 	let body;
@@ -98,7 +96,6 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	await requireAdminAccess(event);
 	const table = validateTable(event.params.table);
 
 	let body;

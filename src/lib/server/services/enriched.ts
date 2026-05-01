@@ -6,14 +6,16 @@
  */
 
 import { db } from '$lib/server';
-import { ServiceError } from './types';
+import { ServiceError, requireReadServiceAccess, type ServiceContext } from './types';
 import type { GetEnrichedTimelineParams } from '$lib/types/enriched';
 
 // ============================================================================
 // Enriched Timeline
 // ============================================================================
 
-export async function getEnrichedTimeline(params: GetEnrichedTimelineParams) {
+export async function getEnrichedTimeline(params: GetEnrichedTimelineParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	if (!params.incident_id) {
 		throw new ServiceError(400, 'MISSING_FIELDS', 'incident_id parameter is required');
 	}

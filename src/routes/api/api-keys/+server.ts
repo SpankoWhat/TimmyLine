@@ -1,18 +1,13 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireAuth, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { listApiKeysService, createApiKey, revokeApiKeyService, ServiceError } from '$lib/server/services';
 
 export const GET: RequestHandler = async (event) => {
-	const session = await requireAuth(event);
-	const userId = session.user?.id;
-
-	if (!userId) {
-		throw error(400, 'No user account linked to this session');
-	}
+	const ctx = buildServiceContext(event);
 
 	try {
-		const keys = await listApiKeysService(userId);
+		const keys = await listApiKeysService(ctx);
 		return json(keys);
 	} catch (err) {
 		if (err instanceof ServiceError) {
@@ -23,8 +18,6 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-	await requireAuth(event);
-
 	let body;
 	try {
 		body = await event.request.json();
@@ -55,8 +48,6 @@ export const POST: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	await requireAuth(event);
-
 	let body;
 	try {
 		body = await event.request.json();

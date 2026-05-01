@@ -6,7 +6,13 @@
  */
 
 import { generateApiKey, listApiKeys as listApiKeysAuth, revokeApiKey as revokeApiKeyAuth } from '$lib/server/auth/apiKeys';
-import { ServiceError, validateRequired, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireActorUserId,
+	requireReadServiceAccess,
+	validateRequired,
+	type ServiceContext
+} from './types';
 
 // ============================================================================
 // Constants
@@ -19,10 +25,11 @@ const ROLE_HIERARCHY = ['reader', 'analyst', 'admin'] as const;
 // List
 // ============================================================================
 
-export async function listApiKeysService(userId: string) {
-	if (!userId) {
-		throw new ServiceError(400, 'MISSING_FIELDS', 'userId is required');
-	}
+
+export async function listApiKeysService(ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+	const userId = requireActorUserId(ctx);
+
 	return listApiKeysAuth(userId);
 }
 
@@ -38,6 +45,9 @@ export async function createApiKey(
 	},
 	ctx: ServiceContext
 ) {
+	requireReadServiceAccess(ctx);
+	const actorUserId = requireActorUserId(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['name']);
 
 	if (typeof data.name !== 'string' || data.name.trim().length === 0) {
@@ -63,13 +73,13 @@ export async function createApiKey(
 		}
 	}
 
-	if (!ctx.actorUserId || !ctx.actorUUID) {
+	if (!ctx.actorUUID) {
 		throw new ServiceError(400, 'MISSING_CONTEXT', 'Service context must include actorUserId and actorUUID');
 	}
 
 	const { plaintextKey, record } = await generateApiKey({
 		name: data.name.trim(),
-		user_id: ctx.actorUserId,
+		user_id: actorUserId,
 		analyst_uuid: ctx.actorUUID,
 		role: keyRole as 'reader' | 'analyst' | 'admin',
 		expires_at: data.expires_at
@@ -86,13 +96,12 @@ export async function revokeApiKeyService(
 	data: { id: string },
 	ctx: ServiceContext
 ) {
+	requireReadServiceAccess(ctx);
+	const actorUserId = requireActorUserId(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['id']);
 
-	if (!ctx.actorUserId) {
-		throw new ServiceError(400, 'MISSING_CONTEXT', 'Service context must include actorUserId');
-	}
-
-	const revoked = await revokeApiKeyAuth(data.id, ctx.actorUserId);
+	const revoked = await revokeApiKeyAuth(data.id, actorUserId);
 	if (!revoked) {
 		throw new ServiceError(404, 'NOT_FOUND', 'API key not found, already revoked, or does not belong to you');
 	}

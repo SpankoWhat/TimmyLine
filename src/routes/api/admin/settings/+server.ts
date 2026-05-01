@@ -1,14 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireAdminAccess, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { getAllSettings, updateSettings } from '$lib/server/services/appSettings';
 import { ServiceError } from '$lib/server/services';
 
 export const GET: RequestHandler = async (event) => {
-	await requireAdminAccess(event);
+	const ctx = buildServiceContext(event);
 
 	try {
-		const settings = await getAllSettings();
+		const settings = await getAllSettings(ctx);
 		return json({ settings });
 	} catch (e: unknown) {
 		if (e instanceof ServiceError) {
@@ -19,8 +19,6 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const PATCH: RequestHandler = async (event) => {
-	await requireAdminAccess(event);
-
 	try {
 		const { settings } = await event.request.json();
 

@@ -1,14 +1,14 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireReadAccess, requireWriteAccess, requireAdminAccess, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { listIncidents, updateIncident, deleteIncident, ServiceError } from '$lib/server/services';
 
 export const GET: RequestHandler = async (event) => {
-	await requireReadAccess(event);
 	const { uuid } = event.params;
+	const ctx = buildServiceContext(event);
 
 	try {
-		const results = await listIncidents({ uuid });
+		const results = await listIncidents({ uuid }, ctx);
 		if (results.length === 0) {
 			return json({ error: 'Incident not found' }, { status: 404 });
 		}
@@ -22,7 +22,6 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const PATCH: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
 	const { uuid } = event.params;
 
 	let body;
@@ -46,7 +45,6 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	await requireAdminAccess(event);
 	const { uuid } = event.params;
 	const ctx = buildServiceContext(event);
 

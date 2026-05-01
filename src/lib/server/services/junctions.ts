@@ -2,7 +2,13 @@ import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq, and } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, type ServiceContext, type JunctionTableName } from './types';
+import {
+	ServiceError,
+	requireWriteServiceAccess,
+	validateRequired,
+	type ServiceContext,
+	type JunctionTableName
+} from './types';
 import type { CreateEventEntityData, CreateActionEventData, CreateActionEntityData, UpdateEventEntityData, UpdateActionEventData, UpdateActionEntityData, DeleteJunctionData } from '$lib/types/junctions';
 
 // ============================================================================
@@ -13,6 +19,8 @@ export async function createEventEntity(
 	data: CreateEventEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	const event_id = data.event_uuid;
 	const entity_id = data.entity_uuid;
 
@@ -47,6 +55,8 @@ export async function createActionEvent(
 	data: CreateActionEventData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	const action_id = data.action_uuid;
 	const event_id = data.event_uuid;
 
@@ -83,6 +93,8 @@ export async function createActionEntity(
 	data: CreateActionEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	const action_id = data.action_uuid;
 	const entity_id = data.entity_uuid;
 
@@ -117,6 +129,8 @@ export async function updateEventEntity(
 	data: UpdateEventEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['event_id', 'entity_id']);
 
 	const updated = db
@@ -151,6 +165,8 @@ export async function updateActionEvent(
 	data: UpdateActionEventData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'event_id']);
 
 	const updated = db
@@ -185,6 +201,8 @@ export async function updateActionEntity(
 	data: UpdateActionEntityData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['action_id', 'entity_id']);
 
 	const updated = db
@@ -226,6 +244,8 @@ export async function deleteJunction(
 	data: DeleteJunctionData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table']);
 
 	if (!VALID_JUNCTION_TABLES.includes(data.table as JunctionTableName)) {

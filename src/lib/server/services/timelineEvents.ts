@@ -11,7 +11,14 @@ import * as schema from '$lib/server/database';
 import { timeline_events } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 import type { ListTimelineEventsParams, CreateTimelineEventData, UpdateTimelineEventData, DeleteTimelineEventData } from '$lib/types/events';
 import type { NewTimelineEvent } from '$lib/server/database';
 
@@ -27,7 +34,9 @@ const SOURCE_RELIABILITY_VALUES = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 // List
 // ============================================================================
 
-export async function listTimelineEvents(params: ListTimelineEventsParams) {
+export async function listTimelineEvents(params: ListTimelineEventsParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(timeline_events.uuid, params.uuid));
@@ -64,6 +73,8 @@ export async function listTimelineEvents(params: ListTimelineEventsParams) {
 // ============================================================================
 
 export async function createTimelineEvent(data: CreateTimelineEventData, ctx: ServiceContext) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, [
 		'incident_id',
 		'discovered_by',
@@ -108,6 +119,8 @@ export async function createTimelineEvent(data: CreateTimelineEventData, ctx: Se
 // ============================================================================
 
 export async function updateTimelineEvent(data: UpdateTimelineEventData, ctx: ServiceContext) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	validateEnum('severity', data.severity, SEVERITY_VALUES);
@@ -148,6 +161,8 @@ export async function updateTimelineEvent(data: UpdateTimelineEventData, ctx: Se
 // ============================================================================
 
 export async function deleteTimelineEvent(data: DeleteTimelineEventData, ctx: ServiceContext) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	const [deleted] = await db

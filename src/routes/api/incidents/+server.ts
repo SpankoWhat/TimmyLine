@@ -1,11 +1,11 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireReadAccess, requireWriteAccess, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { listIncidents, createIncident, ServiceError } from '$lib/server/services';
 
 export const GET: RequestHandler = async (event) => {
-	await requireReadAccess(event);
 	const { url } = event;
+	const ctx = buildServiceContext(event);
 
 	try {
 		const results = await listIncidents({
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async (event) => {
 			created_at: url.searchParams.get('created_at') ? parseInt(url.searchParams.get('created_at')!) : undefined,
 			updated_at: url.searchParams.get('updated_at') ? parseInt(url.searchParams.get('updated_at')!) : undefined,
 			include_deleted: url.searchParams.get('include_deleted') === 'true'
-		});
+		}, ctx);
 		return json(results);
 	} catch (err) {
 		if (err instanceof ServiceError) {
@@ -28,8 +28,6 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
-
 	let body;
 	try {
 		body = await event.request.json();

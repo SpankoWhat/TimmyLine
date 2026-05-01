@@ -2,7 +2,15 @@ import { db } from '$lib/server';
 import * as schema from '$lib/server/database';
 import { eq, isNull, isNotNull } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, type ServiceContext, type LookupTableName } from './types';
+import {
+	ServiceError,
+	requireAdminServiceAccess,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	type ServiceContext,
+	type LookupTableName
+} from './types';
 import type { ListLookupsParams, CreateLookupData, UpdateLookupData, SoftDeleteLookupData, RestoreLookupData, DeleteLookupData } from '$lib/types/lookups';
 
 // ============================================================================
@@ -32,7 +40,9 @@ function getTable(name: string) {
 // List
 // ============================================================================
 
-export async function listLookups(params: ListLookupsParams) {
+export async function listLookups(params: ListLookupsParams, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	validateRequired(params as unknown as Record<string, unknown>, ['table']);
 	const tableObj = getTable(params.table);
 
@@ -51,6 +61,8 @@ export async function createLookup(
 	data: CreateLookupData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name', 'description']);
 	const tableObj = getTable(data.table);
 
@@ -81,6 +93,8 @@ export async function updateLookup(
 	data: UpdateLookupData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name', 'description', 'old_name']);
 	const tableObj = getTable(data.table);
 
@@ -114,6 +128,8 @@ export async function softDeleteLookup(
 	data: SoftDeleteLookupData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 
@@ -141,6 +157,8 @@ export async function restoreLookup(
 	data: RestoreLookupData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 
@@ -167,6 +185,8 @@ export async function deleteLookup(
 	data: DeleteLookupData,
 	ctx: ServiceContext
 ) {
+	requireAdminServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['table', 'name']);
 	const tableObj = getTable(data.table);
 

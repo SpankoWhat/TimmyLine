@@ -12,7 +12,7 @@
 
 import { getConfig, writeConfigFile, reloadConfig } from '$lib/server/config';
 import type { TimmyLineConfig } from '$lib/server/config';
-import { ServiceError } from './types';
+import { ServiceError, requireAdminServiceAccess } from './types';
 import type { ServiceContext } from './types';
 
 // ============================================================================
@@ -40,7 +40,9 @@ export function getSettingsMap(): Record<string, string> {
 }
 
 /** Backwards-compatible alias used by the admin API GET handler */
-export async function getAllSettings(): Promise<Record<string, string>> {
+export async function getAllSettings(ctx: ServiceContext): Promise<Record<string, string>> {
+	requireAdminServiceAccess(ctx);
+
 	return getSettingsMap();
 }
 
@@ -68,8 +70,10 @@ const KEY_MAP: Record<string, (cfg: TimmyLineConfig, v: string) => void> = {
  */
 export async function updateSettings(
 	updates: Record<string, string>,
-	_ctx: ServiceContext
+	ctx: ServiceContext
 ): Promise<Record<string, string>> {
+	requireAdminServiceAccess(ctx);
+
 	const unknownKeys = Object.keys(updates).filter((k) => !(k in KEY_MAP));
 	if (unknownKeys.length > 0) {
 		throw new ServiceError(

@@ -10,7 +10,16 @@ import * as schema from '$lib/server/database';
 import { incidents } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireAdminServiceAccess,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 import type { ListIncidentsParams, CreateIncidentData, UpdateIncidentData, DeleteIncidentData } from '$lib/types/incidents';
 
 import type { NewIncident } from '$lib/server/database';
@@ -26,7 +35,9 @@ const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 // List
 // ============================================================================
 
-export async function listIncidents(params: ListIncidentsParams = {}) {
+export async function listIncidents(params: ListIncidentsParams = {}, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid !== undefined) conditions.push(eq(incidents.uuid, params.uuid));
@@ -57,6 +68,8 @@ export async function listIncidents(params: ListIncidentsParams = {}) {
 // ============================================================================
 
 export async function createIncident(data: CreateIncidentData, ctx: ServiceContext) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['title', 'status', 'priority']);
 	validateEnum('status', data.status, VALID_STATUSES);
 	validateEnum('priority', data.priority, VALID_PRIORITIES);
@@ -92,6 +105,8 @@ export async function createIncident(data: CreateIncidentData, ctx: ServiceConte
 // ============================================================================
 
 export async function updateIncident(data: UpdateIncidentData, ctx: ServiceContext) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	if (data.status !== undefined) validateEnum('status', data.status, VALID_STATUSES);
@@ -136,6 +151,8 @@ export async function updateIncident(data: UpdateIncidentData, ctx: ServiceConte
 // ============================================================================
 
 export async function deleteIncident(data: DeleteIncidentData, ctx: ServiceContext) {
+	requireAdminServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	const now = Math.floor(Date.now() / 1000);

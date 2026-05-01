@@ -2,7 +2,15 @@ import { db } from '$lib/server';
 import { analysts } from '$lib/server/database';
 import { eq, and, isNull, type SQL } from 'drizzle-orm';
 import { getSocketIO } from '$lib/server/socket';
-import { ServiceError, validateRequired, validateEnum, stripUndefined, type ServiceContext } from './types';
+import {
+	ServiceError,
+	requireReadServiceAccess,
+	requireWriteServiceAccess,
+	validateRequired,
+	validateEnum,
+	stripUndefined,
+	type ServiceContext
+} from './types';
 
 import type { NewAnalyst } from '$lib/server/database';
 import type { ListAnalystsParams, CreateAnalystData, UpdateAnalystData, DeleteAnalystData } from '$lib/types/analysts';
@@ -13,7 +21,9 @@ const VALID_ROLES = ['reader', 'analyst', 'admin'] as const;
 // List
 // ============================================================================
 
-export async function listAnalysts(params: ListAnalystsParams = {}) {
+export async function listAnalysts(params: ListAnalystsParams = {}, ctx: ServiceContext) {
+	requireReadServiceAccess(ctx);
+
 	const conditions: SQL[] = [];
 
 	if (params.uuid) conditions.push(eq(analysts.uuid, params.uuid));
@@ -44,6 +54,8 @@ export async function createAnalyst(
 	data: CreateAnalystData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['username']);
 	if (data.role) {
 		validateEnum('role', data.role, VALID_ROLES);
@@ -81,6 +93,8 @@ export async function updateAnalyst(
 	data: UpdateAnalystData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 	if (data.role !== undefined) {
 		validateEnum('role', data.role, VALID_ROLES);
@@ -128,6 +142,8 @@ export async function deleteAnalyst(
 	data: DeleteAnalystData,
 	ctx: ServiceContext
 ) {
+	requireWriteServiceAccess(ctx);
+
 	validateRequired(data as unknown as Record<string, unknown>, ['uuid']);
 
 	const [deleted] = await db

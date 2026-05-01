@@ -1,10 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireWriteAccess, buildServiceContext } from '$lib/server/auth/authorization';
+import { buildServiceContext } from '$lib/server/auth/authorization';
 import { updateAnnotation, deleteAnnotation, ServiceError } from '$lib/server/services';
 
 export const PATCH: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
 	const { uuid } = event.params;
 
 	let body;
@@ -28,7 +27,6 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 export const DELETE: RequestHandler = async (event) => {
-	await requireWriteAccess(event);
 	const { uuid } = event.params;
 
 	let body: Record<string, unknown> = {};
