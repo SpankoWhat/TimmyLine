@@ -8,7 +8,6 @@ export interface HealthResponse {
 	status: 'healthy' | 'degraded' | 'unhealthy';
 	database: string;
 	mcp: string;
-	mcpActiveSessions: number;
 	timestamp: number;
 }
 

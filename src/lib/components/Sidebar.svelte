@@ -88,7 +88,6 @@
 				status: 'unhealthy',
 				database: 'error',
 				mcp: 'unknown',
-				mcpActiveSessions: 0,
 				timestamp: 0
 			};
 		}

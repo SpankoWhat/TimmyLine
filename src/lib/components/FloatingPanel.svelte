@@ -33,18 +33,26 @@
 		children: Snippet;
 	} = $props();
 
-	// Capture initial values (props are reactive, but we only need initial values for defaults)
-	const initialX = defaultPosition.x;
-	const initialY = defaultPosition.y;
-	const initialW = defaultSize.width;
-	const initialH = defaultSize.height;
-	const storageKey = `timmyline-float-panel-${panelId}`;
+	function getDefaultPanelState() {
+		return {
+			x: defaultPosition.x,
+			y: defaultPosition.y,
+			width: defaultSize.width,
+			height: defaultSize.height,
+		};
+	}
+
+	function getStorageKey() {
+		return `timmyline-float-panel-${panelId}`;
+	}
+
+	const initialState = getDefaultPanelState();
 
 	// Panel position & size
-	let x = $state(initialX);
-	let y = $state(initialY);
-	let width = $state(initialW);
-	let height = $state(initialH);
+	let x = $state(initialState.x);
+	let y = $state(initialState.y);
+	let width = $state(initialState.width);
+	let height = $state(initialState.height);
 	let zIndex = $state(getNextZ());
 
 	// Drag state
@@ -61,17 +69,17 @@
 	let resizeStartW = 0;
 	let resizeStartH = 0;
 
-	const STORAGE_KEY = storageKey;
-
 	onMount(() => {
+		const defaults = getDefaultPanelState();
+
 		try {
-			const saved = localStorage.getItem(STORAGE_KEY);
+			const saved = localStorage.getItem(getStorageKey());
 			if (saved) {
 				const data = JSON.parse(saved);
-				x = data.x ?? initialX;
-				y = data.y ?? initialY;
-				width = data.width ?? initialW;
-				height = data.height ?? initialH;
+				x = data.x ?? defaults.x;
+				y = data.y ?? defaults.y;
+				width = data.width ?? defaults.width;
+				height = data.height ?? defaults.height;
 			}
 		} catch {
 			// Ignore parse errors
@@ -81,7 +89,7 @@
 
 	function saveState() {
 		try {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y, width, height }));
+			localStorage.setItem(getStorageKey(), JSON.stringify({ x, y, width, height }));
 		} catch {
 			// Ignore storage errors
 		}
