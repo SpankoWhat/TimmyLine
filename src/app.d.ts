@@ -16,6 +16,18 @@ declare global {
 				analystUsername: string;
 				analystRole: string;
 			};
+			/** Set when request is authenticated via Microsoft Entra bearer token */
+			bearerToken?: {
+				issuer: string;
+				subject: string;
+				principal: string;
+				principalClaim: 'email' | 'preferred_username' | 'upn' | 'unique_name';
+				audience: string;
+				userId?: string;
+				analystUUID: string;
+				analystUsername: string;
+				analystRole: string;
+			};
 		}
 		// interface PageData {}
 		// interface PageState {}

@@ -5,6 +5,10 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { authLogger as logger } from '$lib/server/logging';
 import { validateApiKey } from '$lib/server/auth/apiKeys';
+import {
+    MicrosoftBearerTokenAuthError,
+    validateMicrosoftBearerToken
+} from '$lib/server/auth/microsoftBearerTokens';
 import { initializeSocketIO } from '$lib/server/socket/index';
 
 // ── Production Socket.IO bridge ─────────────────────────────────────
@@ -53,20 +57,54 @@ function jsonError(message: string, status: number): Response {
     });
 }
 
+function extractBearerToken(authHeader: string | null): string | null {
+    if (!authHeader) {
+        return null;
+    }
+
+    const [scheme, ...rest] = authHeader.split(' ');
+    if (!scheme || scheme.toLowerCase() !== 'bearer') {
+        return null;
+    }
+
+    const token = rest.join(' ').trim();
+    return token.length > 0 ? token : null;
+}
+
+function setSyntheticSession(
+    event: Parameters<Handle>[0]['event'],
+    user: {
+        id?: string;
+        name?: string | null;
+        email?: string | null;
+        analystUUID: string;
+        analystRole: string;
+        analystUsername: string;
+    }
+) {
+    const syntheticSession = {
+        user,
+        expires: new Date(Date.now() + 86400000).toISOString()
+    };
+
+    event.locals.session = syntheticSession as any;
+    event.locals.auth = async () => syntheticSession as any;
+}
+
 /**
- * API Key Authentication Hook
- * Checks for Bearer token before session auth. If a valid API key is found,
- * synthesizes a session so downstream auth helpers work unchanged.
+ * Credential Authentication Hook
+ * Checks Authorization Bearer credentials before session auth.
+ * - `tml_` tokens authenticate as TimmyLine API keys
+ * - other Bearer tokens can authenticate as Microsoft Entra access tokens
  */
-const apiKeyHandle: Handle = async ({ event, resolve }) => {
-    const authHeader = event.request.headers.get('authorization');
+const credentialHandle: Handle = async ({ event, resolve }) => {
+    if (!event.url.pathname.startsWith('/api/')) {
+        return resolve(event);
+    }
 
-    // Extract tml_ token from Authorization header
-    const token = authHeader?.includes('tml_')
-        ? 'tml_' + authHeader.split('tml_')[1]
-        : null;
+    const token = extractBearerToken(event.request.headers.get('authorization'));
 
-    if (token) {
+    if (token?.startsWith('tml_')) {
         // Check if API key auth is enabled (reads from config file, hot-reloadable)
         const { getConfig } = await import('$lib/server/config');
         const config = getConfig();
@@ -100,20 +138,14 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
         };
 
         // Synthesize a session so requireAuth/requireWriteAccess/etc. work unchanged
-        const syntheticSession = {
-            user: {
-                id: keyInfo.userId,
-                name: keyInfo.analystFullName,
-                email: keyInfo.analystEmail,
-                analystUUID: keyInfo.analystUUID,
-                analystRole: effectiveRole,
-                analystUsername: keyInfo.analystUsername
-            },
-            expires: new Date(Date.now() + 86400000).toISOString()
-        };
-
-        event.locals.session = syntheticSession as any;
-        event.locals.auth = async () => syntheticSession as any;
+        setSyntheticSession(event, {
+            id: keyInfo.userId,
+            name: keyInfo.analystFullName,
+            email: keyInfo.analystEmail,
+            analystUUID: keyInfo.analystUUID,
+            analystRole: effectiveRole,
+            analystUsername: keyInfo.analystUsername
+        });
 
         logger.debug('API key authenticated', {
             keyName: keyInfo.keyName,
@@ -123,6 +155,65 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
 
         // Skip session auth and authorization redirect — go straight to resolution
         return resolve(event);
+    }
+
+    if (!token) {
+        return resolve(event);
+    }
+
+    const { getConfig } = await import('$lib/server/config');
+    const config = getConfig();
+    if (!config.auth.microsoft.bearerToken.enabled) {
+        return resolve(event);
+    }
+
+    try {
+        const identity = await validateMicrosoftBearerToken(token);
+
+        event.locals.bearerToken = {
+            issuer: identity.issuer,
+            subject: identity.subject,
+            principal: identity.principal,
+            principalClaim: identity.principalClaim,
+            audience: identity.audience,
+            userId: identity.userId,
+            analystUUID: identity.analystUUID,
+            analystUsername: identity.analystUsername,
+            analystRole: identity.analystRole
+        };
+
+        setSyntheticSession(event, {
+            id: identity.userId,
+            name: identity.analystFullName ?? identity.name,
+            email: identity.analystEmail ?? identity.principal,
+            analystUUID: identity.analystUUID,
+            analystRole: identity.analystRole,
+            analystUsername: identity.analystUsername
+        });
+
+        logger.debug('Microsoft bearer token authenticated', {
+            principal: identity.principal,
+            principalClaim: identity.principalClaim,
+            onBehalfOf: identity.analystUsername
+        });
+
+        return resolve(event);
+    } catch (error) {
+        if (error instanceof MicrosoftBearerTokenAuthError) {
+            return new Response(JSON.stringify({ error: error.message, code: error.code }), {
+                status: error.status,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        logger.error('Unexpected Microsoft bearer token authentication failure', {
+            error: error instanceof Error ? error.message : String(error)
+        });
+
+        return new Response(JSON.stringify({ error: 'Internal authentication error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     return resolve(event);
@@ -135,7 +226,7 @@ const apiKeyHandle: Handle = async ({ event, resolve }) => {
  */
 const authorizationHandle: Handle = async ({ event, resolve }) => {
     // API key requests are already authenticated — skip session/redirect checks
-    if (event.locals.apiKey) {
+    if (event.locals.apiKey || event.locals.bearerToken) {
         return resolve(event);
     }
 
@@ -193,19 +284,27 @@ const loggingHandle: Handle = async ({ event, resolve }) => {
     const startTime = Date.now();
 
     // Include API key provenance in log context when present
-    const apiKeyContext = event.locals.apiKey
+    const authContext = event.locals.apiKey
         ? {
             via: 'api_key' as const,
             apiKeyName: event.locals.apiKey.name,
             onBehalfOf: event.locals.apiKey.analystUsername
         }
+        : event.locals.bearerToken
+            ? {
+                via: 'bearer_token' as const,
+                principal: event.locals.bearerToken.principal,
+                onBehalfOf: event.locals.bearerToken.analystUsername,
+                issuer: event.locals.bearerToken.issuer,
+                subject: event.locals.bearerToken.subject
+            }
         : {};
 
     const log = apiLogger.child({
         requestId,
         path: event.url.pathname,
         method: event.request.method,
-        ...apiKeyContext
+        ...authContext
     });
 
     event.locals.logger = log;
@@ -236,6 +335,6 @@ const loggingHandle: Handle = async ({ event, resolve }) => {
     }
 };
 
-// Chain hooks: API Key -> Auth -> Authorization -> Logging
-// API key auth runs first; if present, it synthesizes a session and skips OAuth flow.
-export const handle = sequence(apiKeyHandle, authHandle, authorizationHandle, loggingHandle);
+// Chain hooks: Credentials -> Auth -> Authorization -> Logging
+// Authorization Bearer credentials run first and can synthesize a session for downstream code.
+export const handle = sequence(credentialHandle, authHandle, authorizationHandle, loggingHandle);

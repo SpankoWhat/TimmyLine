@@ -16,11 +16,13 @@ import { mcpLogger as logger } from '../logging';
 import type { ServiceContextRef } from './tools';
 
 export interface McpSessionOwner {
-	authType: 'api_key' | 'session';
+	authType: 'api_key' | 'bearer_token' | 'session';
 	actorUUID: string;
 	actorRole: ServiceRole;
 	actorUserId?: string;
 	apiKeyId?: string;
+	bearerIssuer?: string;
+	bearerSubject?: string;
 }
 
 export interface McpSession {
@@ -125,6 +127,11 @@ export function sessionMatchesOwner(session: McpSession, owner: McpSessionOwner)
 
 	if (owner.authType === 'api_key') {
 		return session.owner.apiKeyId === owner.apiKeyId;
+	}
+
+	if (owner.authType === 'bearer_token') {
+		return session.owner.bearerIssuer === owner.bearerIssuer
+			&& session.owner.bearerSubject === owner.bearerSubject;
 	}
 
 	return true;

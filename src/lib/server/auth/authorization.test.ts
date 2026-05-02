@@ -53,6 +53,31 @@ describe('authorization helpers', () => {
 		});
 	});
 
+	it('buildServiceContext uses bearer token identity before session identity', () => {
+		const ctx = buildServiceContext({
+			locals: {
+				bearerToken: {
+					analystUUID: 'bearer-analyst',
+					analystRole: 'analyst',
+					userId: 'bearer-user'
+				},
+				session: {
+					user: {
+						analystUUID: 'session-analyst',
+						analystRole: 'admin',
+						id: 'session-user'
+					}
+				}
+			}
+		} as never);
+
+		expect(ctx).toEqual({
+			actorUUID: 'bearer-analyst',
+			actorRole: 'analyst',
+			actorUserId: 'bearer-user'
+		});
+	});
+
 	it('requireAuth rejects unauthenticated requests', async () => {
 		await expect(
 			requireAuth({
@@ -75,6 +100,25 @@ describe('authorization helpers', () => {
 		).resolves.toMatchObject({
 			user: { analystRole: 'analyst' }
 		});
+	});
+
+	it('requireAuth accepts synthesized locals.session without calling auth', async () => {
+		const auth = vi.fn();
+
+		await expect(
+			requireAuth({
+				locals: {
+					session: {
+						user: { analystRole: 'reader', analystUUID: 'analyst-1' }
+					},
+					auth
+				}
+			} as never)
+		).resolves.toMatchObject({
+			user: { analystRole: 'reader', analystUUID: 'analyst-1' }
+		});
+
+		expect(auth).not.toHaveBeenCalled();
 	});
 
 	it('requireAdminAccess rejects non-admin users', async () => {

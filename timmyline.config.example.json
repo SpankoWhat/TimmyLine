@@ -11,7 +11,15 @@
 			"enabled": false
 		},
 		"microsoft": {
-			"enabled": false
+			"enabled": false,
+			"bearerToken": {
+				"enabled": false,
+				"tenantId": "",
+				"audience": "",
+				"issuer": "",
+				"discoveryUrl": "",
+				"jwksUri": ""
+			}
 		},
 		"github": {
 			"enabled": true

@@ -32,7 +32,17 @@ const DEFAULTS = {
 	},
 	auth: {
 		google: { enabled: true },
-		microsoft: { enabled: true },
+		microsoft: {
+			enabled: true,
+			bearerToken: {
+				enabled: false,
+				tenantId: '',
+				audience: '',
+				issuer: '',
+				discoveryUrl: '',
+				jwksUri: ''
+			}
+		},
 		github: { enabled: true },
 		apiKeys: { enabled: true }
 	},

@@ -33,6 +33,17 @@ function buildSessionOwner(
 		};
 	}
 
+	if (event.locals.bearerToken) {
+		return {
+			authType: 'bearer_token',
+			actorUUID: ctx.actorUUID,
+			actorRole: ctx.actorRole,
+			actorUserId: ctx.actorUserId,
+			bearerIssuer: event.locals.bearerToken.issuer,
+			bearerSubject: event.locals.bearerToken.subject
+		};
+	}
+
 	return {
 		authType: 'session',
 		actorUUID: ctx.actorUUID,

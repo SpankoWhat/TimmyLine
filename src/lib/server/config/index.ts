@@ -54,7 +54,17 @@ export interface TimmyLineConfig {
 	};
 	auth: {
 		google: { enabled: boolean };
-		microsoft: { enabled: boolean };
+		microsoft: {
+			enabled: boolean;
+			bearerToken: {
+				enabled: boolean;
+				tenantId: string;
+				audience: string;
+				issuer: string;
+				discoveryUrl: string;
+				jwksUri: string;
+			};
+		};
 		github: { enabled: boolean };
 		apiKeys: { enabled: boolean };
 	};

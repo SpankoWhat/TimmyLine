@@ -61,4 +61,32 @@ describe('sessionMatchesOwner', () => {
 
 		expect(sessionMatchesOwner(session, sameActorDifferentKey)).toBe(false);
 	});
+
+	it('accepts the same bearer-token-backed principal', () => {
+		const owner = createOwner({
+			authType: 'bearer_token',
+			bearerIssuer: 'https://login.microsoftonline.com/tenant/v2.0',
+			bearerSubject: 'subject-1'
+		});
+		const session = createSession(owner);
+
+		expect(sessionMatchesOwner(session, owner)).toBe(true);
+	});
+
+	it('rejects a different bearer token subject for the same actor', () => {
+		const session = createSession(
+			createOwner({
+				authType: 'bearer_token',
+				bearerIssuer: 'https://login.microsoftonline.com/tenant/v2.0',
+				bearerSubject: 'subject-1'
+			})
+		);
+		const owner = createOwner({
+			authType: 'bearer_token',
+			bearerIssuer: 'https://login.microsoftonline.com/tenant/v2.0',
+			bearerSubject: 'subject-2'
+		});
+
+		expect(sessionMatchesOwner(session, owner)).toBe(false);
+	});
 });

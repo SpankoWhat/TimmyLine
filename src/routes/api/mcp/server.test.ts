@@ -35,6 +35,10 @@ function createEvent(
 	options: {
 		sessionId?: string;
 		apiKeyId?: string;
+		bearerToken?: {
+			issuer: string;
+			subject: string;
+		};
 	} = {}
 ) {
 	const headers = new Headers();
@@ -48,7 +52,11 @@ function createEvent(
 			? {
 					apiKey: { id: options.apiKeyId }
 				}
-			: {}
+			: options.bearerToken
+				? {
+						bearerToken: options.bearerToken
+					}
+				: {}
 	} as Parameters<typeof POST>[0];
 }
 
@@ -109,6 +117,35 @@ describe('/api/mcp handlers', () => {
 			actorUserId: ctx.actorUserId
 		});
 		expect(mocks.refreshSessionContext).not.toHaveBeenCalled();
+		expect(response.status).toBe(201);
+	});
+
+	it('creates a new session owned by the current bearer token principal', async () => {
+		const ctx = createContext();
+		const transport = {
+			handleRequest: vi.fn().mockResolvedValue(new Response('created', { status: 201 }))
+		};
+
+		mocks.buildServiceContext.mockReturnValue(ctx);
+		mocks.createSession.mockReturnValue(transport);
+
+		const response = await POST(
+			createEvent('POST', {
+				bearerToken: {
+					issuer: 'https://login.microsoftonline.com/tenant/v2.0',
+					subject: 'subject-1'
+				}
+			})
+		);
+
+		expect(mocks.createSession).toHaveBeenCalledWith(ctx, {
+			authType: 'bearer_token',
+			actorUUID: ctx.actorUUID,
+			actorRole: ctx.actorRole,
+			actorUserId: ctx.actorUserId,
+			bearerIssuer: 'https://login.microsoftonline.com/tenant/v2.0',
+			bearerSubject: 'subject-1'
+		});
 		expect(response.status).toBe(201);
 	});
 

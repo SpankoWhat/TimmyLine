@@ -9,7 +9,11 @@ type AnalystRole = 'reader' | 'analyst' | 'admin';
  * Returns the session or throws 401.
  */
 export async function requireAuth(event: RequestEvent) {
-    const session = await event.locals.auth();
+    if (event.locals.session?.user) {
+        return event.locals.session;
+    }
+
+    const session = event.locals.auth ? await event.locals.auth() : null;
     if (!session?.user) {
         throw error(401, 'Authentication required');
     }
@@ -71,6 +75,15 @@ export function buildServiceContext(event: RequestEvent): ServiceContext {
             actorUUID: apiKey.analystUUID,
             actorRole: apiKey.analystRole as ServiceRole,
             actorUserId: apiKey.userId
+        };
+    }
+
+    const bearerToken = event.locals.bearerToken;
+    if (bearerToken) {
+        return {
+            actorUUID: bearerToken.analystUUID,
+            actorRole: bearerToken.analystRole as ServiceRole,
+            actorUserId: bearerToken.userId
         };
     }
 
