@@ -26,6 +26,13 @@ if [ ! -f "${CONFIG_FILE}" ]; then
     cp /app/timmyline.config.example.json "${CONFIG_FILE}"
 fi
 
+# Optionally inject runtime credentials from AWS Secrets Manager.
+# The secret payload must be a JSON object whose keys match the expected env var names.
+if [ -n "${TIMMYLINE_AWS_SECRET_ID:-}" ]; then
+	echo "Loading runtime credentials from AWS Secrets Manager..."
+	eval "$(node /app/scripts/aws-secrets-env.mjs --format sh)"
+fi
+
 # ── Run migrations ───────────────────────────────────────────
 echo "Checking database migrations..."
 node migrate.js

@@ -12,7 +12,7 @@ cd TimmyLine
 npm install
 
 cp timmyline.config.example.json timmyline.config.json   # non-secret settings
-cp example.env .env                                        # secrets (OAuth, session key)
+cp example.env .env                                        # optional local env template
 
 npm run db:push    # create the SQLite database
 npm run db:seed    # optional: populate lookup tables
@@ -30,7 +30,9 @@ TimmyLine separates configuration into two layers:
 | File | Purpose |
 |---|---|
 | `timmyline.config.json` | Non-secret settings: database path, logging, auth toggles, web server port/origin |
-| `.env` | Secrets only: `AUTH_SECRET`, OAuth client IDs/secrets |
+| Process environment | Runtime auth settings and secrets: `AUTH_SECRET`, OAuth client IDs/secrets |
+
+TimmyLine reads credentials from environment variables at runtime. You can supply them with a local `.env`, your platform's secret injection, or the bundled AWS Secrets Manager helper without changing application code.
 
 ```json
 {
@@ -50,21 +52,61 @@ Full reference: [Configuration](https://github.com/SpankoWhat/TimmyLine/wiki/Con
 ### Docker (Recommended)
 
 ```bash
-cp example.env .env
 cp timmyline.config.example.json timmyline.config.json
 ./init-db.sh
 docker compose up -d
 ```
 
+If you want Docker to fetch credentials from AWS Secrets Manager at startup, export `TIMMYLINE_AWS_SECRET_ID` and a region (`TIMMYLINE_AWS_SECRET_REGION` or `AWS_REGION`) before `docker compose up -d`. The container entrypoint will fetch the secret and inject the values into its shell environment before starting TimmyLine.
+
 ### Manual (Node.js 20+)
 
 ```bash
 npm ci && npm run build
-cp example.env .env
 cp timmyline.config.example.json timmyline.config.json
 node migrate.js
 node server.js
 ```
+
+## AWS Runtime Injection
+
+The helper at `scripts/aws-secrets-env.mjs` fetches one Secrets Manager secret, expects a JSON object whose keys are environment variable names, and prints shell commands that export them.
+
+Example secret payload:
+
+```json
+{
+  "AUTH_SECRET": "...",
+  "GOOGLE_CLIENT_ID": "...",
+  "GOOGLE_CLIENT_SECRET": "...",
+  "MICROSOFT_ENTRA_ID_CLIENT_ID": "...",
+  "MICROSOFT_ENTRA_ID_CLIENT_SECRET": "...",
+  "MICROSOFT_ENTRA_ID_TENANT_ID": "...",
+  "MICROSOFT_ENTRA_ID_API_AUDIENCE": "...",
+  "GITHUB_CLIENT_ID": "...",
+  "GITHUB_CLIENT_SECRET": "..."
+}
+```
+
+PowerShell:
+
+```powershell
+$env:TIMMYLINE_AWS_SECRET_ID = 'timmyline/auth'
+$env:TIMMYLINE_AWS_SECRET_REGION = 'us-east-1'
+node .\scripts\aws-secrets-env.mjs --format powershell | Invoke-Expression
+npm run dev
+```
+
+POSIX shells:
+
+```bash
+export TIMMYLINE_AWS_SECRET_ID=timmyline/auth
+export TIMMYLINE_AWS_SECRET_REGION=us-east-1
+eval "$(node ./scripts/aws-secrets-env.mjs --format sh)"
+npm run dev
+```
+
+The helper never writes a plaintext credential file. It only materializes the secret values in the current process environment at runtime.
 
 Full guide: [Production Deployment](https://github.com/SpankoWhat/TimmyLine/wiki/Production-Deployment)
 

@@ -46,6 +46,7 @@ COPY --from=builder /app/drizzle ./drizzle
 # Copy the standalone config reader and example config
 COPY --from=builder /app/config.js ./
 COPY --from=builder /app/timmyline.config.example.json ./
+COPY --from=builder /app/scripts ./scripts
 
 # NOTE: No VOLUME or mkdir for /app/data here — the host owns the data
 # directory and bind-mounts it into the container. Run init-db.sh on the

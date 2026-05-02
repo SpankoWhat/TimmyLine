@@ -1,7 +1,8 @@
 # TimmyLine — Docker Compose
 #
 # Quick start:
-#   1. Copy example.env to .env and fill in your OAuth credentials + AUTH_SECRET
+#   1. Export env vars directly, use `docker compose --env-file .env`, or set
+#      TIMMYLINE_AWS_SECRET_ID/TIMMYLINE_AWS_SECRET_REGION for runtime fetch.
 #   2. Run ./init-db.sh to create the host data directory
 #   3. docker compose up -d
 #   4. Open http://localhost:3000
@@ -17,8 +18,24 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-    env_file: .env
     environment:
       - NODE_ENV=production
       - TIMMYLINE_CONFIG=/app/data/timmyline.config.json
+      - TIMMYLINE_AWS_SECRET_ID
+      - TIMMYLINE_AWS_SECRET_REGION
+      - AWS_REGION
+      - AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AUTH_SECRET
+      - AUTH_TRUST_HOST
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - MICROSOFT_ENTRA_ID_CLIENT_ID
+      - MICROSOFT_ENTRA_ID_CLIENT_SECRET
+      - MICROSOFT_ENTRA_ID_TENANT_ID
+      - MICROSOFT_ENTRA_ID_API_AUDIENCE
+      - GITHUB_CLIENT_ID
+      - GITHUB_CLIENT_SECRET
     restart: unless-stopped
