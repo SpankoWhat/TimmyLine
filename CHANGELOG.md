@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **AWS Secrets Manager Runtime Injection** — Added a helper script and Docker entrypoint support for loading auth credentials from AWS Secrets Manager into the process environment at startup.
+
+### Changed
+
+- **Documentation** — Updated setup, configuration, deployment, and authentication docs to describe the env-only credential model and AWS-backed runtime injection flow.
+
 ## [0.1.0] — 2025-03-18
 
 ### Added

@@ -12,7 +12,18 @@ cd TimmyLine
 npm install
 
 cp timmyline.config.example.json timmyline.config.json   # non-secret settings
-cp example.env .env                                        # optional local env template
+```
+
+Then choose one runtime credential source:
+
+```powershell
+# Option A: local env file template
+cp example.env .env
+
+# Option B: AWS Secrets Manager runtime injection
+$env:TIMMYLINE_AWS_SECRET_ID = 'timmyline/auth'
+$env:TIMMYLINE_AWS_SECRET_REGION = 'us-east-1'
+node .\scripts\aws-secrets-env.mjs --format powershell | Invoke-Expression
 
 npm run db:push    # create the SQLite database
 npm run db:seed    # optional: populate lookup tables
@@ -57,7 +68,12 @@ cp timmyline.config.example.json timmyline.config.json
 docker compose up -d
 ```
 
-If you want Docker to fetch credentials from AWS Secrets Manager at startup, export `TIMMYLINE_AWS_SECRET_ID` and a region (`TIMMYLINE_AWS_SECRET_REGION` or `AWS_REGION`) before `docker compose up -d`. The container entrypoint will fetch the secret and inject the values into its shell environment before starting TimmyLine.
+Credential source options:
+
+- Direct environment variables, including `docker compose --env-file .env up -d`
+- Runtime AWS Secrets Manager injection by exporting `TIMMYLINE_AWS_SECRET_ID` and a region (`TIMMYLINE_AWS_SECRET_REGION` or `AWS_REGION`) before `docker compose up -d`
+
+When `TIMMYLINE_AWS_SECRET_ID` is set, the container entrypoint fetches the secret and injects the values into its shell environment before starting TimmyLine.
 
 ### Manual (Node.js 20+)
 
@@ -67,6 +83,8 @@ cp timmyline.config.example.json timmyline.config.json
 node migrate.js
 node server.js
 ```
+
+For manual runtime injection, export the environment directly or load it from AWS before starting the server process.
 
 ## AWS Runtime Injection
 
