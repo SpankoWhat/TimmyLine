@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TimelineItem } from '$lib/stores/cacheStore';
+    import type { TimelineItem } from '$lib/timeline/core';
     import { analystsByUuid } from '$lib/stores/cacheStore';
     import ResizableDivider from '../../ResizableDivider.svelte';
     import JsonViewer from '../../JsonViewer.svelte';

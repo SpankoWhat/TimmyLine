@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { investigationStats, entityStats } from '$lib/stores/cacheStore';
+	import { entityStats } from '$lib/stores/cacheStore';
+	import { investigationStats } from '$lib/stores/timeline';
 </script>
 
 <div class="stats-row">

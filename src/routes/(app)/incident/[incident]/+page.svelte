@@ -5,12 +5,19 @@
 	// Store Imports
 	import {
 		currentSelectedIncident,
-		currentCachedTimeline,
 		initializeAllCaches,
 		showDeletedItems,
 		clearHighlights,
 		currentTimelineView
 	} from '$lib/stores/cacheStore.js';
+	import {
+		actionDynamicFields,
+		eventDynamicFields,
+		investigationStats,
+		timelineItemCount,
+		timelineItems
+	} from '$lib/stores/timeline';
+	import { filterTimelineItems } from '$lib/timeline/core';
 	import { timelineViews } from '$lib/config/timelineViews';
 	import { joinIncidentSocket, leaveIncidentSocket, emitCursorMove, emitCursorLeave } from '$lib/stores/collabStore.js';
 	import type { Incident } from '$lib/server/database';
@@ -65,22 +72,9 @@
 		}
 	});
 
-	// Local filtered timeline — filters $currentCachedTimeline without touching the store
+	// Local filtered timeline — filters the canonical timeline store without mutating it
 	const filteredTimeline = $derived.by(() => {
-		const query = searchQuery.trim().toLowerCase();
-		const items = $currentCachedTimeline;
-		if (!query) return items;
-
-		return items.filter((item) => {
-			const data = item.data;
-			// Search all string values on the data object
-			return Object.values(data).some((val) => {
-				if (val == null) return false;
-				if (typeof val === 'string') return val.toLowerCase().includes(query);
-				if (typeof val === 'number') return String(val).includes(query);
-				return false;
-			});
-		});
+		return filterTimelineItems($timelineItems, searchQuery);
 	});
 
 	// Compute filtered field configs based on field states (for passing to TimelineRow)
@@ -281,7 +275,7 @@
 						<path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
 					</svg>
 				</button>
-				<span class="search-count">{filteredTimeline.length}/{$currentCachedTimeline.length}</span>
+				<span class="search-count">{filteredTimeline.length}/{$timelineItemCount}</span>
 			{/if}
 		</div>
 		<div class="toolbar-separator"></div>
@@ -344,7 +338,7 @@
 					items={filteredTimeline}
 					displayFieldsConfig={filteredDisplayFieldsConfig}
 					searchQuery={searchQuery}
-					totalItemCount={$currentCachedTimeline.length}
+					totalItemCount={$investigationStats.total}
 					hasIncident={!!$currentSelectedIncident?.uuid}
 					onClearSearch={() => (searchQuery = '')}
 				/>
@@ -420,13 +414,13 @@
 					<FieldSelectorPanel
 						title="Event Fields"
 						type="event"
-						timelineItems={$currentCachedTimeline}
+						dynamicFieldsMap={$eventDynamicFields}
 						bind:fields={fieldStates.event}
 					/>
 					<FieldSelectorPanel
 						title="Action Fields"
 						type="action"
-						timelineItems={$currentCachedTimeline}
+						dynamicFieldsMap={$actionDynamicFields}
 						bind:fields={fieldStates.action}
 					/>
 				</div>
@@ -454,13 +448,13 @@
 						<FieldSelectorPanel
 							title="Event Fields"
 							type="event"
-							timelineItems={$currentCachedTimeline}
+							dynamicFieldsMap={$eventDynamicFields}
 							bind:fields={fieldStates.event}
 						/>
 						<FieldSelectorPanel
 							title="Action Fields"
 							type="action"
-							timelineItems={$currentCachedTimeline}
+							dynamicFieldsMap={$actionDynamicFields}
 							bind:fields={fieldStates.action}
 						/>
 					</div>

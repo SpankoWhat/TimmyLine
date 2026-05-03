@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { TimelineItem } from '$lib/stores/cacheStore';
+	import { processTimelineItems, type TimelineItem } from '$lib/timeline/core';
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
 	import { timePreferences } from '$lib/stores/timePreferencesStore';
-	import { formatTimelineTimestampForUi, getTimelineDateKey } from '$lib/utils/dateTime';
+	import { formatTimelineTimestampForUi } from '$lib/utils/dateTime';
 
 	import TimelineCard from './vertical-timeline/TimelineCard.svelte';
 	import TimelineGap from './vertical-timeline/TimelineGap.svelte';
@@ -26,111 +26,6 @@
 		hasIncident,
 		onClearSearch
 	}: Props = $props();
-
-	// ── Configuration ──────────────────────────────────────────────────────
-
-	/** Minimum gap (seconds) between items to show a gap indicator */
-	const GAP_THRESHOLD = 1800; // 30 minutes
-
-	/** Maximum window (seconds) to cluster rapid-fire items */
-	const CLUSTER_WINDOW = 60; // 60 seconds
-
-	/** Minimum items within the window to trigger clustering */
-	const CLUSTER_MIN_ITEMS = 4;
-
-	// ── Virtual Node Types ─────────────────────────────────────────────────
-
-	type DateSeparatorNode = {
-		kind: 'date-separator';
-		dateKey: string;
-		anchorEpoch: number;
-	};
-
-	type GapNode = {
-		kind: 'gap';
-		durationSeconds: number;
-	};
-
-	type ClusterNode = {
-		kind: 'cluster';
-		items: TimelineItem[];
-		durationSeconds: number;
-	};
-
-	type ItemNode = {
-		kind: 'item';
-		item: TimelineItem;
-	};
-
-	type ProcessedNode = DateSeparatorNode | GapNode | ClusterNode | ItemNode;
-
-	// ── Processing Logic ───────────────────────────────────────────────────
-
-	/**
-	 * Process raw timeline items into a list of virtual nodes
-	 * that includes date separators, time gaps, and clusters.
-	 */
-	function processTimelineItems(sourceItems: TimelineItem[], timezone: string): ProcessedNode[] {
-		if (sourceItems.length === 0) return [];
-
-		const result: ProcessedNode[] = [];
-		let lastDateKey = '';
-		let i = 0;
-
-		while (i < sourceItems.length) {
-			const current = sourceItems[i];
-			const currentDateKey = getTimelineDateKey(current.timestamp, timezone);
-
-			// Insert date separator on day change
-			if (currentDateKey !== lastDateKey) {
-				result.push({ kind: 'date-separator', dateKey: currentDateKey, anchorEpoch: current.timestamp });
-				lastDateKey = currentDateKey;
-			}
-
-			// Try to detect a cluster starting at this index
-			let clusterEnd = i + 1;
-			while (
-				clusterEnd < sourceItems.length &&
-				sourceItems[clusterEnd].timestamp - current.timestamp <= CLUSTER_WINDOW
-			) {
-				clusterEnd++;
-			}
-
-			const clusterSize = clusterEnd - i;
-			if (clusterSize >= CLUSTER_MIN_ITEMS) {
-				// Emit cluster node
-				const clusterItems = sourceItems.slice(i, clusterEnd);
-				const duration =
-					clusterItems[clusterItems.length - 1].timestamp - clusterItems[0].timestamp;
-				result.push({ kind: 'cluster', items: clusterItems, durationSeconds: duration });
-				i = clusterEnd;
-			} else {
-				// Emit single item
-				result.push({ kind: 'item', item: current });
-				i++;
-			}
-
-			// Check for gap to next item (only if there IS a next item)
-			if (i < sourceItems.length) {
-				const prev = sourceItems[i - 1];
-				const next = sourceItems[i];
-				const gap = next.timestamp - prev.timestamp;
-
-				if (gap >= GAP_THRESHOLD) {
-					result.push({ kind: 'gap', durationSeconds: gap });
-				}
-
-				// Check for date change after gap
-				const nextDateKey = getTimelineDateKey(next.timestamp, timezone);
-				if (nextDateKey !== lastDateKey) {
-					result.push({ kind: 'date-separator', dateKey: nextDateKey, anchorEpoch: next.timestamp });
-					lastDateKey = nextDateKey;
-				}
-			}
-		}
-
-		return result;
-	}
 
 	// ── Derived Processed Items ────────────────────────────────────────────
 

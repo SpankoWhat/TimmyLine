@@ -2,12 +2,12 @@
 	import { 
 		currentCachedEntities, 
 		currentCachedAnnotations,
-		currentCachedTimeline,
 		entityTypes,
 		annotationTypes,
 		setHighlights,
 		clearHighlights
 	} from '$lib/stores/cacheStore';
+	import { entityReferenceIndex, timelineItemsByUuid } from '$lib/stores/timeline';
 	import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
 	import { fade, slide } from 'svelte/transition';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -19,7 +19,7 @@
 	} = $props();
 
 	let activeTab: 'entities' | 'annotations' = $state('entities');
-	let expandedTypes = $state(new SvelteSet<string>());
+	let expandedTypes = new SvelteSet<string>();
 
 	// Group entities by type
 	let entitiesByType = $derived(
@@ -65,22 +65,7 @@
 	 * and highlight them
 	 */
 	function highlightEntityReferences(entityUuid: string) {
-		const matchingUuids: string[] = [];
-
-		// Search through timeline items for this entity
-		for (const item of $currentCachedTimeline) {
-			if (item.type === 'event') {
-				const eventEntities = (item.data as any).eventEntities || [];
-				if (eventEntities.some((ee: any) => ee.entity?.uuid === entityUuid)) {
-					matchingUuids.push(item.uuid);
-				}
-			} else if (item.type === 'action') {
-				const actionEntities = (item.data as any).actionEntities || [];
-				if (actionEntities.some((ae: any) => ae.entity?.uuid === entityUuid)) {
-					matchingUuids.push(item.uuid);
-				}
-			}
-		}
+		const matchingUuids = $entityReferenceIndex.get(entityUuid) || [];
 
 		if (matchingUuids.length > 0) {
 			setHighlights(matchingUuids);
@@ -101,7 +86,7 @@
 		
 		if (annotation.refers_to) {
 			// Check if it references an event or action in the timeline
-			const matchingItem = $currentCachedTimeline.find(i => i.uuid === annotation.refers_to);
+			const matchingItem = $timelineItemsByUuid.get(annotation.refers_to);
 			if (matchingItem) {
 				matchingUuids.push(matchingItem.uuid);
 			}

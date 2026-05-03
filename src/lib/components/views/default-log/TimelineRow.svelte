@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TimelineItem } from '$lib/stores/cacheStore';
+    import type { TimelineItem } from '$lib/timeline/core';
     import { analystsByUuid, highlightedItemUuids } from '$lib/stores/cacheStore';
     import { api } from '$lib/client';
     import { emitViewRow, emitIdle, getUsersOnRow } from '$lib/stores/collabStore';

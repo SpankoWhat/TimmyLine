@@ -5,6 +5,13 @@ import { writable, get, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { io, type Socket } from 'socket.io-client';
 import { currentSelectedIncident, currentSelectedAnalyst, upsertEntity, removeEntity, updateLookupTable } from './cacheStore';
+import {
+    applyTimelineEntityRemoval,
+    applyTimelineEntityUpsert,
+    applyTimelineJunctionDelete,
+    applyTimelineJunctionUpdate,
+    isTimelineSocketEntityType
+} from './timeline';
 import type { UserIncidentState, UsersInIncident, IncidentUUID, SocketId, AnalystUUID, CursorPosition } from '$lib/config/socketType.ts';
 
 let socket: Socket | null = null;
@@ -263,17 +270,38 @@ function registerEventListeners(socket: Socket) {
     // Data synchronization events
     socket.on('entity-created', (entityType: string, entity: any) => {
         console.log(`%c[SOCKET-SYNC] entity-created | type=${entityType} | uuid=${entity?.uuid}`, 'color: #00ffcc; font-weight: bold', entity);
+        if (isTimelineSocketEntityType(entityType)) {
+            applyTimelineEntityUpsert(entityType, entity);
+            return;
+        }
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-updated', (entityType: string, entity: any) => {
         console.log(`%c[SOCKET-SYNC] entity-updated | type=${entityType} | uuid=${entity?.uuid}`, 'color: #ffcc00; font-weight: bold', entity);
+        if (isTimelineSocketEntityType(entityType)) {
+            applyTimelineEntityUpsert(entityType, entity);
+            return;
+        }
         upsertEntity(entityType, entity);
     });
 
     socket.on('entity-deleted', (entityType: string, uuid: string) => {
         console.log(`%c[SOCKET-SYNC] entity-deleted | type=${entityType} | uuid=${uuid}`, 'color: #ff6666; font-weight: bold');
+        if (applyTimelineEntityRemoval(entityType, uuid)) {
+            return;
+        }
         removeEntity(entityType, uuid);
+    });
+
+    socket.on('junction-updated', (table: string, data: any) => {
+        console.log(`%c[SOCKET-SYNC] junction-updated | table=${table}`, 'color: #66ccff; font-weight: bold', data);
+        applyTimelineJunctionUpdate(table, data);
+    });
+
+    socket.on('junction-deleted', (table: string, data: any) => {
+        console.log(`%c[SOCKET-SYNC] junction-deleted | table=${table}`, 'color: #ff9999; font-weight: bold', data);
+        applyTimelineJunctionDelete(table, data);
     });
 
     socket.on('lookup-updated', (lookupType: string, data: any[]) => {

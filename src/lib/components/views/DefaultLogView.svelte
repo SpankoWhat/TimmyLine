@@ -1,6 +1,6 @@
 <script lang="ts">
 	import TimelineRow from '$lib/components/views/default-log/TimelineRow.svelte';
-	import type { TimelineItem } from '$lib/stores/cacheStore';
+	import type { TimelineItem } from '$lib/timeline/core';
 	import type { DisplayFieldsConfiguration } from '$lib/config/displayFieldsConfig';
 
 	interface Props {

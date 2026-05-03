@@ -1,18 +1,17 @@
 <script lang="ts">
     import type { DisplayField } from '$lib/config/displayFieldsConfig';
-    import type { TimelineItem } from '$lib/stores/cacheStore';
-    import { discoverDynamicFields, mergeFieldConfigs, saveFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldUtils';
+    import { mergeFieldConfigs, saveFieldPreferences, clearFieldPreferences } from '$lib/utils/fieldUtils';
     import { displayFieldsConfig } from '$lib/config/displayFieldsConfig';
 
     let {
         title,
         type,
-        timelineItems,
+        dynamicFieldsMap,
         fields = $bindable(),
     }: {
         title: string;
         type: 'event' | 'action';
-        timelineItems: TimelineItem[];
+        dynamicFieldsMap: Map<string, DisplayField[]>;
         fields: DisplayField[];
     } = $props();
 
@@ -22,14 +21,7 @@
 
     let searchQuery = $state('');
 
-    // Discover dynamic fields from timeline data for this type
-    const discoveredDynamicFields = $derived(
-        discoverDynamicFields(
-            timelineItems.map(item => ({ type: item.type, data: item.data as Record<string, unknown> })),
-            displayFieldsConfig,
-            type
-        )
-    );
+    const discoveredDynamicFields = $derived(dynamicFieldsMap);
 
     // Merge static fields with discovered dynamic fields, preserving user state
     // Also removes dynamic fields that are no longer discovered (e.g., after switching incidents)

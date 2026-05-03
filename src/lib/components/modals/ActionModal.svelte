@@ -6,11 +6,10 @@
 		actionTypes,
 		currentSelectedIncident,
 		currentSelectedAnalyst,
-		knownJsonKeys,
 		currentCachedEntities,
-		currentCachedTimeline,
 		relationTypes
 	} from '$lib/stores/cacheStore';
+	import { eventTimelineRelationshipOptions, knownJsonKeys } from '$lib/stores/timeline';
 	import { emitEditingRowStatus, emitIdle } from '$lib/stores/collabStore';
 	import JsonKeyValueEditor from '$lib/components/JsonKeyValueEditor.svelte';
 	import RelationshipBuilder, { type PendingLink } from '$lib/components/RelationshipBuilder.svelte';
@@ -82,18 +81,7 @@
 
 	// Build available events for relationship builder
 	let availableEvents = $derived(
-		$currentCachedTimeline
-			.filter((item) => item.type === 'event')
-			.map((item) => {
-				const d = item.data as any;
-				const parts = [d.source, d.notes].filter(Boolean);
-				const desc = parts.join(' \u2014 ');
-				return {
-					uuid: item.uuid,
-					label: d.event_type ?? 'Event',
-					sublabel: desc ? (desc.length > 60 ? desc.slice(0, 57) + '...' : desc) : undefined
-				};
-			})
+		$eventTimelineRelationshipOptions
 	);
 
 	// Build relation options from lookup store

@@ -1,10 +1,13 @@
+// #TODO: I need to figure if the socket logic should go here or in a separate file. It might be cleaner to have a dedicated socket store that listens for events and then calls the appropriate cache update functions here. That way this file can focus on cache management and the socket store can focus on real-time updates. I'll start by implementing the cache update functions here and then we can decide how to integrate the socket logic.
 import { writable, derived, get, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import { api } from '$lib/client';
+import {
+	buildTimelineItems,
+	type TimelineItem
+} from '$lib/timeline/core';
 import type {
 	Incident,
-	TimelineEvent,
-	InvestigationAction,
 	Annotation,
 	Entity,
 	Analyst,
@@ -23,12 +26,7 @@ import type {
  * Generic timeline item that can represent either an event or action
  * Contains minimal info for display with reference to full data
  */
-export type TimelineItem = {
-	uuid: string;
-	type: 'event' | 'action';
-	timestamp: number;
-	data: TimelineEvent | InvestigationAction;
-};
+export type { TimelineItem } from '$lib/timeline/core';
 
 // ============================================================================
 // CORE STATE STORES - Single Selected Items
@@ -148,53 +146,6 @@ export const entityStats = derived(currentCachedEntities, ($entities) => ({
 
 
 /**
- * Known JSON root keys extracted from event_data and action_data across the timeline.
- * Used by the JsonKeyValueEditor component to suggest existing keys when building JSON.
- * Automatically updates when cached events or actions change.
- */
-export const knownJsonKeys = derived(
-	currentCachedTimeline,
-	($timeline) => {
-		const eventKeys = new Set<string>();
-		const actionKeys = new Set<string>();
-
-		for (const item of $timeline) {
-			const jsonField = item.type === 'event'
-				? (item.data as any).event_data
-				: (item.data as any).action_data;
-			const targetSet = item.type === 'event' ? eventKeys : actionKeys;
-
-			if (jsonField && typeof jsonField === 'string') {
-				try {
-					const parsed = JSON.parse(jsonField);
-					if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-						for (const key of Object.keys(parsed)) {
-							targetSet.add(key);
-						}
-					}
-				} catch { /* skip invalid JSON */ }
-			}
-		}
-
-		return {
-			event: [...eventKeys].sort(),
-			action: [...actionKeys].sort()
-		};
-	}
-);
-
-/**
- * Various timeline statistics, currently provides:
- * - Count of actions 
- * - Count of events
- */
-export const investigationStats = derived(currentCachedTimeline, ($items) => ({
-	total: $items.length,
-	events: $items.filter((item) => item.type === 'event').length,
-	actions: $items.filter((item) => item.type === 'action').length
-}));
-
-/**
  * Handles calling cache update functions when showDeletedItems changes
  * Ensures that caches reflect the current preference for showing deleted items
  * Only runs in browser to avoid SSR fetch issues
@@ -232,22 +183,7 @@ export async function updateIncidentCache(incident: Incident): Promise<void> {
 		// Extract events and actions from enriched response
 		const { events, actions } = timelineData as { events: any[], actions: any[] };
 
-		// Build unified timeline
-		const timelineItems: TimelineItem[] = [
-			...events.map((event: any) => ({
-				uuid: event.uuid,
-				type: 'event' as const,
-				timestamp: event.occurred_at || event.discovered_at || 0,
-				data: event
-			})),
-			...actions.map((action: any) => ({
-				uuid: action.uuid,
-				type: 'action' as const,
-				timestamp: action.performed_at || 0,
-				data: action
-			}))
-		];
-		timelineItems.sort((a, b) => a.timestamp - b.timestamp);
+		const timelineItems = buildTimelineItems(events, actions);
 		currentCachedTimeline.set(timelineItems);
 		currentCachedAnnotations.set(annotationsData as unknown as Annotation[]);
 		currentCachedEntities.set(entitiesData as unknown as Entity[]);
@@ -345,38 +281,6 @@ export function setupIncidentWatcher() {
 export function upsertEntity(entityType: string, entity: any) {
 	console.log(`%c[CACHE-UPSERT] entityType=${entityType} | uuid=${entity?.uuid ?? 'N/A'}`, 'color: #00ccff; font-weight: bold', entity);
 	switch (entityType) {
-		case 'timeline_event':
-			currentCachedTimeline.update((items) => {
-				const index = items.findIndex((i) => i.type === 'event' && i.uuid === entity.uuid);
-				const newItem: TimelineItem = {
-					uuid: entity.uuid,
-					type: 'event',
-					timestamp: entity.occurred_at || entity.discovered_at || 0,
-					data: entity
-				};
-				const newItems = index >= 0
-					? items.map((item, i) => (i === index ? newItem : item))
-					: [...items, newItem];
-				return newItems.sort((a, b) => a.timestamp - b.timestamp);
-			});
-			break;
-
-		case 'investigation_action':
-			currentCachedTimeline.update((items) => {
-				const index = items.findIndex((i) => i.type === 'action' && i.uuid === entity.uuid);
-				const newItem: TimelineItem = {
-					uuid: entity.uuid,
-					type: 'action',
-					timestamp: entity.performed_at || 0,
-					data: entity
-				};
-				const newItems = index >= 0
-					? items.map((item, i) => (i === index ? newItem : item))
-					: [...items, newItem];
-				return newItems.sort((a, b) => a.timestamp - b.timestamp);
-			});
-			break;
-
 		case 'annotation':
 			currentCachedAnnotations.update((annotations) => {
 				const index = annotations.findIndex((a) => a.uuid === entity.uuid);
@@ -404,21 +308,6 @@ export function upsertEntity(entityType: string, entity: any) {
 			});
 			break;
 
-		// Need to refactor this to efficiently update nested entities. 
-		// The return from the socket event is:
-		// { action_id: "1da0da81-1309-4d16-972f-e4339e32b529", entity_id: "677c8460-a818-46a8-8ec5-d5eec19baaeb", relation_type: "source" }
-		case 'action_entities':
-			updateIncidentCache(get(currentSelectedIncident)!);
-			break;
-
-		case 'action_events':
-			updateIncidentCache(get(currentSelectedIncident)!);
-			break;
-
-		case 'event_entities':
-			updateIncidentCache(get(currentSelectedIncident)!);
-			break;
-
 		default:
 			console.warn(`Unknown entity type for upsert: ${entityType}`);
 	}
@@ -431,14 +320,6 @@ export function upsertEntity(entityType: string, entity: any) {
 export function removeEntity(entityType: string, uuid: string) {
 	console.log(`%c[CACHE-REMOVE] entityType=${entityType} | uuid=${uuid}`, 'color: #ff6666; font-weight: bold');
 	switch (entityType) {
-		case 'timeline_event':
-			currentCachedTimeline.update((items) => items.filter((i) => !(i.type === 'event' && i.uuid === uuid)));
-			break;
-
-		case 'investigation_action':
-			currentCachedTimeline.update((items) => items.filter((i) => !(i.type === 'action' && i.uuid === uuid)));
-			break;
-
 		case 'annotation':
 			currentCachedAnnotations.update((annotations) => annotations.filter((a) => a.uuid !== uuid));
 			break;

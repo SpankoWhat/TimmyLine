@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TimelineItem } from '$lib/stores/cacheStore';
+    import type { TimelineItem } from '$lib/timeline/core';
     import type { DisplayFieldsConfiguration, DisplayField } from '$lib/config/displayFieldsConfig';
     import type { TimelineEvent } from '$lib/types/events';
     import type { InvestigationAction } from '$lib/types/actions';

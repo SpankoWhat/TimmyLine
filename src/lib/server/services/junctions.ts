@@ -257,6 +257,12 @@ export async function deleteJunction(
 	}
 
 	const table = data.table as JunctionTableName;
+	const emitDeletedJunction = () => {
+		try {
+			const io = getSocketIO();
+			io.emit('junction-deleted', table, data);
+		} catch { /* Socket.IO not available */ }
+	};
 
 	switch (table) {
 		case 'action_events': {
@@ -269,6 +275,7 @@ export async function deleteJunction(
 					)
 				)
 				.run();
+			emitDeletedJunction();
 			break;
 		}
 		case 'event_entities': {
@@ -281,6 +288,7 @@ export async function deleteJunction(
 					)
 				)
 				.run();
+			emitDeletedJunction();
 			break;
 		}
 		case 'action_entities': {
@@ -293,6 +301,7 @@ export async function deleteJunction(
 					)
 				)
 				.run();
+			emitDeletedJunction();
 			break;
 		}
 		case 'annotation_references': {

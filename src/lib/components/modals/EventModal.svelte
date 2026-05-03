@@ -6,11 +6,10 @@
 		eventTypes,
 		currentSelectedIncident,
 		currentSelectedAnalyst,
-		knownJsonKeys,
 		currentCachedEntities,
-		currentCachedTimeline,
 		relationTypes 
 	} from '$lib/stores/cacheStore';
+	import { actionTimelineRelationshipOptions, knownJsonKeys } from '$lib/stores/timeline';
 	import { 
 		emitEditingRowStatus, 
 		emitIdle 
@@ -83,18 +82,7 @@
 
 	// Build available actions for relationship builder
 	let availableActions = $derived(
-		$currentCachedTimeline
-			.filter((item) => item.type === 'action')
-			.map((item) => {
-				const d = item.data as any;
-				const parts = [d.tool_used, d.notes].filter(Boolean);
-				const desc = parts.join(' \u2014 ');
-				return {
-					uuid: item.uuid,
-					label: d.action_type ?? 'Action',
-					sublabel: desc ? (desc.length > 60 ? desc.slice(0, 57) + '...' : desc) : undefined
-				};
-			})
+		$actionTimelineRelationshipOptions
 	);
 
 	// Build relation options from lookup store
