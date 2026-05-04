@@ -6,7 +6,7 @@
     import { modalStore, createModalConfig } from '$lib/modals/ModalRegistry';
     import type { EntityType, DisplayFieldsConfig } from '$lib/modals/types';
     import type { DisplayField } from '$lib/config/displayFieldsConfig';
-    import { fade } from 'svelte/transition';
+    import { fade, slide } from 'svelte/transition';
     import { getFieldValue } from '$lib/utils/fieldUtils';
     import { timePreferences } from '$lib/stores/timePreferencesStore';
     import { formatTimestampForUi } from '$lib/utils/dateTime';
@@ -100,6 +100,7 @@
 <div 
     class="timeline-item" 
     class:highlighted={isHighlighted}
+    class:expanded={showExpandedDetails}
     data-timeline-uuid={item.uuid}
     role="button"
     tabindex="0"
@@ -131,6 +132,32 @@
                 {/if}
             {/each}
         </div>
+
+        <!-- Action Buttons -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="actions" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+            <button
+                class="action-btn edit"
+                disabled={isBeingEditedByOther}
+                title={isBeingEditedByOther ? 'Another user is editing this item' : 'Edit'}
+                aria-label={isBeingEditedByOther ? 'Another user is editing this item' : 'Edit this item'}
+                onclick={editEntity}
+            >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/>
+                </svg>
+            </button>
+            <button
+                class="action-btn delete"
+                title="Delete"
+                aria-label="Delete this item"
+                onclick={() => deleteEntity(item.uuid)}
+            >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4l8 8M12 4l-8 8"/>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div class="secondary-row">
@@ -159,51 +186,27 @@
                 {/each}
             </div>
         {/if}
-        
-        <!-- Action Buttons -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="actions" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-            <button
-                class="action-btn edit"
-                disabled={isBeingEditedByOther}
-                title={isBeingEditedByOther ? 'Another user is editing this item' : 'Edit'}
-                aria-label={isBeingEditedByOther ? 'Another user is editing this item' : 'Edit this item'}
-                onclick={editEntity}
-            >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"/>
-                </svg>
-            </button>
-            <button
-                class="action-btn delete"
-                title="Delete"
-                aria-label="Delete this item"
-                onclick={() => deleteEntity(item.uuid)}
-            >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4l8 8M12 4l-8 8"/>
-                </svg>
-            </button>
-        </div>
     </div>
-</div>
 
-<!-- Expanded Details View -->
-{#if showExpandedDetails}
-    <TimelineRowDetails
-        {item}
-        type={item.type}
-        bind:columnRatio
-        onEdit={editEntity}
-        onDelete={deleteEntity}
-    />
-{/if}
+    {#if showExpandedDetails}
+        <div class="details-panel" transition:slide={{ duration: 180 }}>
+            <TimelineRowDetails
+                {item}
+                type={item.type}
+                bind:columnRatio
+                onEdit={editEntity}
+                onDelete={deleteEntity}
+            />
+        </div>
+    {/if}
+</div>
 
 <style>
     /* === Row Container === */
     .timeline-item {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
         background: hsl(var(--bg-surface-100));
         border: var(--border-width) solid hsl(var(--border-default));
         border-radius: var(--radius-sm);
@@ -224,6 +227,10 @@
         box-shadow: 0 0 0 1px hsl(var(--brand-default) / 0.3);
     }
 
+    .timeline-item.expanded {
+        border-color: hsl(var(--border-strong));
+    }
+
     .timeline-item:focus-visible {
         outline: var(--border-width-thick) solid hsl(var(--border-focus));
         outline-offset: 1px;
@@ -232,7 +239,7 @@
     /* === Main Row === */
     .main-row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         padding: var(--space-1) var(--space-3);
         gap: var(--space-3);
     }
@@ -304,6 +311,14 @@
         gap: var(--space-2);
     }
 
+    .timeline-item.expanded .secondary-row {
+        padding-bottom: var(--space-2);
+    }
+
+    .details-panel {
+        overflow: hidden;
+    }
+
     /* === Note Snippet === */
     .note-snippet {
         font-style: italic;
@@ -345,6 +360,8 @@
         display: flex;
         gap: var(--space-0\.5);
         align-items: center;
+        flex-shrink: 0;
+        margin-left: auto;
     }
 
     .action-btn {

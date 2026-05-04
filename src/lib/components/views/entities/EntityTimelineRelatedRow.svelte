@@ -7,6 +7,7 @@
 	import { timePreferences } from '$lib/stores/timePreferencesStore';
 	import type { EntityTimelineRelatedItem } from '$lib/timeline/core';
 	import { formatTimelineTimestampForUi } from '$lib/utils/dateTime';
+	import { slide } from 'svelte/transition';
 	import TimelineRowDetails from '../default-log/TimelineRowDetails.svelte';
 
 	interface Props {
@@ -175,20 +176,19 @@
 				</button>
 			</div>
 		</div>
+		{#if showExpandedDetails}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="details-panel" onclick={(event) => event.stopPropagation()} onkeydown={() => {}} transition:slide={{ duration: 180 }}>
+				<TimelineRowDetails
+					item={relatedItem.item}
+					type={relatedItem.item.type}
+					bind:columnRatio
+					onEdit={editItem}
+					onDelete={deleteItem}
+				/>
+			</div>
+		{/if}
 	</div>
-
-	{#if showExpandedDetails}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="related-row-details" onclick={(event) => event.stopPropagation()} onkeydown={() => {}}>
-			<TimelineRowDetails
-				item={relatedItem.item}
-				type={relatedItem.item.type}
-				bind:columnRatio
-				onEdit={editItem}
-				onDelete={deleteItem}
-			/>
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -204,6 +204,7 @@
 		gap: var(--space-3);
 		align-items: center;
 		padding: var(--space-3);
+		overflow: hidden;
 		background: hsl(var(--bg-surface-100));
 		border: var(--border-width) solid hsl(var(--border-default));
 		border-radius: var(--radius-md);
@@ -354,7 +355,9 @@
 		outline-offset: 1px;
 	}
 
-	.related-row-details {
-		padding-left: var(--space-4);
+	.details-panel {
+		grid-column: 1 / -1;
+		margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
+		overflow: hidden;
 	}
 </style>

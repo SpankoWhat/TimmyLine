@@ -132,9 +132,10 @@
     /* Expanded Details Container */
     .expanded-details {
         width: 100%;
-        background: hsl(var(--bg-surface-75));
-        border: var(--border-width) solid hsl(var(--border-default));
-        border-radius: var(--radius-sm);
+        background: transparent;
+        border: none;
+        border-top: var(--border-width) solid hsl(var(--border-muted));
+        border-radius: 0;
         overflow: hidden;
     }
 
