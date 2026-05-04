@@ -1,10 +1,12 @@
 import { derived, get } from 'svelte/store';
 import {
+	currentCachedEntities,
 	currentCachedTimeline,
 	currentSelectedIncident,
 	updateIncidentCache
 } from './cacheStore';
 import {
+	buildEntityTimelineGroups,
 	buildEntityReferenceIndex,
 	buildTimelineItemsByUuid,
 	buildTimelineRelationshipOptions,
@@ -45,6 +47,15 @@ export const knownJsonKeys = derived(currentCachedTimeline, ($timeline) => colle
 export const timelineItemsByUuid = derived(currentCachedTimeline, ($items) => buildTimelineItemsByUuid($items));
 
 export const entityReferenceIndex = derived(currentCachedTimeline, ($items) => buildEntityReferenceIndex($items));
+
+export const entityTimelineGroups = derived(
+	[currentCachedEntities, currentCachedTimeline],
+	([$entities, $items]) => buildEntityTimelineGroups($entities, $items)
+);
+
+export const entityTimelineEntityCount = derived(entityTimelineGroups, ($groups) =>
+	$groups.reduce((total, group) => total + group.entities.length, 0)
+);
 
 export const dynamicTimelineFields = derived(currentCachedTimeline, ($items) => discoverTimelineDynamicFields($items));
 

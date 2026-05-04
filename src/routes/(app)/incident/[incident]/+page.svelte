@@ -12,12 +12,14 @@
 	} from '$lib/stores/cacheStore.js';
 	import {
 		actionDynamicFields,
+		entityTimelineEntityCount,
+		entityTimelineGroups,
 		eventDynamicFields,
 		investigationStats,
 		timelineItemCount,
 		timelineItems
 	} from '$lib/stores/timeline';
-	import { filterTimelineItems } from '$lib/timeline/core';
+	import { filterEntityTimelineGroups, filterTimelineItems } from '$lib/timeline/core';
 	import { timelineViews } from '$lib/config/timelineViews';
 	import { joinIncidentSocket, leaveIncidentSocket, emitCursorMove, emitCursorLeave } from '$lib/stores/collabStore.js';
 	import type { Incident } from '$lib/server/database';
@@ -77,10 +79,34 @@
 		return filterTimelineItems($timelineItems, searchQuery);
 	});
 
+	const isEntityTimelineView = $derived($currentTimelineView === 'entities');
+
+	const filteredEntityGroups = $derived.by(() => {
+		return filterEntityTimelineGroups($entityTimelineGroups, searchQuery);
+	});
+
+	const filteredEntityCount = $derived.by(() => {
+		return filteredEntityGroups.reduce((total, group) => total + group.entities.length, 0);
+	});
+
+	const searchPlaceholder = $derived(
+		isEntityTimelineView ? 'Search entities...' : 'Search timeline...'
+	);
+
 	// Compute filtered field configs based on field states (for passing to TimelineRow)
 	const filteredDisplayFieldsConfig = $derived({
 		event: [...fieldStates.event].sort((a, b) => a.order - b.order),
 		action: [...fieldStates.action].sort((a, b) => a.order - b.order)
+	});
+
+	$effect(() => {
+		if (isEntityTimelineView) {
+			showFieldSelector = false;
+			fieldSelectorFloating = false;
+			showEntitiesPanel = false;
+			entitiesPanelFloating = false;
+			clearHighlights();
+		}
 	});
 
 	function resetFieldSelection() {
@@ -266,7 +292,7 @@
 			<input
 				class="search-input"
 				type="text"
-				placeholder="Search timeline..."
+				placeholder={searchPlaceholder}
 				bind:value={searchQuery}
 			/>
 			{#if searchQuery}
@@ -275,7 +301,11 @@
 						<path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
 					</svg>
 				</button>
-				<span class="search-count">{filteredTimeline.length}/{$timelineItemCount}</span>
+				<span class="search-count">
+					{isEntityTimelineView ? filteredEntityCount : filteredTimeline.length}/{isEntityTimelineView
+						? $entityTimelineEntityCount
+						: $timelineItemCount}
+				</span>
 			{/if}
 		</div>
 		<div class="toolbar-separator"></div>
@@ -290,35 +320,37 @@
 		</div>
 		<div class="toolbar-separator"></div>
 		<div class="toolbar-group">
-			<button
-				class="btn-icon"
-				class:active={showEntitiesPanel || entitiesPanelFloating}
-				onclick={toggleEntitiesPanel}
-				title="Entities & Annotations Panel"
-			>
-				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<path d="M8 1L15 8L8 15L1 8L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-				</svg>
-			</button>
-			<button
-				class="btn-icon"
-				class:active={showFieldSelector || fieldSelectorFloating}
-				onclick={() => {
-					if (fieldSelectorFloating) {
-						closeFieldSelector();
-					} else {
-						showFieldSelector = !showFieldSelector;
-					}
-				}}
-				title="Configure visible fields"
-			>
-				<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<path d="M6.5 1.5H2.5C1.95 1.5 1.5 1.95 1.5 2.5V6.5C1.5 7.05 1.95 7.5 2.5 7.5H6.5C7.05 7.5 7.5 7.05 7.5 6.5V2.5C7.5 1.95 7.05 1.5 6.5 1.5Z" stroke="currentColor" stroke-width="1.2" />
-					<path d="M13.5 1.5H9.5C8.95 1.5 8.5 1.95 8.5 2.5V6.5C8.5 7.05 8.95 7.5 9.5 7.5H13.5C14.05 7.5 14.5 7.05 14.5 6.5V2.5C14.5 1.95 14.05 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1.2" />
-					<path d="M6.5 8.5H2.5C1.95 8.5 1.5 8.95 1.5 9.5V13.5C1.5 14.05 1.95 14.5 2.5 14.5H6.5C7.05 14.5 7.5 14.05 7.5 13.5V9.5C7.5 8.95 7.05 8.5 6.5 8.5Z" stroke="currentColor" stroke-width="1.2" />
-					<path d="M13.5 8.5H9.5C8.95 8.5 8.5 8.95 8.5 9.5V13.5C8.5 14.05 8.95 14.5 9.5 14.5H13.5C14.05 14.5 14.5 14.05 14.5 13.5V9.5C14.5 8.95 14.05 8.5 13.5 8.5Z" stroke="currentColor" stroke-width="1.2" />
-				</svg>
-			</button>
+			{#if !isEntityTimelineView}
+				<button
+					class="btn-icon"
+					class:active={showEntitiesPanel || entitiesPanelFloating}
+					onclick={toggleEntitiesPanel}
+					title="Entities & Annotations Panel"
+				>
+					<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M8 1L15 8L8 15L1 8L8 1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+					</svg>
+				</button>
+				<button
+					class="btn-icon"
+					class:active={showFieldSelector || fieldSelectorFloating}
+					onclick={() => {
+						if (fieldSelectorFloating) {
+							closeFieldSelector();
+						} else {
+							showFieldSelector = !showFieldSelector;
+						}
+					}}
+					title="Configure visible fields"
+				>
+					<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M6.5 1.5H2.5C1.95 1.5 1.5 1.95 1.5 2.5V6.5C1.5 7.05 1.95 7.5 2.5 7.5H6.5C7.05 7.5 7.5 7.05 7.5 6.5V2.5C7.5 1.95 7.05 1.5 6.5 1.5Z" stroke="currentColor" stroke-width="1.2" />
+						<path d="M13.5 1.5H9.5C8.95 1.5 8.5 1.95 8.5 2.5V6.5C8.5 7.05 8.95 7.5 9.5 7.5H13.5C14.05 7.5 14.5 7.05 14.5 6.5V2.5C14.5 1.95 14.05 1.5 13.5 1.5Z" stroke="currentColor" stroke-width="1.2" />
+						<path d="M6.5 8.5H2.5C1.95 8.5 1.5 8.95 1.5 9.5V13.5C1.5 14.05 1.95 14.5 2.5 14.5H6.5C7.05 14.5 7.5 14.05 7.5 13.5V9.5C7.5 8.95 7.05 8.5 6.5 8.5Z" stroke="currentColor" stroke-width="1.2" />
+						<path d="M13.5 8.5H9.5C8.95 8.5 8.5 8.95 8.5 9.5V13.5C8.5 14.05 8.95 14.5 9.5 14.5H13.5C14.05 14.5 14.5 14.05 14.5 13.5V9.5C14.5 8.95 14.05 8.5 13.5 8.5Z" stroke="currentColor" stroke-width="1.2" />
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 
@@ -327,6 +359,7 @@
 	<div class="timeline-content">
 		<div
 			class="timeline-list-wrapper"
+			class:entity-view-active={isEntityTimelineView}
 			bind:this={timelineScrollEl}
 			onscroll={handleTimelineScroll}
 			onmousemove={handleCursorMove}
@@ -335,9 +368,11 @@
 			<RemoteCursors />
 			{#if ActiveViewModule}
 				<ActiveViewModule.default
+					entityGroups={filteredEntityGroups}
 					items={filteredTimeline}
 					displayFieldsConfig={filteredDisplayFieldsConfig}
 					searchQuery={searchQuery}
+					totalEntityCount={$entityTimelineEntityCount}
 					totalItemCount={$investigationStats.total}
 					hasIncident={!!$currentSelectedIncident?.uuid}
 					onClearSearch={() => (searchQuery = '')}
@@ -840,6 +875,10 @@
 		overflow-y: auto;
 		padding: var(--space-3);
 		position: relative;
+	}
+
+	.timeline-list-wrapper.entity-view-active {
+		padding: 0;
 	}
 
 	/* ===== Entities Overlay (same pattern as field selector) ===== */

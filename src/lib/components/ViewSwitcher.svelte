@@ -2,16 +2,6 @@
 	import { currentTimelineView } from '$lib/stores/cacheStore';
 	import { timelineViews } from '$lib/config/timelineViews';
 
-	/** Icon SVG paths keyed by icon identifier */
-	const icons: Record<string, { paths: string }> = {
-		list: {
-			paths: `<line x1="2" y1="4" x2="14" y2="4" /><line x1="2" y1="8" x2="14" y2="8" /><line x1="2" y1="12" x2="14" y2="12" />`
-		},
-		timeline: {
-			paths: `<line x1="5" y1="1" x2="5" y2="15" /><circle cx="5" cy="4" r="1.5" /><circle cx="5" cy="9" r="1.5" /><circle cx="5" cy="13" r="1.5" /><line x1="6.5" y1="4" x2="13" y2="4" /><line x1="6.5" y1="9" x2="11" y2="9" />`
-		}
-	};
-
 	function handleKeydown(event: KeyboardEvent) {
 		const currentIndex = timelineViews.findIndex((v) => v.id === $currentTimelineView);
 		let newIndex = currentIndex;
@@ -35,11 +25,10 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_interactive_supports_focus -->
 <div
 	class="view-switcher"
 	role="tablist"
+	tabindex="0"
 	aria-label="Timeline view"
 	onkeydown={handleKeydown}
 >
@@ -65,7 +54,25 @@
 				stroke-linejoin="round"
 				aria-hidden="true"
 			>
-				{@html icons[view.icon]?.paths ?? ''}
+				{#if view.icon === 'list'}
+					<line x1="2" y1="4" x2="14" y2="4" />
+					<line x1="2" y1="8" x2="14" y2="8" />
+					<line x1="2" y1="12" x2="14" y2="12" />
+				{:else if view.icon === 'timeline'}
+					<line x1="5" y1="1" x2="5" y2="15" />
+					<circle cx="5" cy="4" r="1.5" />
+					<circle cx="5" cy="9" r="1.5" />
+					<circle cx="5" cy="13" r="1.5" />
+					<line x1="6.5" y1="4" x2="13" y2="4" />
+					<line x1="6.5" y1="9" x2="11" y2="9" />
+				{:else}
+					<circle cx="4" cy="4" r="1.5" />
+					<circle cx="12" cy="4" r="1.5" />
+					<circle cx="8" cy="12" r="1.5" />
+					<path d="M5.4 4.8L6.9 6.6" />
+					<path d="M10.6 4.8L9.1 6.6" />
+					<path d="M8 10.5V7.4" />
+				{/if}
 			</svg>
 			<span class="view-switcher-label">{view.label}</span>
 		</button>

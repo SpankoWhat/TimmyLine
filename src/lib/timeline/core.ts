@@ -1,7 +1,8 @@
 import { displayFieldsConfig, type DisplayField } from '$lib/config/displayFieldsConfig';
 import type { InvestigationAction, TimelineEvent } from '$lib/server/database';
+import type { Entity } from '$lib/types/entities';
 import { getTimelineDateKey } from '$lib/utils/dateTime';
-import { discoverDynamicFields } from '$lib/utils/fieldUtils';
+import { discoverDynamicFields, keyToLabel } from '$lib/utils/fieldUtils';
 
 export type TimelineItem = {
 	uuid: string;
@@ -44,6 +45,30 @@ export type ItemNode = {
 };
 
 export type ProcessedTimelineNode = DateSeparatorNode | GapNode | ClusterNode | ItemNode;
+
+export type EntityTimelineItemFilter = 'both' | 'events' | 'actions';
+
+export type EntityTimelineRelatedItem = {
+	item: TimelineItem;
+	relationLabel: string | null;
+};
+
+export type EntityTimelineEntityNode = {
+	entity: Entity;
+	relatedItems: EntityTimelineRelatedItem[];
+	relatedCounts: {
+		total: number;
+		events: number;
+		actions: number;
+	};
+	searchableText: string;
+};
+
+export type EntityTimelineGroup = {
+	groupKey: string;
+	groupLabel: string;
+	entities: EntityTimelineEntityNode[];
+};
 
 type TimelineEventLike = Record<string, unknown> & {
 	uuid: string;
@@ -223,6 +248,116 @@ export function buildEntityReferenceIndex(items: TimelineItem[]): Map<string, st
 	return new Map(
 		Array.from(references.entries(), ([entityUuid, itemUuids]) => [entityUuid, [...itemUuids]])
 	);
+}
+
+function getItemEntityRelationships(item: TimelineItem): Array<Record<string, unknown>> {
+	return item.type === 'event'
+		? (((item.data as Record<string, unknown>).eventEntities as Array<Record<string, unknown>> | undefined) ?? [])
+		: (((item.data as Record<string, unknown>).actionEntities as Array<Record<string, unknown>> | undefined) ?? []);
+}
+
+function getRelationshipLabel(relationship: Record<string, unknown>): string | null {
+	const label = relationship.relation_type ?? relationship.role ?? relationship.context;
+	return typeof label === 'string' && label.trim() ? label.trim() : null;
+}
+
+function buildEntitySearchableText(entity: Entity): string {
+	return [
+		entity.entity_type,
+		entity.identifier,
+		entity.display_name,
+		entity.status,
+		entity.criticality,
+		entity.tags,
+		entity.attributes
+	]
+		.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+		.join(' ')
+		.toLowerCase();
+}
+
+function compareEntitiesByIdentifier(left: EntityTimelineEntityNode, right: EntityTimelineEntityNode): number {
+	const leftLabel = left.entity.identifier || left.entity.display_name || left.entity.uuid;
+	const rightLabel = right.entity.identifier || right.entity.display_name || right.entity.uuid;
+	return leftLabel.localeCompare(rightLabel, undefined, { sensitivity: 'base' });
+}
+
+export function buildEntityTimelineGroups(
+	entities: Entity[],
+	items: TimelineItem[]
+): EntityTimelineGroup[] {
+	const relatedItemsByEntityUuid = new Map<string, EntityTimelineRelatedItem[]>();
+
+	for (const item of items) {
+		for (const relationship of getItemEntityRelationships(item)) {
+			const entity = relationship.entity as Record<string, unknown> | undefined;
+			const entityUuid = entity?.uuid as string | undefined;
+			if (!entityUuid) continue;
+
+			const existing = relatedItemsByEntityUuid.get(entityUuid) ?? [];
+			existing.push({
+				item,
+				relationLabel: getRelationshipLabel(relationship)
+			});
+			relatedItemsByEntityUuid.set(entityUuid, existing);
+		}
+	}
+
+	const groups = new Map<string, EntityTimelineGroup>();
+
+	for (const entity of entities) {
+		const groupKey = entity.entity_type?.trim() || 'unknown';
+		const existingGroup = groups.get(groupKey) ?? {
+			groupKey,
+			groupLabel: keyToLabel(groupKey),
+			entities: []
+		};
+		const relatedItems = relatedItemsByEntityUuid.get(entity.uuid) ?? [];
+		const relatedCounts = relatedItems.reduce(
+			(counts, relatedItem) => {
+				counts.total += 1;
+				if (relatedItem.item.type === 'event') {
+					counts.events += 1;
+				} else {
+					counts.actions += 1;
+				}
+				return counts;
+			},
+			{ total: 0, events: 0, actions: 0 }
+		);
+
+		existingGroup.entities.push({
+			entity,
+			relatedItems,
+			relatedCounts,
+			searchableText: buildEntitySearchableText(entity)
+		});
+		groups.set(groupKey, existingGroup);
+	}
+
+	return Array.from(groups.values())
+		.map((group) => ({
+			...group,
+			entities: [...group.entities].sort(compareEntitiesByIdentifier)
+		}))
+		.sort((left, right) => left.groupLabel.localeCompare(right.groupLabel, undefined, { sensitivity: 'base' }));
+}
+
+export function filterEntityTimelineGroups(
+	groups: EntityTimelineGroup[],
+	query: string
+): EntityTimelineGroup[] {
+	const normalizedQuery = query.trim().toLowerCase();
+	if (!normalizedQuery) {
+		return groups;
+	}
+
+	return groups
+		.map((group) => ({
+			...group,
+			entities: group.entities.filter((entityNode) => entityNode.searchableText.includes(normalizedQuery))
+		}))
+		.filter((group) => group.entities.length > 0);
 }
 
 export function processTimelineItems(
