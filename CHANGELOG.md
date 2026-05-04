@@ -11,10 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- No notable changes yet.
+
+## [3.0.0] — 2026-05-03
+
+### Added
+
+- **Entity-Centric Timeline View** — Added dedicated entity timeline sections, related event/action rows, inline relation badges, presence indicators, and expandable detail panels with inline edit and delete actions.
+- **Microsoft Entra Bearer Authentication** — Added bearer-token support for Microsoft Entra-backed API authentication flows.
 - **AWS Secrets Manager Runtime Injection** — Added a helper script and Docker entrypoint support for loading auth credentials from AWS Secrets Manager into the process environment at startup.
+- **Timestamp Preferences** — Added user-configurable time formatting preferences with a dedicated modal and store.
+- **Vitest Coverage Foundation** — Added Vitest configuration plus session and authorization helper tests.
 
 ### Changed
 
+- **Timeline Experience** — Refactored timeline management and socket integration, and expanded timeline row and detail interactions for denser analysis workflows.
+- **Access Control** — Tightened admin access validation, service context handling, and session ownership and authentication behavior across analyst routes and APIs.
+- **Exports and Health APIs** — Added export classification and warning handling, improved export logging, and simplified the health response payload.
+- **Navigation and UI Polish** — Improved sidebar sign-out behavior, compact incident header presentation, and timestamp formatting across the app.
+- **Dependencies and Tooling** — Updated core SvelteKit and Vite dependencies and aligned the project with the new test tooling.
 - **Documentation** — Updated setup, configuration, deployment, and authentication docs to describe the env-only credential model and AWS-backed runtime injection flow.
 
 ## [0.1.0] — 2025-03-18
