@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
+	import { signOut } from '@auth/sveltekit/client';
 	import { currentSelectedIncident, currentSelectedAnalyst } from '$lib/stores/cacheStore';
 	import { onMount, onDestroy } from 'svelte';
 	import { api } from '$lib/client';
@@ -9,6 +10,7 @@
 	const STORAGE_KEY = 'timmyline-sidebar-expanded';
 
 	let expanded = $state(browser ? localStorage.getItem(STORAGE_KEY) !== 'false' : true);
+	let signingOut = $state(false);
 
 	let health = $state<HealthResponse | null>(null);
 	let healthInterval: ReturnType<typeof setInterval> | undefined;
@@ -27,6 +29,21 @@
 	function openCommandPalette() {
 		if (browser) {
 			document.dispatchEvent(new CustomEvent('open-command-palette'));
+		}
+	}
+
+	async function handleSignOut() {
+		if (signingOut) {
+			return;
+		}
+
+		signingOut = true;
+
+		try {
+			await signOut({ redirectTo: '/login' });
+		} catch (error) {
+			console.error('Failed to sign out:', error);
+			signingOut = false;
 		}
 	}
 
@@ -92,7 +109,6 @@
 			};
 		}
 	}
-
 	onMount(() => {
 		fetchHealth();
 		// Refresh health status every 30 seconds
@@ -353,6 +369,32 @@
 		</a>
 
 		<button
+			type="button"
+			class="sidebar-item sidebar-item-danger"
+			onclick={handleSignOut}
+			disabled={signingOut}
+			aria-label={signingOut ? 'Signing out' : 'Sign out'}
+			title={expanded ? undefined : signingOut ? 'Signing out' : 'Sign out'}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="sidebar-item-icon"
+				aria-hidden="true"
+			>
+				<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+				<polyline points="16 17 21 12 16 7" />
+				<line x1="21" y1="12" x2="9" y2="12" />
+			</svg>
+			<span class="sidebar-item-label">{signingOut ? 'Signing out...' : 'Sign out'}</span>
+		</button>
+
+		<button
+			type="button"
 			class="sidebar-toggle"
 			onclick={toggleSidebar}
 			aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -548,8 +590,18 @@
 		background: hsl(var(--bg-surface-200));
 	}
 
+	.sidebar-item:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
 	.sidebar-item.active {
 		color: hsl(var(--brand-default));
+	}
+
+	.sidebar-item-danger:hover:not(:disabled) {
+		color: hsl(var(--destructive-600));
+		background: hsl(var(--destructive-default) / 0.12);
 	}
 
 	.sidebar-item:focus-visible {
